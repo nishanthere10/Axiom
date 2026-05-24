@@ -1,5 +1,3 @@
-from celery import Task
-from workers.celery_app import celery_app
 from agents.graph.decision_graph import decision_graph
 from services import research_service
 
@@ -12,15 +10,9 @@ _NODE_PROGRESS = {
 }
 
 
-@celery_app.task(
-    bind=True,
-    name="workers.tasks.run_research_task",
-    max_retries=2,
-    default_retry_delay=5,
-)
-def run_research_task(self: Task, session_id: str, job_id: str, question: str) -> dict:
+def run_research_background_task(session_id: str, job_id: str, question: str) -> dict:
     """
-    Celery task that runs the LangGraph decision pipeline.
+    Background task that runs the LangGraph decision pipeline natively via FastAPI.
 
     Steps:
     1. Mark job as running.
@@ -33,9 +25,22 @@ def run_research_task(self: Task, session_id: str, job_id: str, question: str) -
         research_service.update_job_status(job_id, status="running", progress=5, step="starting")
 
         # 2. Stream the graph — get state updates after each node
-        final_state = None
-        for chunk in decision_graph.stream({"question": question, "summary": "", "recommendation": "", "tradeoffs": "", "alternatives": "", "confidence": {}, "status": "starting"}):
+        current_state = {
+            "question": question, 
+            "summary": "", 
+            "recommendation": "", 
+            "tradeoffs": "", 
+            "alternatives": "", 
+            "confidence": {}, 
+            "status": "starting"
+        }
+        
+        for chunk in decision_graph.stream(current_state):
             for node_name, node_state in chunk.items():
+                # LangGraph stream yields only the updates from the current node.
+                # We must accumulate them to have the full state for saving.
+                current_state.update(node_state)
+                
                 _, progress = _NODE_PROGRESS.get(node_name, (0, 0))
                 research_service.update_job_status(
                     job_id,
@@ -43,7 +48,8 @@ def run_research_task(self: Task, session_id: str, job_id: str, question: str) -
                     progress=progress,
                     step=node_name,
                 )
-                final_state = node_state
+                
+        final_state = current_state
 
         if final_state is None or final_state.get("status") != "complete":
             raise ValueError("Graph did not complete successfully.")
@@ -62,12 +68,6 @@ def run_research_task(self: Task, session_id: str, job_id: str, question: str) -
         return {"session_id": session_id, "job_id": job_id, "status": "completed"}
 
     except Exception as exc:
-        # Retry on timeout / transient errors (not on validation errors)
-        is_transient = isinstance(exc, (TimeoutError, ConnectionError))
         research_service.update_job_status(job_id, status="failed", progress=0, step="error")
         research_service.update_session_status(session_id, "failed")
-
-        if is_transient and self.request.retries < self.max_retries:
-            raise self.retry(exc=exc)
-
         raise

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from api.schemas.research import (
     ResearchRequest,
     ResearchResponse,
@@ -6,24 +6,25 @@ from api.schemas.research import (
     SessionDocumentResponse,
 )
 from services import research_service
-from workers.tasks import run_research_task
+from workers.tasks import run_research_background_task
 
 router = APIRouter()
 
 
 @router.post("", response_model=ResearchResponse, status_code=202)
-async def submit_research(body: ResearchRequest):
+async def submit_research(body: ResearchRequest, background_tasks: BackgroundTasks):
     """
     POST /research
     Accepts a technical question, creates a session and job in Supabase,
-    enqueues the Celery task, and returns immediately.
+    enqueues the FastAPI background task, and returns immediately.
     """
     # Create session and job records in Supabase
     session = research_service.create_session(body.question)
     job = research_service.create_job(session["id"])
 
-    # Enqueue background task
-    run_research_task.delay(
+    # Enqueue background task (Runs natively inside the FastAPI process)
+    background_tasks.add_task(
+        run_research_background_task,
         session_id=session["id"],
         job_id=job["id"],
         question=body.question,

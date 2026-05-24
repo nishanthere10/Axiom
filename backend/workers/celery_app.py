@@ -1,11 +1,22 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Resolve the .env file relative to the backend/ root (this file's grandparent).
+# This ensures it works regardless of CWD or which Python interpreter is used.
+_env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(_env_path)
+
 from celery import Celery
-from core.config import settings
+
+redis_url = os.getenv("REDIS_URL") or "redis://localhost:6379/0"
+
 
 celery_app = Celery(
     "atlas_research_workers",
-    broker=settings.REDIS_URL,
-    backend=settings.REDIS_URL,
-    include=["workers.tasks"] # We will create tasks.py later
+    broker=redis_url,
+    backend=redis_url,
+    include=["workers.tasks"],
 )
 
 celery_app.conf.update(
