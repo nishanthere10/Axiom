@@ -15,28 +15,28 @@ def generate_decision(state: ResearchState) -> dict:
     question = state["question"]
     summary = state["summary"]
 
-    prompt = f"""You are a senior engineering decision-maker. Based on the technical question and its analysis, generate a comprehensive decision document.
+    prompt = f"""You are a distinguished Principal Software Engineer. Based on the technical question and analysis, generate a highly scannable, expert-level decision document. Do not use huge text blocks. Use bullet points and bold text to make it readable at a glance. Prioritize context-rich quality over quantity.
 
 Question: {question}
 
 Analysis: {summary}
 
 Return a JSON object with exactly these keys:
-- "recommendation_context": A detailed 3-5 paragraph recommendation explaining the best approach, why it fits, and under what conditions it applies. No markdown.
-- "tradeoffs": A thorough analysis of the key tradeoffs (pros, cons, risks). Write as structured plain text paragraphs, not bullet points.
-- "alternatives": Description of 2-3 viable alternative approaches, when they make sense, and how they compare. Plain text.
+- "recommendation_context": A highly scannable recommendation. Use bullet points to highlight EXACTLY why this approach is best. Keep sentences very short and punchy. Include a brief code/config snippet if it helps clarity.
+- "tradeoffs": A rigorous but scannable analysis. Use bulleted lists for pros, cons, and risks. Highlight key metrics (latency, scale) in bold. No wall of text.
+- "alternatives": Bulleted list of 1-2 viable alternatives. Explain in one sentence when they apply and why they were rejected here.
 
-Return only valid JSON with those three keys."""
+Return only valid JSON. Ensure all strings correctly escape quotes and newlines so the JSON remains valid."""
 
     response = _client.chat.completions.create(
         model=_MODEL,
         messages=[
-            {"role": "system", "content": "You are an expert software engineering advisor. Return only valid JSON."},
+            {"role": "system", "content": "You are an elite Principal Engineer. You write context-rich, highly scannable technical docs. Rely heavily on bullet points and bold text for at-a-glance readability. Zero fluff. Return only valid JSON."},
             {"role": "user", "content": prompt},
         ],
         response_format={"type": "json_object"},
         temperature=0.4,
-        max_tokens=2500,
+        max_tokens=6000,
     )
 
     content = json.loads(response.choices[0].message.content)

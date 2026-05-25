@@ -20,3 +20,11 @@ class JobStatusResponse(BaseModel):
 
 class SessionDocumentResponse(BaseModel):
     document: Optional[dict]
+
+class SessionHistoryItem(BaseModel):
+    id: str
+    question: str
+    created_at: str
+
+class SessionHistoryResponse(BaseModel):
+    sessions: list[SessionHistoryItem]

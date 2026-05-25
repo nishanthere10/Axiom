@@ -2,23 +2,26 @@
 
 ## Current Status
 
-- Status: Planning / Setup
-- Phase: Context Tailoring
+- Status: Execution Phase
+- Phase: Feature Implementation
 
 ## Completed
 
 - Tailored Context Files based on `prd.md`.
+- Project Kickoff & Requirements Analysis.
+- Setup Next.js frontend (UI layer scaffolded).
+- Setup FastAPI backend.
+- F-001: End-to-End Generation (LangGraph pipeline, polling UI, DB schemas).
+- F-002: Historical Decision Comparison (Synchronous API, diffing, deterministic suggestions).
 
 ## In Progress
 
-- Project Kickoff & Requirements Analysis.
+- Awaiting next feature spec.
 
 ## Next Up
 
-- Setup Next.js frontend with Clerk and shadcn/ui.
-- Setup FastAPI backend with Celery and LangGraph.
-- Provision Pinecone vector store and database.
+- Unassigned / TBD.
 
 ## Open Questions
 
-- *None at the moment. (Decisions made: Supabase for Relational DB, Redis for Celery Broker).*
+- *None at the moment. (Architectural decision made: Shifted from Celery/Redis to native FastAPI BackgroundTasks/Sync for simpler V1 execution).*

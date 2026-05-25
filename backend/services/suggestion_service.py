@@ -1,6 +1,6 @@
 import difflib
 from datetime import datetime, timezone
-from services.db import db
+from services.db import supabase
 from typing import List, Dict, Any
 
 def text_similarity(a: str, b: str) -> float:
@@ -17,13 +17,13 @@ def time_proximity(dt1: datetime, dt2: datetime) -> float:
 
 def get_suggestions(session_id: str) -> List[Dict[str, Any]]:
     # 1. Fetch the target session
-    res = db.table("decision_documents").select("*").eq("id", session_id).execute()
+    res = supabase.table("decision_documents").select("*").eq("session_id", session_id).execute()
     if not res.data:
         return []
     target = res.data[0]
     
     # 2. Fetch all other sessions (ideally limit this in a real app, but for V1 we fetch all)
-    res_all = db.table("decision_documents").select("*").neq("id", session_id).execute()
+    res_all = supabase.table("decision_documents").select("*").neq("session_id", session_id).execute()
     if not res_all.data:
         return []
         
@@ -40,7 +40,7 @@ def get_suggestions(session_id: str) -> List[Dict[str, Any]]:
         score = (0.5 * q_sim) + (0.3 * r_sim) + (0.2 * t_prox)
         
         suggestions.append({
-            "session_id": doc["id"],
+            "session_id": doc["session_id"],
             "question": doc.get("question", "Unknown Question"),
             "created_at": doc.get("created_at"),
             "score": round(score, 3)

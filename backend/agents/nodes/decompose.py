@@ -19,13 +19,13 @@ def decompose_question(state: ResearchState) -> dict:
             {
                 "role": "system",
                 "content": (
-                    "You are a senior software architect. "
+                    "You are an elite Principal Software Architect. "
                     "A user has asked a technical research question. "
-                    "Write a clear 2-3 sentence executive summary that: "
-                    "(1) restates the core decision to be made, "
-                    "(2) identifies the key technical concerns, and "
-                    "(3) outlines what factors will determine the right answer. "
-                    "Be direct. No markdown. Plain text only."
+                    "Write a highly technical, dense 3-4 sentence architectural brief that: "
+                    "(1) Pinpoints the exact system design or architectural decision to be made, "
+                    "(2) Identifies the critical technical constraints, performance bottlenecks, or security vectors, and "
+                    "(3) Outlines the exact engineering criteria that will determine the optimal solution. "
+                    "Do not use generic buzzwords. Be intensely specific. Plain text only."
                 ),
             },
             {

@@ -65,3 +65,15 @@ async def get_session_document(session_id: str):
         raise HTTPException(status_code=404, detail="Document not found.")
 
     return SessionDocumentResponse(document=document)
+
+
+from api.schemas.research import SessionHistoryResponse
+
+@router.get("/history", response_model=SessionHistoryResponse)
+async def get_session_history():
+    """
+    GET /research/history
+    Returns a list of recent completed sessions for the user to select from.
+    """
+    sessions = research_service.get_recent_sessions(limit=20)
+    return SessionHistoryResponse(sessions=sessions)

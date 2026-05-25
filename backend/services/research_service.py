@@ -71,3 +71,16 @@ def get_document_by_session(session_id: str) -> dict | None:
     if response.data:
         return response.data[0]
     return None
+
+
+def get_recent_sessions(limit: int = 15) -> list[dict]:
+    """Fetch recent completed research sessions."""
+    response = (
+        supabase.table("research_sessions")
+        .select("id, question, created_at")
+        .eq("status", "complete")
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return response.data or []
