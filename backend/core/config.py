@@ -12,8 +12,6 @@ class Settings(BaseSettings):
     # Clerk
     CLERK_SECRET_KEY: str = ""
     
-    # Redis / Celery
-    REDIS_URL: str = "redis://localhost:6379/0"
 
     # LLM & Vector Store
     GROQ_API_KEY: str = ""

@@ -31,5 +31,5 @@ def build_decision_graph():
     return graph.compile()
 
 
-# Compiled graph instance — imported by Celery tasks
+# Compiled graph instance — imported by FastAPI background tasks
 decision_graph = build_decision_graph()

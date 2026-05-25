@@ -11,8 +11,6 @@ sse-starlette
 google-generativeai
 faster-whisper
 python-multipart
-celery
-redis
 pinecone-client
 groq
 clerk-backend-api

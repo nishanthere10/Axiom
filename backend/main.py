@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes.research import router as research_router
+from api.routes.compare import router as compare_router
 
 app = FastAPI(
     title="Atlas Research v1 API",
@@ -24,6 +25,7 @@ app.add_middleware(
 
 # Register routers
 app.include_router(research_router, prefix="/research", tags=["research"])
+app.include_router(compare_router, prefix="/compare", tags=["compare"])
 
 
 @app.get("/health", tags=["system"])
