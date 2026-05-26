@@ -11,7 +11,7 @@ class ComparisonState(TypedDict):
     normalized_b: Optional[Dict[str, Any]]
     
     structural_diff: Optional[Dict[str, str]]
-    decision_evolution: str
-    impact_summary: str
+    decision_evolution: Optional[Dict[str, Any]]
+    impact_summary: Optional[Dict[str, Any]]
     
     status: str

@@ -8,11 +8,16 @@ _MODEL = "llama-3.3-70b-versatile"
 
 _SYSTEM_PROMPT = """You are an elite Principal Software Architect analyzing the fallout of a major architectural shift.
 Given the decision evolution and structural diff, describe the rigorous engineering IMPACT of this change.
-Do not use huge text blocks. You MUST use bullet points and bold text to make it readable at a glance. Prioritize context-rich quality over quantity. Keep sentences very short and punchy.
 
-Return ONLY a valid JSON object with the following schema:
+Return ONLY a valid JSON object with EXACTLY the following schema:
 {
-    "impact_summary": "Highly scannable explanation of the impact and migration paths using bullet points..."
+    "risk_level": "low" | "medium" | "high",
+    "action_items": [
+        "Concise, actionable migration step 1",
+        "Concise, actionable migration step 2"
+    ],
+    "migration_needed": true | false,
+    "breaking_changes": true | false
 }
 """
 
@@ -21,8 +26,10 @@ def generate_impact(state: ComparisonState) -> dict:
     Node 5: Uses LLM to generate the impact summary.
     """
     evolution = state["decision_evolution"]
+    # We pass the reasoning or verdict if it's a dict
+    evo_str = json.dumps(evolution) if isinstance(evolution, dict) else str(evolution)
     
-    prompt = f"Decision Evolution:\n{evolution}\n\nGenerate a highly scannable impact summary detailing migration strategies. Rely heavily on bullet points and bold text."
+    prompt = f"Decision Evolution:\n{evo_str}\n\nGenerate the structured impact summary."
     
     response = _client.chat.completions.create(
         model=_MODEL,
@@ -38,9 +45,14 @@ def generate_impact(state: ComparisonState) -> dict:
     try:
         content = response.choices[0].message.content
         parsed = json.loads(content)
-        impact = parsed.get("impact_summary", "Impact could not be parsed.")
+        impact = parsed
     except Exception:
-        impact = "Error parsing LLM output."
+        impact = {
+            "risk_level": "medium",
+            "action_items": ["Error parsing LLM output"],
+            "migration_needed": False,
+            "breaking_changes": False
+        }
         
     return {
         "impact_summary": impact,

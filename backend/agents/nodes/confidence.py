@@ -19,9 +19,9 @@ def build_confidence(state: ResearchState) -> dict:
 Evaluate the confidence of this technical recommendation based on the tradeoffs identified.
 The system must NEVER claim certainty. All scores should reflect genuine uncertainty.
 
-Recommendation: {recommendation[:1000]}
+Recommendation: {str(recommendation)[:1000]}
 
-Tradeoffs: {tradeoffs[:800]}
+Tradeoffs: {str(tradeoffs)[:800]}
 
 Return a JSON object with exactly these keys and float values between 0.0 and 1.0:
 - "evidence_coverage": How much of the problem space is covered by available evidence (0 = unknown territory, 1 = well-documented area)

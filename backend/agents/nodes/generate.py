@@ -21,12 +21,12 @@ Question: {question}
 
 Analysis: {summary}
 
-Return a JSON object with exactly these keys:
-- "recommendation_context": A highly scannable recommendation. Use bullet points to highlight EXACTLY why this approach is best. Keep sentences very short and punchy. Include a brief code/config snippet if it helps clarity.
-- "tradeoffs": A rigorous but scannable analysis. Use bulleted lists for pros, cons, and risks. Highlight key metrics (latency, scale) in bold. No wall of text.
-- "alternatives": Bulleted list of 1-2 viable alternatives. Explain in one sentence when they apply and why they were rejected here.
+Return a JSON object with exactly these keys. The value for each key MUST be a single Markdown string, NOT nested JSON objects or arrays:
+- "recommendation_context": A Markdown string containing a highly scannable recommendation. Use bullet points to highlight EXACTLY why this approach is best. Keep sentences very short and punchy. Include a brief code/config snippet if it helps clarity.
+- "tradeoffs": A Markdown string containing a rigorous but scannable analysis. Use bulleted lists for pros, cons, and risks. Highlight key metrics (latency, scale) in bold. No wall of text.
+- "alternatives": A Markdown string containing a bulleted list of 1-2 viable alternatives. Explain in one sentence when they apply and why they were rejected here.
 
-Return only valid JSON. Ensure all strings correctly escape quotes and newlines so the JSON remains valid."""
+Return only valid JSON. Ensure all strings correctly escape quotes and newlines so the JSON remains valid. DO NOT use nested arrays or objects for the values."""
 
     response = _client.chat.completions.create(
         model=_MODEL,
@@ -40,10 +40,17 @@ Return only valid JSON. Ensure all strings correctly escape quotes and newlines 
     )
 
     content = json.loads(response.choices[0].message.content)
+    
+    def enforce_string(val):
+        if isinstance(val, list):
+            return "\n".join(f"- {str(v)}" for v in val)
+        if isinstance(val, dict):
+            return "\n".join(f"- **{k}**: {v}" for k, v in val.items())
+        return str(val)
 
     return {
-        "recommendation": content.get("recommendation_context", ""),
-        "tradeoffs": content.get("tradeoffs", ""),
-        "alternatives": content.get("alternatives", ""),
+        "recommendation": enforce_string(content.get("recommendation_context", "")),
+        "tradeoffs": enforce_string(content.get("tradeoffs", "")),
+        "alternatives": enforce_string(content.get("alternatives", "")),
         "status": "generated",
     }

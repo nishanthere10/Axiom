@@ -8,11 +8,19 @@ _MODEL = "llama-3.3-70b-versatile"
 
 _SYSTEM_PROMPT = """You are an elite Principal Software Architect performing an architectural teardown of how a system design evolved.
 Your goal is to explain the engineering WHY behind the decision evolution. 
-Do not use huge text blocks. You MUST use bullet points and bold text to make it readable at a glance. Prioritize context-rich quality over quantity. Keep sentences very short and punchy.
 
-Return ONLY a valid JSON object with the following schema:
+Return ONLY a valid JSON object with EXACTLY the following schema:
 {
-    "decision_evolution": "Highly scannable explanation of the architectural evolution using bullet points..."
+    "verdict": "One short, bold sentence summarizing the shift (e.g. 'Shifted from PostgreSQL to DynamoDB due to scale.')",
+    "key_changes": [
+        {
+            "field": "Recommendation" | "Tradeoffs" | "Alternatives" | "Confidence",
+            "before": "Extremely brief summary of before state (3-5 words)",
+            "after": "Extremely brief summary of after state (3-5 words)",
+            "change_type": "major" | "minor" | "improved" | "unchanged"
+        }
+    ],
+    "reasoning": "A short, highly scannable explanation using bullet points."
 }
 """
 
@@ -23,7 +31,7 @@ def generate_explanation(state: ComparisonState) -> dict:
     diff_text = json.dumps(state["structural_diff"], indent=2)
     q = state["document_b"].get("question", "Unknown")
     
-    prompt = f"Question: {q}\n\nStructural Diff:\n{diff_text}\n\nExplain the architectural evolution between the baseline and the new decision. Rely heavily on bullet points and bold text."
+    prompt = f"Question: {q}\n\nStructural Diff:\n{diff_text}\n\nGenerate the structured architectural evolution."
     
     response = _client.chat.completions.create(
         model=_MODEL,
@@ -39,9 +47,13 @@ def generate_explanation(state: ComparisonState) -> dict:
     try:
         content = response.choices[0].message.content
         parsed = json.loads(content)
-        evolution = parsed.get("decision_evolution", "Evolution could not be parsed.")
+        evolution = parsed
     except Exception:
-        evolution = "Error parsing LLM output."
+        evolution = {
+            "verdict": "Error parsing LLM output.",
+            "key_changes": [],
+            "reasoning": "Could not parse the reasoning."
+        }
         
     return {
         "decision_evolution": evolution,

@@ -16,8 +16,8 @@ class ComparisonOutput(BaseModel):
     session_a: str
     session_b: str
     structural_diff: StructuralDiff
-    decision_evolution: str
-    impact_summary: str
+    decision_evolution: Dict[str, Any]
+    impact_summary: Dict[str, Any]
     created_at: str
 
 class CompareResponse(BaseModel):
@@ -41,3 +41,13 @@ class SuggestionItem(BaseModel):
 
 class SuggestionsResponse(BaseModel):
     suggestions: List[SuggestionItem]
+
+class SavedComparisonItem(BaseModel):
+    id: str
+    session_a: str
+    session_b: str
+    summary: str
+    created_at: str
+
+class SavedComparisonsResponse(BaseModel):
+    comparisons: List[SavedComparisonItem]

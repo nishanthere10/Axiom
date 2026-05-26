@@ -2,7 +2,8 @@ import uuid
 from fastapi import APIRouter, HTTPException
 from api.schemas.compare import (
     CompareRequest, CompareResponse, GetComparisonResponse,
-    SaveCompareRequest, SaveCompareResponse, SuggestionsResponse
+    SaveCompareRequest, SaveCompareResponse, SuggestionsResponse,
+    SavedComparisonsResponse
 )
 from services import suggestion_service, compare_service
 from agents.graph.comparison_graph import comparison_graph
@@ -49,6 +50,11 @@ def submit_comparison(body: CompareRequest):
         comparison_id=comparison_id,
         comparison=created
     )
+
+@router.get("/saved", response_model=SavedComparisonsResponse)
+def get_saved_comparisons():
+    comps = compare_service.get_saved_comparisons()
+    return SavedComparisonsResponse(comparisons=comps)
 
 @router.get("/{comparison_id}", response_model=GetComparisonResponse)
 def get_comparison(comparison_id: str):
