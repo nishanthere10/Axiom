@@ -35,7 +35,10 @@ def update_session_status(session_id: str, status: str) -> None:
 
 def save_document(session_id: str, question: str, state: dict) -> dict:
     """Save the final decision document to Supabase."""
+    from datetime import datetime
     confidence = state.get("confidence", {})
+    evidence = state.get("evidence", [])
+    
     payload = {
         "session_id": session_id,
         "question": question,
@@ -44,6 +47,9 @@ def save_document(session_id: str, question: str, state: dict) -> dict:
         "tradeoffs": state.get("tradeoffs", ""),
         "alternatives": state.get("alternatives", ""),
         "confidence": confidence,
+        "evidence": evidence,
+        "consensus": state.get("consensus", ""),
+        "evidence_generated_at": datetime.utcnow().isoformat() if evidence else None,
         "version": 1,
     }
     response = supabase.table("decision_documents").insert(payload).execute()

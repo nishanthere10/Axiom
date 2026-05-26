@@ -14,12 +14,24 @@ def generate_decision(state: ResearchState) -> dict:
     """
     question = state["question"]
     summary = state["summary"]
+    evidence = state.get("evidence", [])
+    
+    # Format evidence for the prompt
+    evidence_text = "\n\n".join(
+        f"[Source {i+1}]: {e['title']} - {e['claim']}" 
+        for i, e in enumerate(evidence)
+    )
 
-    prompt = f"""You are a distinguished Principal Software Engineer. Based on the technical question and analysis, generate a highly scannable, expert-level decision document. Do not use huge text blocks. Use bullet points and bold text to make it readable at a glance. Prioritize context-rich quality over quantity.
+    prompt = f"""You are a distinguished Principal Software Engineer. Based on the technical question, analysis, and the provided EVIDENCE, generate a highly scannable, expert-level decision document. 
+Do not use huge text blocks. Use bullet points and bold text to make it readable at a glance. Prioritize context-rich quality over quantity.
+CRITICAL: You MUST base your decision on the Evidence provided. You must cite your sources (e.g. "[Source 1]") when making claims.
 
 Question: {question}
 
 Analysis: {summary}
+
+Evidence:
+{evidence_text if evidence else "No external evidence provided. Rely on general knowledge."}
 
 Return a JSON object with exactly these keys. The value for each key MUST be a single Markdown string, NOT nested JSON objects or arrays:
 - "recommendation_context": A Markdown string containing a highly scannable recommendation. Use bullet points to highlight EXACTLY why this approach is best. Keep sentences very short and punchy. Include a brief code/config snippet if it helps clarity.

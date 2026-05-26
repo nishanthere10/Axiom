@@ -3,14 +3,17 @@ from services import research_service
 
 # Progress milestones per node (used when streaming the graph)
 _NODE_PROGRESS = {
-    "decompose_question": (10, 25),
-    "generate_decision": (25, 60),
-    "build_confidence": (60, 85),
-    "format_document": (85, 100),
+    "decompose_question": (5, 15),
+    "canonicalize_topic": (15, 20),
+    "generate_queries": (20, 25),
+    "collect_and_score_evidence": (25, 45),
+    "generate_decision": (45, 75),
+    "build_confidence": (75, 90),
+    "format_document": (90, 100),
 }
 
 
-def run_research_background_task(session_id: str, job_id: str, question: str) -> dict:
+def run_research_background_task(session_id: str, job_id: str, question: str, force_refresh: bool = False) -> dict:
     """
     Background task that runs the LangGraph decision pipeline natively via FastAPI.
 
@@ -31,7 +34,12 @@ def run_research_background_task(session_id: str, job_id: str, question: str) ->
             "recommendation": "", 
             "tradeoffs": "", 
             "alternatives": "", 
-            "confidence": {}, 
+            "confidence": {},
+            "canonical_slug": "",
+            "queries": [],
+            "evidence": [],
+            "consensus": "",
+            "force_refresh": force_refresh,
             "status": "starting"
         }
         

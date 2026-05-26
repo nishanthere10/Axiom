@@ -1,6 +1,9 @@
 from langgraph.graph import StateGraph, START, END
 from agents.state.research_state import ResearchState
 from agents.nodes.decompose import decompose_question
+from agents.nodes.canonicalize_topic import canonicalize_topic
+from agents.nodes.generate_queries import generate_queries
+from agents.nodes.collect_and_score_evidence import collect_and_score_evidence
 from agents.nodes.generate import generate_decision
 from agents.nodes.confidence import build_confidence
 from agents.nodes.format import format_document
@@ -10,20 +13,25 @@ def build_decision_graph():
     """
     Compiles the LangGraph decision pipeline.
 
-    Flow: START → decompose_question → generate_decision → build_confidence → format_document → END
-    No extra nodes. Linear execution only.
+    Flow: START → decompose_question → canonicalize_topic → generate_queries → collect_and_score_evidence → generate_decision → build_confidence → format_document → END
     """
     graph = StateGraph(ResearchState)
 
     # Register nodes
     graph.add_node("decompose_question", decompose_question)
+    graph.add_node("canonicalize_topic", canonicalize_topic)
+    graph.add_node("generate_queries", generate_queries)
+    graph.add_node("collect_and_score_evidence", collect_and_score_evidence)
     graph.add_node("generate_decision", generate_decision)
     graph.add_node("build_confidence", build_confidence)
     graph.add_node("format_document", format_document)
 
     # Wire edges — strict linear order
     graph.add_edge(START, "decompose_question")
-    graph.add_edge("decompose_question", "generate_decision")
+    graph.add_edge("decompose_question", "canonicalize_topic")
+    graph.add_edge("canonicalize_topic", "generate_queries")
+    graph.add_edge("generate_queries", "collect_and_score_evidence")
+    graph.add_edge("collect_and_score_evidence", "generate_decision")
     graph.add_edge("generate_decision", "build_confidence")
     graph.add_edge("build_confidence", "format_document")
     graph.add_edge("format_document", END)

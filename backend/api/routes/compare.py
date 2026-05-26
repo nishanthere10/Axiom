@@ -56,11 +56,20 @@ def get_saved_comparisons():
     comps = compare_service.get_saved_comparisons()
     return SavedComparisonsResponse(comparisons=comps)
 
+from services.cache_service import cache
+
 @router.get("/{comparison_id}", response_model=GetComparisonResponse)
 def get_comparison(comparison_id: str):
+    cache_key = f"comp_{comparison_id}"
+    cached_comp = cache.get(cache_key)
+    if cached_comp:
+        return GetComparisonResponse(comparison=cached_comp)
+
     comp = compare_service.get_comparison(comparison_id)
     if not comp:
         raise HTTPException(status_code=404, detail="Comparison not found.")
+        
+    cache.set(cache_key, comp)
     return GetComparisonResponse(comparison=comp)
 
 @router.post("/save", response_model=SaveCompareResponse)

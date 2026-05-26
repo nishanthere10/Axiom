@@ -28,6 +28,7 @@ async def submit_research(body: ResearchRequest, background_tasks: BackgroundTas
         session_id=session["id"],
         job_id=job["id"],
         question=body.question,
+        force_refresh=body.force_refresh,
     )
 
     return ResearchResponse(
@@ -54,16 +55,24 @@ async def get_job_status(job_id: str):
     )
 
 
+from services.cache_service import cache
+
 @router.get("/sessions/{session_id}", response_model=SessionDocumentResponse)
 async def get_session_document(session_id: str):
     """
     GET /research/sessions/{session_id}
-    Returns the completed decision document for the given session.
+    Returns the completed decision document for the given session, checking cache first.
     """
+    cache_key = f"doc_{session_id}"
+    cached_doc = cache.get(cache_key)
+    if cached_doc:
+        return SessionDocumentResponse(document=cached_doc)
+
     document = research_service.get_document_by_session(session_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found.")
 
+    cache.set(cache_key, document)
     return SessionDocumentResponse(document=document)
 
 

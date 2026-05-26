@@ -14,10 +14,14 @@ def build_confidence(state: ResearchState) -> dict:
     """
     recommendation = state["recommendation"]
     tradeoffs = state["tradeoffs"]
+    consensus = state.get("consensus", "Unknown")
 
     prompt = f"""You are an epistemically careful engineering analyst. 
-Evaluate the confidence of this technical recommendation based on the tradeoffs identified.
+Evaluate the confidence of this technical recommendation based on the tradeoffs identified and the external evidence consensus.
 The system must NEVER claim certainty. All scores should reflect genuine uncertainty.
+Strong consensus should increase confidence, while conflicting or weak consensus should lower it.
+
+Evidence Consensus: {consensus}
 
 Recommendation: {str(recommendation)[:1000]}
 
