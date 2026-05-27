@@ -4,8 +4,10 @@ from api.schemas.research import (
     ResearchResponse,
     JobStatusResponse,
     SessionDocumentResponse,
+    SessionHistoryResponse,
 )
 from services import research_service
+from services.cache_service import cache
 from workers.tasks import run_research_background_task
 
 router = APIRouter()
@@ -55,7 +57,6 @@ async def get_job_status(job_id: str):
     )
 
 
-from services.cache_service import cache
 
 @router.get("/sessions/{session_id}", response_model=SessionDocumentResponse)
 async def get_session_document(session_id: str):
@@ -76,7 +77,6 @@ async def get_session_document(session_id: str):
     return SessionDocumentResponse(document=document)
 
 
-from api.schemas.research import SessionHistoryResponse
 
 @router.get("/history", response_model=SessionHistoryResponse)
 async def get_session_history():

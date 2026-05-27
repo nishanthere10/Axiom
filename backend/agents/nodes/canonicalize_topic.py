@@ -2,6 +2,7 @@ from agents.state.research_state import ResearchState
 from groq import Groq
 from core.config import settings
 import json
+import hashlib
 
 _client = Groq(api_key=settings.GROQ_API_KEY)
 _MODEL = "llama-3.3-70b-versatile"
@@ -37,8 +38,8 @@ Return ONLY a JSON object with this exact schema:
         content = json.loads(response.choices[0].message.content)
         slug = content.get("slug", "unknown-topic").lower().replace(" ", "-")
     except Exception:
-        # Fallback to simple hash-like slug if LLM fails
-        slug = "fallback-" + str(hash(question))
+        # Fallback: use a deterministic md5 hash (NOT Python's hash() which is randomized per-process)
+        slug = "topic-" + hashlib.md5(question.encode()).hexdigest()[:10]
         
     return {
         "canonical_slug": slug,

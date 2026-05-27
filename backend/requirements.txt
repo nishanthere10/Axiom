@@ -14,3 +14,4 @@ python-multipart
 pinecone-client
 groq
 clerk-backend-api
+tavily-python

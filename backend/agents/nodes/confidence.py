@@ -35,24 +35,28 @@ Return a JSON object with exactly these keys and float values between 0.0 and 1.
 
 Return only valid JSON."""
 
-    response = _client.chat.completions.create(
-        model=_MODEL,
-        messages=[
-            {"role": "system", "content": "You are a calibrated uncertainty estimator. Return only valid JSON."},
-            {"role": "user", "content": prompt},
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.2,
-        max_tokens=300,
-    )
+    try:
+        response = _client.chat.completions.create(
+            model=_MODEL,
+            messages=[
+                {"role": "system", "content": "You are a calibrated uncertainty estimator. Return only valid JSON."},
+                {"role": "user", "content": prompt},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.2,
+            max_tokens=300,
+        )
+        confidence_raw = json.loads(response.choices[0].message.content)
+    except Exception as e:
+        print(f"Error in build_confidence: {e}")
+        confidence_raw = {}
 
-    confidence = json.loads(response.choices[0].message.content)
-
-    # Clamp all values to [0.0, 0.95] — system never claims certainty
-    clamped = {
-        k: max(0.0, min(float(v), 0.95))
-        for k, v in confidence.items()
-        if k in {"evidence_coverage", "source_quality", "contradiction_risk", "decision_confidence"}
-    }
+    valid_keys = {"evidence_coverage", "source_quality", "contradiction_risk", "decision_confidence"}
+    clamped = {}
+    for k in valid_keys:
+        try:
+            clamped[k] = max(0.0, min(float(confidence_raw.get(k, 0.5)), 0.95))
+        except (ValueError, TypeError):
+            clamped[k] = 0.5  # safe default if LLM returns non-numeric
 
     return {"confidence": clamped, "status": "evaluated"}

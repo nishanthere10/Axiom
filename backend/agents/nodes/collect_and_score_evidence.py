@@ -87,8 +87,8 @@ Return ONLY a JSON object with this exact schema:
         evidence = []
         consensus = "Error Processing Evidence"
         
-    # Save to cache
-    if slug:
+    # Save to cache ONLY on success — never cache an error state
+    if slug and evidence:
         set_cached_evidence(slug, {"evidence": evidence, "consensus": consensus})
         
     return {

@@ -40,19 +40,6 @@ Return a JSON object with exactly these keys. The value for each key MUST be a s
 
 Return only valid JSON. Ensure all strings correctly escape quotes and newlines so the JSON remains valid. DO NOT use nested arrays or objects for the values."""
 
-    response = _client.chat.completions.create(
-        model=_MODEL,
-        messages=[
-            {"role": "system", "content": "You are an elite Principal Engineer. You write context-rich, highly scannable technical docs. Rely heavily on bullet points and bold text for at-a-glance readability. Zero fluff. Return only valid JSON."},
-            {"role": "user", "content": prompt},
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.4,
-        max_tokens=6000,
-    )
-
-    content = json.loads(response.choices[0].message.content)
-    
     def enforce_string(val):
         if isinstance(val, list):
             return "\n".join(f"- {str(v)}" for v in val)
@@ -60,9 +47,25 @@ Return only valid JSON. Ensure all strings correctly escape quotes and newlines 
             return "\n".join(f"- **{k}**: {v}" for k, v in val.items())
         return str(val)
 
+    try:
+        response = _client.chat.completions.create(
+            model=_MODEL,
+            messages=[
+                {"role": "system", "content": "You are an elite Principal Engineer. You write context-rich, highly scannable technical docs. Rely heavily on bullet points and bold text for at-a-glance readability. Zero fluff. Return only valid JSON."},
+                {"role": "user", "content": prompt},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.4,
+            max_tokens=6000,
+        )
+        content = json.loads(response.choices[0].message.content)
+    except Exception as e:
+        print(f"Error in generate_decision: {e}")
+        content = {}
+
     return {
-        "recommendation": enforce_string(content.get("recommendation_context", "")),
-        "tradeoffs": enforce_string(content.get("tradeoffs", "")),
-        "alternatives": enforce_string(content.get("alternatives", "")),
+        "recommendation": enforce_string(content.get("recommendation_context", "Could not generate recommendation.")),
+        "tradeoffs": enforce_string(content.get("tradeoffs", "Could not generate tradeoffs.")),
+        "alternatives": enforce_string(content.get("alternatives", "Could not generate alternatives.")),
         "status": "generated",
     }

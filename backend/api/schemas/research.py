@@ -1,7 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
 from typing import Optional, Any, Dict
-
 
 class ResearchRequest(BaseModel):
     question: str = Field(..., min_length=10, max_length=1000)
