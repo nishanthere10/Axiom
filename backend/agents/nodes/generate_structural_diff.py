@@ -29,7 +29,9 @@ def generate_structural_diff(state: ComparisonState) -> dict:
         "recommendation": unified_diff(norm_a["recommendation"], norm_b["recommendation"], "Recommendation"),
         "tradeoffs": unified_diff(norm_a["tradeoffs"], norm_b["tradeoffs"], "Tradeoffs"),
         "alternatives": unified_diff(norm_a["alternatives"], norm_b["alternatives"], "Alternatives"),
-        "confidence": unified_diff(norm_a["confidence"], norm_b["confidence"], "Confidence")
+        "confidence": unified_diff(norm_a["confidence"], norm_b["confidence"], "Confidence"),
+        "evidence": unified_diff(norm_a["evidence"], norm_b["evidence"], "Evidence Sources"),
+        "consensus": unified_diff(norm_a["consensus"], norm_b["consensus"], "Industry Consensus")
     }
 
     return {

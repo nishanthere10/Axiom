@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { saveComparison } from "@/lib/compare";
 
-export default function SaveComparison({ comparisonId }: { comparisonId: string }) {
-  const [saved, setSaved] = useState(false);
+export default function SaveComparison({ comparisonId, initialSaved = false }: { comparisonId: string, initialSaved?: boolean }) {
+  const [saved, setSaved] = useState(initialSaved);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

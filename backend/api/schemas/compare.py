@@ -10,6 +10,8 @@ class StructuralDiff(BaseModel):
     tradeoffs: str
     alternatives: str
     confidence: str
+    evidence: Optional[str] = "No changes."
+    consensus: Optional[str] = "No changes."
 
 class ComparisonOutput(BaseModel):
     id: str

@@ -10,6 +10,7 @@ import KeyChangesTable from "@/components/compare/KeyChangesTable";
 import DecisionEvolution from "@/components/compare/DecisionEvolution";
 import ImpactSummary from "@/components/compare/ImpactSummary";
 import SaveComparison from "@/components/compare/SaveComparison";
+import StructuralDiff from "@/components/compare/StructuralDiff";
 
 function CompareContent() {
   const searchParams = useSearchParams();
@@ -76,9 +77,10 @@ function CompareContent() {
             <KeyChangesTable changes={comparison.decision_evolution?.key_changes} />
             <ImpactSummary impact={comparison.impact_summary} />
             <DecisionEvolution evolution={comparison.decision_evolution} />
+            <StructuralDiff diff={comparison.structural_diff} />
             
             <div className="flex justify-end pt-4 border-t border-border">
-              <SaveComparison comparisonId={comparison.id} />
+              <SaveComparison comparisonId={comparison.id} initialSaved={!!idParam} />
             </div>
           </div>
           

@@ -14,13 +14,13 @@ Return ONLY a valid JSON object with EXACTLY the following schema:
     "verdict": "One short, bold sentence summarizing the shift (e.g. 'Shifted from PostgreSQL to DynamoDB due to scale.')",
     "key_changes": [
         {
-            "field": "Recommendation" | "Tradeoffs" | "Alternatives" | "Confidence",
+            "field": "Recommendation" | "Tradeoffs" | "Alternatives" | "Confidence" | "Evidence Sources" | "Industry Consensus",
             "before": "Extremely brief summary of before state (3-5 words)",
             "after": "Extremely brief summary of after state (3-5 words)",
             "change_type": "major" | "minor" | "improved" | "unchanged"
         }
     ],
-    "reasoning": "A short, highly scannable explanation using bullet points."
+    "reasoning": "A short, highly scannable explanation using bullet points. If new Evidence Sources or Consensus were introduced, explicitly explain how that new external data influenced the decision."
 }
 """
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getRecentSessions, getSuggestions, SuggestionItem } from "@/lib/compare";
+import { getRecentSessions } from "@/lib/compare";
 
 interface Props {
   onCompare: (sessionA: string, sessionB: string) => void;
@@ -12,9 +12,7 @@ export default function SessionSelector({ onCompare, disabled }: Props) {
   const [sessionA, setSessionA] = useState("");
   const [sessionB, setSessionB] = useState("");
   const [recentSessions, setRecentSessions] = useState<{ id: string; question: string; created_at: string }[]>([]);
-  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
-  const [loadingA, setLoadingA] = useState(true);
-  const [loadingB, setLoadingB] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
@@ -24,31 +22,11 @@ export default function SessionSelector({ onCompare, disabled }: Props) {
       } catch (err) {
         console.error(err);
       } finally {
-        setLoadingA(false);
+        setLoading(false);
       }
     }
     load();
   }, []);
-
-  useEffect(() => {
-    if (!sessionA) {
-      setSuggestions([]);
-      return;
-    }
-    
-    async function loadSuggestions() {
-      setLoadingB(true);
-      try {
-        const data = await getSuggestions(sessionA);
-        setSuggestions(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoadingB(false);
-      }
-    }
-    loadSuggestions();
-  }, [sessionA]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +34,9 @@ export default function SessionSelector({ onCompare, disabled }: Props) {
       onCompare(sessionA, sessionB);
     }
   };
+
+  // Filter out Session A from the options of Session B
+  const sessionBOptions = recentSessions.filter(s => s.id !== sessionA);
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-8">
@@ -72,7 +53,7 @@ export default function SessionSelector({ onCompare, disabled }: Props) {
             <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Session A (Baseline)
             </label>
-            {loadingA ? (
+            {loading ? (
               <p className="text-sm text-muted-foreground py-3">Loading recent sessions...</p>
             ) : (
               <select
@@ -99,26 +80,22 @@ export default function SessionSelector({ onCompare, disabled }: Props) {
             <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Session B (Evolution)
             </label>
-            {loadingB ? (
-              <p className="text-sm text-muted-foreground py-3 animate-pulse">Finding relevant suggestions...</p>
-            ) : (
-              <select
-                required
-                value={sessionB}
-                onChange={(e) => setSessionB(e.target.value)}
-                className="w-full bg-transparent border-b-2 border-border py-3 px-0 focus:outline-none focus:border-primary transition-colors text-foreground text-sm cursor-pointer"
-                disabled={disabled || !sessionA}
-              >
-                <option value="" disabled className="bg-background">
-                  {sessionA ? "Select a suggested decision" : "Select Session A first"}
+            <select
+              required
+              value={sessionB}
+              onChange={(e) => setSessionB(e.target.value)}
+              className="w-full bg-transparent border-b-2 border-border py-3 px-0 focus:outline-none focus:border-primary transition-colors text-foreground text-sm cursor-pointer"
+              disabled={disabled || !sessionA}
+            >
+              <option value="" disabled className="bg-background">
+                {sessionA ? "Select a second decision to compare" : "Select Session A first"}
+              </option>
+              {sessionBOptions.map(s => (
+                <option key={s.id} value={s.id} className="bg-background">
+                  {new Date(s.created_at).toLocaleDateString()} — {s.question}
                 </option>
-                {suggestions.map(s => (
-                  <option key={s.session_id} value={s.session_id} className="bg-background">
-                    [Match: {(s.score * 100).toFixed(0)}%] {new Date(s.created_at).toLocaleDateString()} — {s.question}
-                  </option>
-                ))}
-              </select>
-            )}
+              ))}
+            </select>
           </div>
         </div>
 

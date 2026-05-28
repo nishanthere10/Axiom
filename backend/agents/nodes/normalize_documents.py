@@ -17,11 +17,19 @@ def normalize_documents(state: ComparisonState) -> dict:
             f"Contradiction Risk: {conf.get('contradiction_risk', 0)}\n"
             f"Decision Confidence: {conf.get('decision_confidence', 0)}"
         )
+        
+        evidence_list = doc.get("evidence") or []
+        evidence_str = "\n".join([f"- [{e.get('url')}] {e.get('title')} (Trust: {e.get('trust_score', 0)})" for e in evidence_list])
+        if not evidence_str:
+            evidence_str = "No evidence sources."
+            
         return {
             "recommendation": doc.get("recommendation_context", ""),
             "tradeoffs": doc.get("tradeoffs", ""),
             "alternatives": doc.get("alternatives", ""),
-            "confidence": conf_str
+            "confidence": conf_str,
+            "consensus": doc.get("consensus", "No consensus."),
+            "evidence": evidence_str
         }
 
     return {

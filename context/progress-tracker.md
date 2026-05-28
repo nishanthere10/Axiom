@@ -13,15 +13,17 @@
 - Setup FastAPI backend.
 - F-001: End-to-End Generation (LangGraph pipeline, polling UI, DB schemas).
 - F-002: Historical Decision Comparison (Synchronous API, diffing, deterministic suggestions).
+- F-003: Evidence Grounded Research (Tavily integration, caching, Evidence UI).
+- F-004: Evidence-Aware Comparisons (Structural diffs for evidence, consensus tracking, Compare UI fixes).
 
 ## In Progress
 
-- Awaiting next feature spec.
+- Planning phase for Visual Decision Intelligence.
 
 ## Next Up
 
-- Unassigned / TBD.
+- Feature: Visual Decision Intelligence (`feat-04-generate-visual.md`) - Generating architecture diagrams, decision trees, and summary cards.
 
 ## Open Questions
 
-- *None at the moment. (Architectural decision made: Shifted from Celery/Redis to native FastAPI BackgroundTasks/Sync for simpler V1 execution).*
+- *Do we agree on the proposed optimizations for the Visual Decision Intelligence spec (single LLM call, parallel execution, auto-layout)?*

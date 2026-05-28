@@ -10,6 +10,8 @@ export interface StructuralDiff {
   tradeoffs: string;
   alternatives: string;
   confidence: string;
+  evidence?: string;
+  consensus?: string;
 }
 
 export interface KeyChange {
