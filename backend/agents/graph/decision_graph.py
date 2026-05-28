@@ -6,14 +6,13 @@ from agents.nodes.generate_queries import generate_queries
 from agents.nodes.collect_and_score_evidence import collect_and_score_evidence
 from agents.nodes.generate import generate_decision
 from agents.nodes.confidence import build_confidence
+from agents.nodes.generate_visual_spec import generate_visual_spec
+from agents.nodes.validate_visual_spec import validate_visual_spec
 from agents.nodes.format import format_document
-
 
 def build_decision_graph():
     """
     Compiles the LangGraph decision pipeline.
-
-    Flow: START → decompose_question → canonicalize_topic → generate_queries → collect_and_score_evidence → generate_decision → build_confidence → format_document → END
     """
     graph = StateGraph(ResearchState)
 
@@ -24,6 +23,8 @@ def build_decision_graph():
     graph.add_node("collect_and_score_evidence", collect_and_score_evidence)
     graph.add_node("generate_decision", generate_decision)
     graph.add_node("build_confidence", build_confidence)
+    graph.add_node("generate_visual_spec", generate_visual_spec)
+    graph.add_node("validate_visual_spec", validate_visual_spec)
     graph.add_node("format_document", format_document)
 
     # Wire edges — strict linear order
@@ -33,11 +34,12 @@ def build_decision_graph():
     graph.add_edge("generate_queries", "collect_and_score_evidence")
     graph.add_edge("collect_and_score_evidence", "generate_decision")
     graph.add_edge("generate_decision", "build_confidence")
-    graph.add_edge("build_confidence", "format_document")
+    graph.add_edge("build_confidence", "generate_visual_spec")
+    graph.add_edge("generate_visual_spec", "validate_visual_spec")
+    graph.add_edge("validate_visual_spec", "format_document")
     graph.add_edge("format_document", END)
 
     return graph.compile()
-
 
 # Compiled graph instance — imported by FastAPI background tasks
 decision_graph = build_decision_graph()

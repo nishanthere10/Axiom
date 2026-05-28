@@ -7,9 +7,11 @@ _NODE_PROGRESS = {
     "canonicalize_topic": (15, 20),
     "generate_queries": (20, 25),
     "collect_and_score_evidence": (25, 45),
-    "generate_decision": (45, 75),
-    "build_confidence": (75, 90),
-    "format_document": (90, 100),
+    "generate_decision": (45, 70),
+    "build_confidence": (70, 80),
+    "generate_visual_spec": (80, 88),
+    "validate_visual_spec": (88, 92),
+    "format_document": (92, 100),
 }
 
 
@@ -40,6 +42,8 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
             "evidence": [],
             "consensus": "",
             "force_refresh": force_refresh,
+            "visual_specs": [],
+            "visuals": [],
             "status": "starting"
         }
         

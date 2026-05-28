@@ -44,6 +44,8 @@ function Section({ title, content }: { title: string; content: string }) {
 import EvidenceCard from "./EvidenceCard";
 import EvidenceConsensus from "./EvidenceConsensus";
 import RefreshEvidence from "./RefreshEvidence";
+import VisualRenderer from "../visuals/VisualRenderer";
+import RegenerateVisualButton from "../visuals/RegenerateVisualButton";
 
 export default function DecisionDocument({ sessionId }: Props) {
   const [doc, setDoc] = useState<DecisionDocument | null>(null);
@@ -106,6 +108,25 @@ export default function DecisionDocument({ sessionId }: Props) {
           <EvidenceCard evidence={doc.evidence} />
           <EvidenceConsensus consensus={doc.consensus} />
         </>
+      )}
+
+      {/* Visuals Section */}
+      {doc.visuals && doc.visuals.length > 0 && (
+        <div className="space-y-4 border-t border-border/50 pt-6 mt-6">
+          <VisualRenderer visuals={doc.visuals} />
+          <RegenerateVisualButton 
+            sessionId={sessionId} 
+            onRegenerated={(newVisuals) => setDoc({ ...doc, visuals: newVisuals, visuals_generated_at: new Date().toISOString() })}
+          />
+        </div>
+      )}
+      {(!doc.visuals || doc.visuals.length === 0) && (
+        <div className="pt-2">
+           <RegenerateVisualButton 
+            sessionId={sessionId} 
+            onRegenerated={(newVisuals) => setDoc({ ...doc, visuals: newVisuals, visuals_generated_at: new Date().toISOString() })}
+          />
+        </div>
       )}
 
       {/* Tradeoffs */}

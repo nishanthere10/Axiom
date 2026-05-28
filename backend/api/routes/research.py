@@ -5,6 +5,8 @@ from api.schemas.research import (
     JobStatusResponse,
     SessionDocumentResponse,
     SessionHistoryResponse,
+    RegenerateVisualsRequest,
+    RegenerateVisualsResponse,
 )
 from services import research_service
 from services.cache_service import cache
@@ -86,3 +88,50 @@ def get_session_history():
     """
     sessions = research_service.get_recent_sessions(limit=20)
     return SessionHistoryResponse(sessions=sessions)
+
+@router.post("/regenerate-visuals", response_model=RegenerateVisualsResponse)
+def regenerate_visuals(body: RegenerateVisualsRequest):
+    """
+    POST /research/regenerate-visuals
+    Regenerates only the visuals for an existing session and updates the database.
+    """
+    document = research_service.get_document_by_session(body.session_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Session document not found.")
+
+    from agents.graph.decision_graph import decision_graph
+
+    # Reconstruct state
+    initial_state = {
+        "question": document.get("question", ""),
+        "decision": document.get("recommendation_context", ""),
+        "evidence": document.get("evidence", []),
+        "visual_specs": [],
+        "visuals": []
+    }
+
+    # Since we only want to run visual generation, we can invoke the nodes directly
+    # instead of the full graph to save time and prevent overwriting other fields.
+    from agents.nodes.generate_visual_spec import generate_visual_spec
+    from agents.nodes.validate_visual_spec import validate_visual_spec
+
+    state_after_gen = generate_visual_spec(initial_state)
+    initial_state.update(state_after_gen)
+    
+    state_after_val = validate_visual_spec(initial_state)
+    
+    visuals = state_after_val.get("visuals", [])
+    
+    # Save back to database
+    from services.db import supabase
+    from datetime import datetime
+    
+    supabase.table("decision_documents").update({
+        "visuals": visuals,
+        "visuals_generated_at": datetime.utcnow().isoformat()
+    }).eq("session_id", body.session_id).execute()
+    
+    # Clear cache
+    cache.delete(f"doc_{body.session_id}")
+    
+    return RegenerateVisualsResponse(visuals=visuals)

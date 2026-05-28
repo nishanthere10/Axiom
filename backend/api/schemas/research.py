@@ -18,6 +18,8 @@ class DecisionDocument(BaseModel):
     evidence: Optional[Any] = []
     consensus: Optional[str] = ""
     evidence_generated_at: Optional[str] = None
+    visuals: Optional[Any] = []
+    visuals_generated_at: Optional[str] = None
     created_at: str
 
 
@@ -43,3 +45,9 @@ class SessionHistoryItem(BaseModel):
 
 class SessionHistoryResponse(BaseModel):
     sessions: list[SessionHistoryItem]
+
+class RegenerateVisualsRequest(BaseModel):
+    session_id: str
+
+class RegenerateVisualsResponse(BaseModel):
+    visuals: list[Any]

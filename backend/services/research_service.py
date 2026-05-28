@@ -38,6 +38,7 @@ def save_document(session_id: str, question: str, state: dict) -> dict:
     from datetime import datetime
     confidence = state.get("confidence", {})
     evidence = state.get("evidence", [])
+    visuals = state.get("visuals", [])
     
     payload = {
         "session_id": session_id,
@@ -49,6 +50,7 @@ def save_document(session_id: str, question: str, state: dict) -> dict:
         "confidence": confidence,
         "evidence": evidence,
         "consensus": state.get("consensus", ""),
+        "visuals": visuals,
         "evidence_generated_at": datetime.utcnow().isoformat() if evidence else None,
         "version": 1,
     }

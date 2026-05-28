@@ -14,5 +14,7 @@ class ResearchState(TypedDict):
     evidence: list[dict]
     consensus: str
     force_refresh: bool
+    visual_specs: list[dict]
+    visuals: list[dict]
     
     status: str

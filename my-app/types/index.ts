@@ -23,6 +23,8 @@ export interface DecisionDocument {
   evidence?: Evidence[];
   consensus?: string;
   evidence_generated_at?: string;
+  visuals?: any[];
+  visuals_generated_at?: string;
   version: number;
   created_at: string;
 }
