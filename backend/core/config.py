@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     PINECONE_API_KEY: str = ""
     PINECONE_INDEX_NAME: str = "atlas-research-v1"
+    TAVILY_API_KEY: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

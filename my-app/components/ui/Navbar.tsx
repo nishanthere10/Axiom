@@ -16,6 +16,12 @@ export default function Navbar() {
               Research
             </Link>
             <Link
+              href="/research-documents"
+              className="text-sm font-medium transition-colors hover:text-foreground/80 text-foreground/60"
+            >
+              Saved Research
+            </Link>
+            <Link
               href="/compare"
               className="text-sm font-medium transition-colors hover:text-foreground/80 text-foreground/60"
             >

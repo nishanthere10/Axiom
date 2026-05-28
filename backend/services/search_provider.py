@@ -1,27 +1,38 @@
 import os
+import concurrent.futures
 from tavily import TavilyClient
+from core.config import settings
 
 def search_tavily(queries: list[str]) -> list[dict]:
     """
-    Executes search queries using Tavily and returns a list of results.
+    Executes search queries using Tavily concurrently and returns a list of unique results.
     Each result contains 'title', 'url', and 'raw_content' (if available).
     """
-    api_key = os.getenv("TAVILY_API_KEY")
+    api_key = settings.TAVILY_API_KEY
     if not api_key:
         print("WARNING: TAVILY_API_KEY not set. Returning empty results.")
         return []
         
     client = TavilyClient(api_key=api_key)
     
+    def fetch_query(q):
+        try:
+            return client.search(q, max_results=3, include_raw_content=True)
+        except Exception as e:
+            print(f"Error executing Tavily search for query '{q}': {e}")
+            return {"results": []}
+
     all_results = []
     seen_urls = set()
-    
-    for query in queries:
-        try:
-            # We use basic search but request raw content.
-            # Max 3 results per query to avoid overwhelming the LLM and respect the "top 5" rule.
-            response = client.search(query, max_results=3, include_raw_content=True)
-            
+
+    # Limit to top 3 queries to avoid rate limits and save time
+    top_queries = queries[:3]
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        futures = [executor.submit(fetch_query, q) for q in top_queries]
+        
+        for future in concurrent.futures.as_completed(futures):
+            response = future.result()
             for result in response.get("results", []):
                 url = result.get("url")
                 if url and url not in seen_urls:
@@ -34,7 +45,5 @@ def search_tavily(queries: list[str]) -> list[dict]:
                     
                     if len(all_results) >= 5:
                         return all_results
-        except Exception as e:
-            print(f"Error executing Tavily search for query '{query}': {e}")
-            
+                        
     return all_results[:5]

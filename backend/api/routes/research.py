@@ -14,7 +14,7 @@ router = APIRouter()
 
 
 @router.post("", response_model=ResearchResponse, status_code=202)
-async def submit_research(body: ResearchRequest, background_tasks: BackgroundTasks):
+def submit_research(body: ResearchRequest, background_tasks: BackgroundTasks):
     """
     POST /research
     Accepts a technical question, creates a session and job in Supabase,
@@ -41,7 +41,7 @@ async def submit_research(body: ResearchRequest, background_tasks: BackgroundTas
 
 
 @router.get("/jobs/{job_id}", response_model=JobStatusResponse)
-async def get_job_status(job_id: str):
+def get_job_status(job_id: str):
     """
     GET /research/jobs/{job_id}
     Returns the current status, progress (0-100), and step of a background job.
@@ -59,7 +59,7 @@ async def get_job_status(job_id: str):
 
 
 @router.get("/sessions/{session_id}", response_model=SessionDocumentResponse)
-async def get_session_document(session_id: str):
+def get_session_document(session_id: str):
     """
     GET /research/sessions/{session_id}
     Returns the completed decision document for the given session, checking cache first.
@@ -79,7 +79,7 @@ async def get_session_document(session_id: str):
 
 
 @router.get("/history", response_model=SessionHistoryResponse)
-async def get_session_history():
+def get_session_history():
     """
     GET /research/history
     Returns a list of recent completed sessions for the user to select from.
