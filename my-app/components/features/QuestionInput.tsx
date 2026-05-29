@@ -65,7 +65,7 @@ export default function QuestionInput({ onSubmitted }: Props) {
             rows={5}
             placeholder="e.g. Should I use PostgreSQL or MongoDB for a high-write event log system?"
             disabled={isSubmitting}
-            className="w-full rounded-md bg-card border border-border text-foreground placeholder:text-muted-foreground text-sm p-4 resize-none focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 transition-colors"
+            className="w-full rounded-md bg-surface border border-border text-foreground placeholder:text-muted-foreground text-sm p-4 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:opacity-50 transition-colors"
           />
           <span className="absolute bottom-3 right-3 text-xs text-muted-foreground tabular-nums">
             {questionValue?.length ?? 0}/1000
@@ -88,7 +88,7 @@ export default function QuestionInput({ onSubmitted }: Props) {
           id="submit-research-btn"
           type="submit"
           disabled={isSubmitting}
-          className="w-full py-2.5 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+          className="w-full py-2 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 focus:ring-offset-background disabled:opacity-50 transition-all duration-200"
         >
           {isSubmitting ? "Submitting…" : "Generate Decision"}
         </button>

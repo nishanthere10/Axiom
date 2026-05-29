@@ -13,6 +13,9 @@ import SaveComparison from "@/components/compare/SaveComparison";
 import StructuralDiff from "@/components/compare/StructuralDiff";
 
 import VisualRenderer from "@/components/visuals/VisualRenderer";
+import LeftSidebar from "@/components/ui/LeftSidebar";
+import CenterCanvas from "@/components/ui/CenterCanvas";
+import RightPanel from "@/components/ui/RightPanel";
 
 function CompareContent() {
   const searchParams = useSearchParams();
@@ -49,61 +52,79 @@ function CompareContent() {
   };
 
   return (
-    <main className="min-h-screen bg-background p-6 md:p-12 lg:p-24 selection:bg-primary/30">
-      {!comparing && !comparison && (
-        <>
-          <SessionSelector onCompare={handleCompare} disabled={comparing} />
-          {error && <p className="text-destructive text-sm text-center mt-4">{error}</p>}
-        </>
-      )}
-
-      {comparing && !comparison && (
-        <div className="flex items-center justify-center min-h-[40vh]">
-          <ComparisonProgress isComplete={false} />
-        </div>
-      )}
-
-      {comparison && (
-        <div className="w-full max-w-4xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-          <div className="border-b border-border pb-4">
-            <h1 className="text-2xl font-bold">Decision Comparison</h1>
-            <p className="text-sm text-muted-foreground font-mono mt-2">
-              A: {comparison.session_a} <br />
-              B: {comparison.session_b}
-            </p>
+    <div className="flex h-full w-full bg-background">
+      <LeftSidebar />
+      <CenterCanvas>
+        {!comparing && !comparison && (
+          <div className="min-h-[50vh] flex flex-col justify-center">
+            <SessionSelector onCompare={handleCompare} disabled={comparing} />
+            {error && <p className="text-destructive text-sm text-center mt-4">{error}</p>}
           </div>
+        )}
 
-          <VerdictBanner verdict={comparison.decision_evolution?.verdict} />
+        {comparing && !comparison && (
+          <div className="flex items-center justify-center min-h-[40vh]">
+            <ComparisonProgress isComplete={false} />
+          </div>
+        )}
 
-          {comparison.visuals && comparison.visuals.length > 0 && (
-            <div className="pt-4">
-              <h2 className="text-xl font-bold mb-6">Visual Comparison</h2>
-              <VisualRenderer visuals={comparison.visuals} />
+        {comparison && (
+          <div className="w-full space-y-12 animate-in fade-in duration-300">
+            <div className="border-b border-border pb-4">
+              <h1 className="text-2xl font-bold">Decision Comparison</h1>
+              <p className="text-sm text-muted-foreground font-mono mt-2">
+                A: {comparison.session_a} <br />
+                B: {comparison.session_b}
+              </p>
             </div>
-          )}
 
-          <div className="space-y-12">
-            <KeyChangesTable changes={comparison.decision_evolution?.key_changes} />
-            <ImpactSummary impact={comparison.impact_summary} />
-            <DecisionEvolution evolution={comparison.decision_evolution} />
-            <StructuralDiff diff={comparison.structural_diff} />
+            <VerdictBanner verdict={comparison.decision_evolution?.verdict} />
+
+            {comparison.visuals && comparison.visuals.length > 0 && (
+              <div className="pt-4 border-t border-border/50">
+                <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-4">Visual Comparison</h2>
+                <VisualRenderer visuals={comparison.visuals} />
+              </div>
+            )}
+
+            <div className="space-y-12">
+              <KeyChangesTable changes={comparison.decision_evolution?.key_changes} />
+              <DecisionEvolution evolution={comparison.decision_evolution} />
+              <StructuralDiff diff={comparison.structural_diff} />
+            </div>
             
-            <div className="flex justify-end pt-4 border-t border-border">
+            <div className="pt-12 border-t border-border flex justify-center">
+               <button 
+                  onClick={() => setComparison(null)}
+                  className="text-xs text-muted-foreground uppercase tracking-widest hover:text-foreground transition-colors"
+               >
+                 Start New Comparison
+               </button>
+            </div>
+          </div>
+        )}
+      </CenterCanvas>
+
+      <RightPanel title="Impact & Actions">
+        {comparison && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+            <ImpactSummary impact={comparison.impact_summary} />
+            
+            <div className="pt-4 border-t border-border">
               <SaveComparison comparisonId={comparison.id} initialSaved={!!idParam} />
             </div>
           </div>
-          
-          <div className="pt-12 border-t border-border flex justify-center">
-             <button 
-                onClick={() => setComparison(null)}
-                className="text-xs text-muted-foreground uppercase tracking-widest hover:text-foreground transition-colors"
-             >
-               Start New Comparison
-             </button>
+        )}
+        {!comparison && (
+          <div className="flex flex-col items-center justify-center h-[50vh] text-center space-y-2 opacity-50">
+            <p className="text-sm text-muted-foreground font-medium">Awaiting Comparison</p>
+            <p className="text-xs text-muted-foreground max-w-[200px]">
+              Impact summaries will appear here.
+            </p>
           </div>
-        </div>
-      )}
-    </main>
+        )}
+      </RightPanel>
+    </div>
   );
 }
 
@@ -111,7 +132,7 @@ import { Suspense } from "react";
 
 export default function ComparePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-background p-6 flex justify-center text-muted-foreground text-sm tracking-widest uppercase animate-pulse">Loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground text-sm tracking-widest uppercase animate-pulse">Loading...</div>}>
       <CompareContent />
     </Suspense>
   );

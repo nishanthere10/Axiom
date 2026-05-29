@@ -1,14 +1,12 @@
-"use client";
+import ReactMarkdown from "react-markdown";
+import type { DecisionDocument as DecisionDocumentType } from "@/types";
+import EvidenceCard from "./EvidenceCard";
+import EvidenceConsensus from "./EvidenceConsensus";
+import RefreshEvidence from "./RefreshEvidence";
+import VisualRenderer from "../visuals/VisualRenderer";
+import RegenerateVisualButton from "../visuals/RegenerateVisualButton";
 
-import { useEffect, useState } from "react";
-import { getSessionDocument } from "@/lib/api";
-import type { DecisionDocument } from "@/types";
-
-interface Props {
-  sessionId: string;
-}
-
-function ConfidenceBar({ label, value }: { label: string; value: number }) {
+export function ConfidenceBar({ label, value }: { label: string; value: number }) {
   const pct = Math.round(value * 100);
   return (
     <div className="space-y-1">
@@ -18,15 +16,13 @@ function ConfidenceBar({ label, value }: { label: string; value: number }) {
       </div>
       <div className="h-1 bg-secondary rounded-full overflow-hidden">
         <div
-          className="h-full bg-primary rounded-full transition-all duration-700"
+          className="h-full bg-primary rounded-full transition-all duration-300 ease-out"
           style={{ width: `${pct}%` }}
         />
       </div>
     </div>
   );
 }
-
-import ReactMarkdown from "react-markdown";
 
 function Section({ title, content }: { title: string; content: string }) {
   return (
@@ -41,51 +37,15 @@ function Section({ title, content }: { title: string; content: string }) {
   );
 }
 
-import EvidenceCard from "./EvidenceCard";
-import EvidenceConsensus from "./EvidenceConsensus";
-import RefreshEvidence from "./RefreshEvidence";
-import VisualRenderer from "../visuals/VisualRenderer";
-import RegenerateVisualButton from "../visuals/RegenerateVisualButton";
+interface Props {
+  doc: DecisionDocumentType;
+  sessionId: string;
+  setDoc: (doc: DecisionDocumentType) => void;
+}
 
-export default function DecisionDocument({ sessionId }: Props) {
-  const [doc, setDoc] = useState<DecisionDocument | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchDoc = async (id: string) => {
-    try {
-      const data = await getSessionDocument(id);
-      setDoc(data.document);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load document.");
-    }
-  };
-
-  useEffect(() => {
-    fetchDoc(sessionId);
-  }, [sessionId]);
-
-  const handleRefresh = (newSessionId: string) => {
-    fetchDoc(newSessionId);
-  };
-
-  if (error) {
-    return (
-      <p className="text-sm text-destructive text-center" role="alert">
-        {error}
-      </p>
-    );
-  }
-
-  if (!doc) {
-    return (
-      <p className="text-sm text-muted-foreground text-center" aria-live="polite">
-        Loading document…
-      </p>
-    );
-  }
-
+export default function DecisionDocument({ doc, sessionId, setDoc }: Props) {
   return (
-    <div id="decision-document" className="w-full max-w-2xl mx-auto space-y-8">
+    <div id="decision-document" className="w-full space-y-8 animate-in fade-in duration-300">
       {/* Header */}
       <div className="border-b border-border pb-4 space-y-1 flex justify-between items-start">
         <div>
@@ -101,14 +61,6 @@ export default function DecisionDocument({ sessionId }: Props) {
 
       {/* Recommendation */}
       <Section title="Recommendation" content={doc.recommendation_context} />
-
-      {/* Evidence Section */}
-      {doc.evidence && doc.evidence.length > 0 && (
-        <>
-          <EvidenceCard evidence={doc.evidence} />
-          <EvidenceConsensus consensus={doc.consensus} />
-        </>
-      )}
 
       {/* Visuals Section */}
       {doc.visuals && doc.visuals.length > 0 && (
@@ -134,7 +86,13 @@ export default function DecisionDocument({ sessionId }: Props) {
 
       {/* Alternatives */}
       <Section title="Alternatives" content={doc.alternatives} />
+    </div>
+  );
+}
 
+export function AuxiliaryDocumentData({ doc, sessionId, onRefresh }: { doc: DecisionDocumentType, sessionId: string, onRefresh: (id: string) => void }) {
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
       {/* Confidence */}
       <div className="space-y-3 rounded-md border border-border bg-card p-4">
         <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -146,12 +104,21 @@ export default function DecisionDocument({ sessionId }: Props) {
         <ConfidenceBar label="Decision Confidence" value={doc.confidence.decision_confidence} />
       </div>
 
-      <RefreshEvidence question={doc.question} onRefresh={handleRefresh} />
+      {/* Evidence Section */}
+      {doc.evidence && doc.evidence.length > 0 && (
+        <div className="space-y-6">
+          <EvidenceCard evidence={doc.evidence} />
+          <EvidenceConsensus consensus={doc.consensus} />
+        </div>
+      )}
+
+      <RefreshEvidence question={doc.question} onRefresh={onRefresh} />
 
       {/* Footer */}
-      <p className="text-xs text-muted-foreground text-right">
+      <p className="text-xs text-muted-foreground">
         Generated at {new Date(doc.created_at).toLocaleString()}
-        {doc.evidence_generated_at && ` (Evidence retrieved at ${new Date(doc.evidence_generated_at).toLocaleString()})`}
+        {doc.evidence_generated_at && <br />}
+        {doc.evidence_generated_at && `(Evidence: ${new Date(doc.evidence_generated_at).toLocaleString()})`}
       </p>
     </div>
   );

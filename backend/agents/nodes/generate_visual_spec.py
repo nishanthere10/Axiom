@@ -45,8 +45,9 @@ def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
          VALID:   A ---|label text| B
          INVALID: A -->|label text|> B   (DO NOT add > after |)
          INVALID: A -->|label text|-> B  (DO NOT add -> after |)
-       - Node definitions: A[Label Text] or A{{Label Text}} or A(Label Text)
-       - Do NOT use special characters like <, >, &, or quotes inside node labels.
+       - Node definitions: A["Label Text"] or A{{"Label Text"}} or A("Label Text")
+       - CRITICAL MERMAID SYNTAX: Never use nested shape definitions like NodeID[A(Label)]. Use standard, flat labels.
+       - If a label contains spaces or special characters, you MUST enclose it in double quotes: NodeID["Label Text"].
        - Do NOT wrap in markdown code blocks.
        - Example:
          graph TD

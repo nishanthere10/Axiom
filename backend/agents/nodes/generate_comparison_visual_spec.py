@@ -37,8 +37,9 @@ def generate_comparison_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
          VALID:   A ---|label text| B
          INVALID: A -->|label text|> B   (DO NOT add > after |)
          INVALID: A -->|label text|-> B  (DO NOT add -> after |)
-       - Node definitions: A[Label Text] or A{{Label Text}} or A(Label Text)
-       - Do NOT use special characters like <, >, &, or quotes inside node labels.
+       - Node definitions: A["Label Text"] or A{{"Label Text"}} or A("Label Text")
+       - CRITICAL MERMAID SYNTAX: Never use nested shape definitions like NodeID[A(Label)]. Use standard, flat labels.
+       - If a label contains spaces or special characters, you MUST enclose it in double quotes: NodeID["Label Text"].
        - Do NOT wrap in markdown code blocks.
     5. For Decision Trees: Map out the conditional logic ("If condition X, use Option A. If condition Y, use Option B."). Include at least 4 nodes.
     6. For Summary Cards: Summarize the final verdict, which option wins on which metric, and the core tradeoff.
