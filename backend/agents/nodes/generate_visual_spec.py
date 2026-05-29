@@ -36,7 +36,25 @@ def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
     2. Do NOT generate more than 3 visuals.
     3. Do NOT generate duplicate visual types.
     4. For Decision Trees: Map out the conditional logic or recommendations. Include at least 4 nodes.
-    5. For Architecture Diagrams: Provide valid Mermaid JS syntax (e.g. graph TD; A-->B;). Do not wrap in markdown ```mermaid blocks.
+    5. For Architecture Diagrams: Provide valid Mermaid JS syntax. CRITICAL MERMAID SYNTAX: Never use -->|text|> for labeled arrows. You must use the standard format A -->|text| B or A -- text --> B.
+       - Start with "graph TD" on the first line.
+       - Use ONLY these arrow formats:
+         VALID:   A --> B
+         VALID:   A -->|label text| B
+         VALID:   A --- B
+         VALID:   A ---|label text| B
+         INVALID: A -->|label text|> B   (DO NOT add > after |)
+         INVALID: A -->|label text|-> B  (DO NOT add -> after |)
+       - Node definitions: A[Label Text] or A{{Label Text}} or A(Label Text)
+       - Do NOT use special characters like <, >, &, or quotes inside node labels.
+       - Do NOT wrap in markdown code blocks.
+       - Example:
+         graph TD
+         A[Client] -->|HTTPS| B[Load Balancer]
+         B --> C[App Server]
+         B --> D[App Server 2]
+         C --> E[Database]
+         D --> E
     6. For Summary Cards: Summarize the final recommendation, confidence, and consensus.
 
     QUESTION:
@@ -63,7 +81,7 @@ def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
     
     try:
         response: VisualSpecResponse = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="llama-3.3-70b-versatile",
             response_model=VisualSpecResponse,
             messages=[
                 {"role": "system", "content": prompt}

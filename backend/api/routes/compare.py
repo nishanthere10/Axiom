@@ -33,6 +33,7 @@ def submit_comparison(body: CompareRequest):
     diff = final_state.get("structural_diff", {})
     evo = final_state.get("decision_evolution", "")
     imp = final_state.get("impact_summary", "")
+    visuals = final_state.get("visuals", [])
     summary = f"Comparison of {body.session_a} and {body.session_b}"
     
     # Save the row to the database (saved=false initially)
@@ -43,7 +44,8 @@ def submit_comparison(body: CompareRequest):
         summary=summary,
         structural_diff=diff,
         decision_evolution=evo,
-        impact_summary=imp
+        impact_summary=imp,
+        visuals=visuals
     )
     
     return CompareResponse(

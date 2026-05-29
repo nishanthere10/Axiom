@@ -14,4 +14,7 @@ class ComparisonState(TypedDict):
     decision_evolution: Optional[Dict[str, Any]]
     impact_summary: Optional[Dict[str, Any]]
     
+    visual_specs: Optional[list[Dict[str, Any]]]
+    visuals: Optional[list[Dict[str, Any]]]
+    
     status: str

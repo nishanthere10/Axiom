@@ -38,6 +38,9 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], direction = "TB") {
   return { nodes: layoutedNodes, edges };
 }
 
+const nodeTypes = {};
+const edgeTypes = {};
+
 export default function DecisionTreeRenderer({ spec }: { spec: DecisionTreeSpec }) {
   const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(() => {
     const initialNodes: Node[] = spec.nodes.map((n) => ({
@@ -83,6 +86,8 @@ export default function DecisionTreeRenderer({ spec }: { spec: DecisionTreeSpec 
         <ReactFlow 
           nodes={layoutedNodes} 
           edges={layoutedEdges}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           fitView
           fitViewOptions={{ padding: 0.2 }}
           proOptions={{ hideAttribution: true }}

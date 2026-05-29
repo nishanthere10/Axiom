@@ -20,6 +20,7 @@ class ComparisonOutput(BaseModel):
     structural_diff: StructuralDiff
     decision_evolution: Dict[str, Any]
     impact_summary: Dict[str, Any]
+    visuals: Optional[List[Any]] = None
     created_at: str
 
 class CompareResponse(BaseModel):

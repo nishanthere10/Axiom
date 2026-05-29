@@ -10,7 +10,8 @@ def create_comparison(
     summary: str,
     structural_diff: Dict[str, Any],
     decision_evolution: Dict[str, Any],
-    impact_summary: Dict[str, Any]
+    impact_summary: Dict[str, Any],
+    visuals: Optional[list[Any]] = None
 ) -> Dict[str, Any]:
     # Fetch internal decision_documents IDs to satisfy the foreign key constraint
     doc_a = supabase.table("decision_documents").select("id").eq("session_id", session_a).execute()
@@ -31,6 +32,7 @@ def create_comparison(
         "structural_diff": structural_diff,
         "decision_evolution": json.dumps(decision_evolution),
         "impact_summary": json.dumps(impact_summary),
+        "visuals": visuals or [],
         "saved": False
     }).execute()
     

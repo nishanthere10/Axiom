@@ -12,6 +12,8 @@ import ImpactSummary from "@/components/compare/ImpactSummary";
 import SaveComparison from "@/components/compare/SaveComparison";
 import StructuralDiff from "@/components/compare/StructuralDiff";
 
+import VisualRenderer from "@/components/visuals/VisualRenderer";
+
 function CompareContent() {
   const searchParams = useSearchParams();
   const idParam = searchParams.get("id");
@@ -72,6 +74,13 @@ function CompareContent() {
           </div>
 
           <VerdictBanner verdict={comparison.decision_evolution?.verdict} />
+
+          {comparison.visuals && comparison.visuals.length > 0 && (
+            <div className="pt-4">
+              <h2 className="text-xl font-bold mb-6">Visual Comparison</h2>
+              <VisualRenderer visuals={comparison.visuals} />
+            </div>
+          )}
 
           <div className="space-y-12">
             <KeyChangesTable changes={comparison.decision_evolution?.key_changes} />

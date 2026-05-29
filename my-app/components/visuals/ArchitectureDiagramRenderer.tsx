@@ -24,10 +24,13 @@ export default function ArchitectureDiagramRenderer({ spec }: { spec: Architectu
     const renderDiagram = async () => {
       try {
         // Strip markdown codeblocks if LLM accidentally included them
-        const cleanSyntax = spec.mermaid_syntax
+        let cleanSyntax = spec.mermaid_syntax
           .replace(/^```mermaid\n?/g, "")
           .replace(/```$/g, "")
           .trim();
+          
+        // Auto-fix LLM hallucinations where it appends an extra > to the end of a label
+        cleanSyntax = cleanSyntax.replace(/-->\s*\|([^|]+)\|\s*>/g, '-->|$1|');
           
         const { svg } = await mermaid.render(id, cleanSyntax);
         if (isMounted) {

@@ -41,6 +41,7 @@ export interface Comparison {
   structural_diff: StructuralDiff;
   decision_evolution: DecisionEvolution;
   impact_summary: ImpactSummary;
+  visuals?: any[];
   created_at: string;
 }
 
