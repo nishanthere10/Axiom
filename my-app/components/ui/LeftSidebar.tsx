@@ -10,25 +10,20 @@ const mockSessions = [
   { id: "3", title: "Redis pub/sub architecture" },
 ];
 
-export default function LeftSidebar() {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
+export default function LeftSidebar({ isCollapsed = false, toggleCollapse }: { isCollapsed?: boolean, toggleCollapse?: () => void }) {
   return (
-    <aside
-      className={cn(
-        "flex flex-col border-r border-border bg-[#171717] transition-all duration-300 ease-in-out shrink-0",
-        isCollapsed ? "w-16" : "w-64"
-      )}
-    >
+    <div className="flex flex-col h-full w-full shrink-0">
       <div className="flex items-center justify-between p-4 border-b border-border/50">
         {!isCollapsed && <h2 className="text-sm font-semibold text-foreground tracking-tight">History</h2>}
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-1.5 rounded-md hover:bg-white/10 text-muted-foreground transition-colors mx-auto"
-          aria-label="Toggle Sidebar"
-        >
-          {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </button>
+        {toggleCollapse && (
+          <button
+            onClick={toggleCollapse}
+            className="p-1.5 rounded-md hover:bg-white/10 text-muted-foreground transition-colors mx-auto"
+            aria-label="Toggle Sidebar"
+          >
+            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -72,6 +67,6 @@ export default function LeftSidebar() {
           {!isCollapsed && <span>Settings</span>}
         </button>
       </div>
-    </aside>
+    </div>
   );
 }

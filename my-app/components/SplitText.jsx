@@ -21,7 +21,7 @@ const SplitText = ({
   rootMargin = '-100px',
   textAlign = 'center',
   tag = 'p',
-  onLetterAnimationComplete
+  onLetterAnimationComplete = undefined
 }) => {
   const ref = useRef(null);
   const animationCompletedRef = useRef(false);

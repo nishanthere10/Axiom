@@ -39,6 +39,9 @@ export default function ArchitectureDiagramRenderer({ spec }: { spec: Architectu
         
         // Auto-fix LLM hallucinations where it uses nested shapes like NodeID[A(Label)]
         cleanSyntax = cleanSyntax.replace(/\[\w*\(([^)]+)\)\]/g, '["$1"]');
+        
+        // Auto-fix LLM trailing periods at the end of node definitions
+        cleanSyntax = cleanSyntax.replace(/\]\.\s*$/gm, ']');
 
         // Clean up any leftover mermaid element from a previous failed render
         const existing = document.getElementById(id);

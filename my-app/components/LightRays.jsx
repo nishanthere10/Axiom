@@ -104,6 +104,7 @@ const LightRays = ({
       gl.canvas.style.width = '100%';
       gl.canvas.style.height = '100%';
 
+      if (!containerRef.current) return;
       while (containerRef.current.firstChild) {
         containerRef.current.removeChild(containerRef.current.firstChild);
       }
