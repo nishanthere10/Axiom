@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { KeyChange } from "@/lib/compare";
 
 const badgeColors = {
@@ -7,7 +8,7 @@ const badgeColors = {
   unchanged: "bg-muted text-muted-foreground border-border",
 };
 
-export default function KeyChangesTable({ changes }: { changes: KeyChange[] }) {
+export default memo(function KeyChangesTable({ changes }: { changes: KeyChange[] }) {
   if (!changes || changes.length === 0) return null;
 
   return (
@@ -53,4 +54,4 @@ export default function KeyChangesTable({ changes }: { changes: KeyChange[] }) {
       </div>
     </div>
   );
-}
+});

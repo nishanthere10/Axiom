@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { StructuralDiff as DiffType } from "@/lib/compare";
 
 function renderDiffLine(line: string, index: number) {
@@ -16,7 +17,7 @@ function renderDiffLine(line: string, index: number) {
   return <div key={index} className="px-2 py-0.5 text-gray-300">{line}</div>;
 }
 
-export default function StructuralDiff({ diff }: { diff: DiffType }) {
+export default memo(function StructuralDiff({ diff }: { diff: DiffType }) {
   return (
     <div className="space-y-6">
       <div className="border-b border-border pb-2">
@@ -45,4 +46,4 @@ export default function StructuralDiff({ diff }: { diff: DiffType }) {
       </div>
     </div>
   );
-}
+});

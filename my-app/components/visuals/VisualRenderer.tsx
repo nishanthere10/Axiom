@@ -1,7 +1,18 @@
 import { VisualSpec } from "@/lib/visuals";
-import ArchitectureDiagramRenderer from "./ArchitectureDiagramRenderer";
-import DecisionTreeRenderer from "./DecisionTreeRenderer";
-import ResearchSummaryCardRenderer from "./ResearchSummaryCardRenderer";
+import dynamic from "next/dynamic";
+
+const ArchitectureDiagramRenderer = dynamic(() => import("./ArchitectureDiagramRenderer"), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-muted/50 rounded-xl min-h-[200px] flex items-center justify-center border border-border/50"><span className="text-muted-foreground text-sm uppercase tracking-widest font-medium">Loading Visual...</span></div>
+});
+const DecisionTreeRenderer = dynamic(() => import("./DecisionTreeRenderer"), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-muted/50 rounded-xl min-h-[200px] flex items-center justify-center border border-border/50"><span className="text-muted-foreground text-sm uppercase tracking-widest font-medium">Loading Visual...</span></div>
+});
+const ResearchSummaryCardRenderer = dynamic(() => import("./ResearchSummaryCardRenderer"), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-muted/50 rounded-xl min-h-[200px] flex items-center justify-center border border-border/50"><span className="text-muted-foreground text-sm uppercase tracking-widest font-medium">Loading Visual...</span></div>
+});
 
 export default function VisualRenderer({ visuals }: { visuals: VisualSpec[] }) {
   if (!visuals || visuals.length === 0) {

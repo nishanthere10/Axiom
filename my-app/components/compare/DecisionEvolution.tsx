@@ -1,7 +1,8 @@
-import ReactMarkdown from "react-markdown";
+import { memo } from "react";
 import { DecisionEvolution as DecisionEvolutionType } from "@/lib/compare";
+import MarkdownRenderer from "../ui/MarkdownRenderer";
 
-export default function DecisionEvolution({ evolution }: { evolution: DecisionEvolutionType }) {
+export default memo(function DecisionEvolution({ evolution }: { evolution: DecisionEvolutionType }) {
   if (!evolution || !evolution.reasoning) return null;
   let reasoningContent = "";
   if (typeof evolution.reasoning === "string") {
@@ -19,9 +20,9 @@ export default function DecisionEvolution({ evolution }: { evolution: DecisionEv
       <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         Deep Dive Reasoning
       </h3>
-      <div className="prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed p-6 border border-border bg-card rounded-md">
-        <ReactMarkdown>{reasoningContent || ""}</ReactMarkdown>
+      <div className="p-6 border border-border bg-card rounded-md">
+        <MarkdownRenderer content={reasoningContent || ""} />
       </div>
     </div>
   );
-}
+});

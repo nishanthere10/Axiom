@@ -1,12 +1,13 @@
-import ReactMarkdown from "react-markdown";
+import { memo } from "react";
 import type { DecisionDocument as DecisionDocumentType } from "@/types";
 import EvidenceCard from "./EvidenceCard";
 import EvidenceConsensus from "./EvidenceConsensus";
 import RefreshEvidence from "./RefreshEvidence";
 import VisualRenderer from "../visuals/VisualRenderer";
 import RegenerateVisualButton from "../visuals/RegenerateVisualButton";
+import MarkdownRenderer from "../ui/MarkdownRenderer";
 
-export function ConfidenceBar({ label, value }: { label: string; value: number }) {
+export const ConfidenceBar = memo(function ConfidenceBar({ label, value }: { label: string; value: number }) {
   const pct = Math.round(value * 100);
   return (
     <div className="space-y-1">
@@ -22,20 +23,18 @@ export function ConfidenceBar({ label, value }: { label: string; value: number }
       </div>
     </div>
   );
-}
+});
 
-function Section({ title, content }: { title: string; content: string }) {
+const Section = memo(function Section({ title, content }: { title: string; content: string }) {
   return (
     <div className="space-y-2">
       <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         {title}
       </h3>
-      <div className="prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed">
-        <ReactMarkdown>{content}</ReactMarkdown>
-      </div>
+      <MarkdownRenderer content={content} />
     </div>
   );
-}
+});
 
 interface Props {
   doc: DecisionDocumentType;

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ImpactSummary as ImpactSummaryType } from "@/lib/compare";
 
 const riskColors = {
@@ -6,7 +7,7 @@ const riskColors = {
   high: "bg-destructive/20 text-destructive border-destructive/50",
 };
 
-export default function ImpactSummary({ impact }: { impact: ImpactSummaryType }) {
+export default memo(function ImpactSummary({ impact }: { impact: ImpactSummaryType }) {
   if (!impact) return null;
 
   return (
@@ -66,4 +67,4 @@ export default function ImpactSummary({ impact }: { impact: ImpactSummaryType })
       </div>
     </div>
   );
-}
+});
