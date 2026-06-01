@@ -15,8 +15,9 @@ class Settings(BaseSettings):
 
     # LLM & Vector Store
     GROQ_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
     PINECONE_API_KEY: str = ""
-    PINECONE_INDEX_NAME: str = "atlas-research-v1"
+    PINECONE_INDEX: str = "atlas-research"
     TAVILY_API_KEY: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")

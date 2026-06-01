@@ -25,6 +25,7 @@ export interface DecisionDocument {
   evidence_generated_at?: string;
   visuals?: any[];
   visuals_generated_at?: string;
+  memory_context?: any;
   version: number;
   created_at: string;
 }

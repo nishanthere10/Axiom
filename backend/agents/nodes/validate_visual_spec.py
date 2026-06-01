@@ -31,6 +31,9 @@ def _sanitize_mermaid(syntax: str) -> str:
         return f'[{content}]'
     syntax = re.sub(r'\[([^\]]*&[^\]]*)\]', clean_amp, syntax)
 
+    # Strip trailing periods at the end of node definitions
+    syntax = re.sub(r'\]\.\s*$', ']', syntax, flags=re.MULTILINE)
+
     return syntax.strip()
 
 

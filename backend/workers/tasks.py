@@ -3,7 +3,9 @@ from services import research_service
 
 # Progress milestones per node (used when streaming the graph)
 _NODE_PROGRESS = {
-    "decompose_question": (5, 15),
+    "decompose_question": (2, 5),
+    "retrieve_memory": (5, 10),
+    "analyze_memory": (10, 15),
     "canonicalize_topic": (15, 20),
     "generate_queries": (20, 25),
     "collect_and_score_evidence": (25, 45),
@@ -44,6 +46,8 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
             "force_refresh": force_refresh,
             "visual_specs": [],
             "visuals": [],
+            "retrieved_memories": [],
+            "memory_context": {},
             "status": "starting"
         }
         
@@ -76,6 +80,17 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
         # 4. Mark session and job as complete
         research_service.update_session_status(session_id, "complete")
         research_service.update_job_status(job_id, status="completed", progress=100, step="done")
+
+        # 5. Background Memory Creation
+        # This executes safely in the background worker thread *after* the user sees 100% complete
+        try:
+            from agents.nodes.create_memory import create_memory
+            from agents.nodes.store_memory import store_memory
+            
+            memory_state = create_memory(final_state)
+            store_memory(memory_state)
+        except Exception as memory_exc:
+            print(f"Memory creation failed (non-fatal): {memory_exc}")
 
         return {"session_id": session_id, "job_id": job_id, "status": "completed"}
 

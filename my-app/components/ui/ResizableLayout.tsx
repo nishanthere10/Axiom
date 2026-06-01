@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Panel, Group, Separator, useDefaultLayout } from "react-resizable-panels";
+import { useRef, useState, useCallback } from "react";
+import { Panel, Group, Separator } from "react-resizable-panels";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import LeftSidebar from "./LeftSidebar";
 import RightPanel from "./RightPanel";
@@ -14,6 +14,26 @@ interface ResizableLayoutProps {
   hideRightPanel?: boolean;
 }
 
+function DragHandle() {
+  return (
+    <div
+      style={{
+        width: 6,
+        height: "100%",
+        borderRadius: 3,
+        backgroundColor: "rgba(255,255,255,0.08)",
+        transition: "background-color 0.2s",
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLDivElement).style.backgroundColor = "rgba(59,130,246,0.5)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLDivElement).style.backgroundColor = "rgba(255,255,255,0.08)";
+      }}
+    />
+  );
+}
+
 export default function ResizableLayout({ children, rightPanelContent, rightPanelTitle, hideRightPanel = false }: ResizableLayoutProps) {
   const leftPanelRef = useRef<PanelImperativeHandle>(null);
   const rightPanelRef = useRef<PanelImperativeHandle>(null);
@@ -21,84 +41,76 @@ export default function ResizableLayout({ children, rightPanelContent, rightPane
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
 
-  // Robust, SSR-safe localStorage persistence layer
-  const safeStorage = {
-    getItem: (key: string) => {
-      if (typeof window !== "undefined") {
-        return localStorage.getItem(key);
-      }
-      return null;
-    },
-    setItem: (key: string, value: string) => {
-      if (typeof window !== "undefined") {
-        localStorage.setItem(key, value);
-      }
-    }
-  };
-
-  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
-    id: "atlas-layout",
-    storage: safeStorage,
-  });
-
-  const toggleLeft = () => {
+  const toggleLeft = useCallback(() => {
     const panel = leftPanelRef.current;
     if (panel) {
-      if (leftCollapsed) {
+      if (panel.isCollapsed()) {
         panel.expand();
       } else {
         panel.collapse();
       }
     }
-  };
+  }, []);
 
-  const toggleRight = () => {
+  const toggleRight = useCallback(() => {
     const panel = rightPanelRef.current;
     if (panel) {
-      if (rightCollapsed) {
+      if (panel.isCollapsed()) {
         panel.expand();
       } else {
         panel.collapse();
       }
     }
-  };
+  }, []);
+
+  const handleLeftResize = useCallback((size: { asPercentage: number; inPixels: number }) => {
+    setLeftCollapsed(size.asPercentage <= 5);
+  }, []);
+
+  const handleRightResize = useCallback((size: { asPercentage: number; inPixels: number }) => {
+    setRightCollapsed(size.asPercentage <= 5);
+  }, []);
 
   return (
-    <Group orientation="horizontal" defaultLayout={defaultLayout} onLayoutChanged={onLayoutChanged} className="flex h-full w-full bg-background overflow-hidden">
+    <Group orientation="horizontal" className="h-full w-full bg-background">
       <Panel
-        ref={leftPanelRef}
+        id="atlas-left"
+        panelRef={leftPanelRef}
         defaultSize={20}
         minSize={15}
         maxSize={30}
         collapsible
         collapsedSize={4}
-        onCollapse={() => setLeftCollapsed(true)}
-        onExpand={() => setLeftCollapsed(false)}
-        className="transition-all duration-300 ease-in-out bg-[#171717] border-r border-border"
+        onResize={handleLeftResize}
+        className="bg-[#171717] border-r border-border"
       >
         <LeftSidebar isCollapsed={leftCollapsed} toggleCollapse={toggleLeft} />
       </Panel>
 
-      <Separator className="w-1 bg-border/50 hover:bg-primary/50 transition-colors cursor-col-resize active:bg-primary z-10" />
+      <Separator style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0 1px", cursor: "col-resize" }}>
+        <DragHandle />
+      </Separator>
 
-      <Panel defaultSize={hideRightPanel ? 80 : 60} minSize={30}>
+      <Panel id="atlas-center" defaultSize={hideRightPanel ? 76 : 56} minSize={30}>
         <CenterCanvas>{children}</CenterCanvas>
       </Panel>
 
       {!hideRightPanel && (
         <>
-          <Separator className="w-1 bg-border/50 hover:bg-primary/50 transition-colors cursor-col-resize active:bg-primary z-10" />
+          <Separator style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0 1px", cursor: "col-resize" }}>
+            <DragHandle />
+          </Separator>
 
           <Panel
-            ref={rightPanelRef}
+            id="atlas-right"
+            panelRef={rightPanelRef}
             defaultSize={20}
             minSize={15}
             maxSize={35}
             collapsible
             collapsedSize={4}
-            onCollapse={() => setRightCollapsed(true)}
-            onExpand={() => setRightCollapsed(false)}
-            className="transition-all duration-300 ease-in-out bg-[#171717] border-l border-border"
+            onResize={handleRightResize}
+            className="bg-[#171717] border-l border-border"
           >
             <RightPanel isCollapsed={rightCollapsed} toggleCollapse={toggleRight} title={rightPanelTitle}>
               {rightPanelContent}
@@ -109,4 +121,3 @@ export default function ResizableLayout({ children, rightPanelContent, rightPane
     </Group>
   );
 }
-

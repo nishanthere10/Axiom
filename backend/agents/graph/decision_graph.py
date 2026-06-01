@@ -8,6 +8,8 @@ from agents.nodes.generate import generate_decision
 from agents.nodes.confidence import build_confidence
 from agents.nodes.generate_visual_spec import generate_visual_spec
 from agents.nodes.validate_visual_spec import validate_visual_spec
+from agents.nodes.retrieve_memory import retrieve_memory
+from agents.nodes.analyze_memory import analyze_memory
 from agents.nodes.format import format_document
 
 def build_decision_graph():
@@ -18,6 +20,8 @@ def build_decision_graph():
 
     # Register nodes
     graph.add_node("decompose_question", decompose_question)
+    graph.add_node("retrieve_memory", retrieve_memory)
+    graph.add_node("analyze_memory", analyze_memory)
     graph.add_node("canonicalize_topic", canonicalize_topic)
     graph.add_node("generate_queries", generate_queries)
     graph.add_node("collect_and_score_evidence", collect_and_score_evidence)
@@ -27,9 +31,11 @@ def build_decision_graph():
     graph.add_node("validate_visual_spec", validate_visual_spec)
     graph.add_node("format_document", format_document)
 
-    # Wire edges — strict linear order
+    # Wire edges
     graph.add_edge(START, "decompose_question")
-    graph.add_edge("decompose_question", "canonicalize_topic")
+    graph.add_edge("decompose_question", "retrieve_memory")
+    graph.add_edge("retrieve_memory", "analyze_memory")
+    graph.add_edge("analyze_memory", "canonicalize_topic")
     graph.add_edge("canonicalize_topic", "generate_queries")
     graph.add_edge("generate_queries", "collect_and_score_evidence")
     graph.add_edge("collect_and_score_evidence", "generate_decision")

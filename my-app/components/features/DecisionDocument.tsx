@@ -6,6 +6,7 @@ import RefreshEvidence from "./RefreshEvidence";
 import VisualRenderer from "../visuals/VisualRenderer";
 import RegenerateVisualButton from "../visuals/RegenerateVisualButton";
 import MarkdownRenderer from "../ui/MarkdownRenderer";
+import MemoryUsed from "../memory/MemoryUsed";
 
 export const ConfidenceBar = memo(function ConfidenceBar({ label, value }: { label: string; value: number }) {
   const pct = Math.round(value * 100);
@@ -57,6 +58,11 @@ export default function DecisionDocument({ doc, sessionId, setDoc }: Props) {
 
       {/* Executive Summary */}
       <Section title="Executive Summary" content={doc.executive_summary} />
+
+      {/* Memory Influence Transparency */}
+      {doc.memory_context && (
+        <MemoryUsed context={doc.memory_context} />
+      )}
 
       {/* Recommendation */}
       <Section title="Recommendation" content={doc.recommendation_context} />

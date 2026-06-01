@@ -17,4 +17,7 @@ class ResearchState(TypedDict):
     visual_specs: list[dict]
     visuals: list[dict]
     
+    retrieved_memories: list[dict]
+    memory_context: dict
+    
     status: str

@@ -4,10 +4,12 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import QuestionInput from "@/components/features/QuestionInput";
 import ResearchProgress from "@/components/features/ResearchProgress";
-import ResizableLayout from "@/components/ui/ResizableLayout";
 import { getSessionDocument } from "@/lib/api";
-import type { DecisionDocument as DecisionDocumentType } from "@/types";
+import ResizableLayout from "@/components/ui/ResizableLayout";
+import type { DecisionDocument as DecisionDocumentType, PollingState, ResearchResponse } from "@/types";
 import DecisionDocument, { AuxiliaryDocumentData } from "@/components/features/DecisionDocument";
+
+type PageState = "idle" | "polling" | "done" | "failed";
 
 function ResearchPageInner() {
   const router = useRouter();

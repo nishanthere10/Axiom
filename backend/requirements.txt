@@ -11,7 +11,7 @@ sse-starlette
 google-generativeai
 faster-whisper
 python-multipart
-pinecone-client
+pinecone
 groq
 clerk-backend-api
 tavily-python
