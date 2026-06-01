@@ -19,7 +19,18 @@ class DecisionTreeSchema(BaseModel):
 class ArchitectureDiagramSchema(BaseModel):
     type: Literal["architecture_diagram"] = "architecture_diagram"
     title: str = Field(description="Title of the architecture diagram")
-    mermaid_syntax: str = Field(description="Raw Mermaid JS syntax representing the architecture (e.g. graph TD; A-->B;). Do not wrap in markdown blocks.")
+    mermaid_syntax: str = Field(description='''Raw Mermaid JS syntax. 
+CRITICAL RULES:
+1. ONLY use 'graph TD' or 'graph LR'. No other types.
+2. Node definitions MUST use brackets: ID[Label]
+3. Edge definitions MUST use valid syntax: --> or -->|label|
+4. NEVER use "note right:" or sequence diagram features in graphs.
+5. NEVER use quotes outside brackets (e.g. a -- 'Label' is INVALID).
+6. Do not wrap in markdown ``` codeblocks.
+Example:
+graph TD
+  A[Client] -->|HTTPS| B[Server]
+''')
 
 class SummaryCardHighlight(BaseModel):
     label: str = Field(description="Label for the metric or highlight")

@@ -8,11 +8,15 @@ from agents.nodes.generate_impact import generate_impact
 from agents.nodes.generate_comparison_visual_spec import generate_comparison_visual_spec
 from agents.nodes.validate_visual_spec import validate_visual_spec
 from agents.nodes.format_comparison import format_comparison
+from agents.nodes.retrieve_memory import retrieve_memory
+from agents.nodes.analyze_memory import analyze_memory
 
 def build_comparison_graph() -> StateGraph:
     workflow = StateGraph(ComparisonState)
     
     workflow.add_node("load_sessions", load_sessions)
+    workflow.add_node("retrieve_memory", retrieve_memory)
+    workflow.add_node("analyze_memory", analyze_memory)
     workflow.add_node("normalize_documents", normalize_documents)
     workflow.add_node("generate_structural_diff", generate_structural_diff)
     workflow.add_node("generate_explanation", generate_explanation)
@@ -23,7 +27,9 @@ def build_comparison_graph() -> StateGraph:
     
     workflow.set_entry_point("load_sessions")
     
-    workflow.add_edge("load_sessions", "normalize_documents")
+    workflow.add_edge("load_sessions", "retrieve_memory")
+    workflow.add_edge("retrieve_memory", "analyze_memory")
+    workflow.add_edge("analyze_memory", "normalize_documents")
     workflow.add_edge("normalize_documents", "generate_structural_diff")
     workflow.add_edge("generate_structural_diff", "generate_explanation")
     workflow.add_edge("generate_explanation", "generate_impact")

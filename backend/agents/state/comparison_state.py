@@ -17,4 +17,7 @@ class ComparisonState(TypedDict):
     visual_specs: Optional[list[Dict[str, Any]]]
     visuals: Optional[list[Dict[str, Any]]]
     
+    retrieved_memories: Optional[list[Dict[str, Any]]]
+    memory_context: Optional[Dict[str, Any]]
+    
     status: str

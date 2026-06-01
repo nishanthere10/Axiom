@@ -11,6 +11,7 @@ import DecisionEvolution from "@/components/compare/DecisionEvolution";
 import ImpactSummary from "@/components/compare/ImpactSummary";
 import SaveComparison from "@/components/compare/SaveComparison";
 import StructuralDiff from "@/components/compare/StructuralDiff";
+import MemoryUsed from "@/components/memory/MemoryUsed";
 
 import VisualRenderer from "@/components/visuals/VisualRenderer";
 import ResizableLayout from "@/components/ui/ResizableLayout";
@@ -96,6 +97,12 @@ function CompareContent() {
               B: {comparison.session_b}
             </p>
           </div>
+
+          {comparison.impact_summary?.memory_context && (
+            <div className="mb-8">
+              <MemoryUsed context={comparison.impact_summary.memory_context} />
+            </div>
+          )}
 
           <VerdictBanner verdict={comparison.decision_evolution?.verdict} />
 

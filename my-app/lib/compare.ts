@@ -32,6 +32,7 @@ export interface ImpactSummary {
   action_items: string[];
   migration_needed: boolean;
   breaking_changes: boolean;
+  memory_context?: any;
 }
 
 export interface Comparison {

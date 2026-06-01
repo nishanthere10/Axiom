@@ -14,26 +14,6 @@ interface ResizableLayoutProps {
   hideRightPanel?: boolean;
 }
 
-function DragHandle() {
-  return (
-    <div
-      style={{
-        width: 6,
-        height: "100%",
-        borderRadius: 3,
-        backgroundColor: "rgba(255,255,255,0.08)",
-        transition: "background-color 0.2s",
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.backgroundColor = "rgba(59,130,246,0.5)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLDivElement).style.backgroundColor = "rgba(255,255,255,0.08)";
-      }}
-    />
-  );
-}
-
 export default function ResizableLayout({ children, rightPanelContent, rightPanelTitle, hideRightPanel = false }: ResizableLayoutProps) {
   const leftPanelRef = useRef<PanelImperativeHandle>(null);
   const rightPanelRef = useRef<PanelImperativeHandle>(null);
@@ -72,7 +52,7 @@ export default function ResizableLayout({ children, rightPanelContent, rightPane
   }, []);
 
   return (
-    <Group orientation="horizontal" className="h-full w-full bg-background">
+    <Group orientation="horizontal">
       <Panel
         id="atlas-left"
         panelRef={leftPanelRef}
@@ -82,13 +62,20 @@ export default function ResizableLayout({ children, rightPanelContent, rightPane
         collapsible
         collapsedSize={4}
         onResize={handleLeftResize}
-        className="bg-[#171717] border-r border-border"
       >
-        <LeftSidebar isCollapsed={leftCollapsed} toggleCollapse={toggleLeft} />
+        <div style={{ background: "#171717", height: "100%", borderRight: "1px solid var(--color-border, #262626)" }}>
+          <LeftSidebar isCollapsed={leftCollapsed} toggleCollapse={toggleLeft} />
+        </div>
       </Panel>
 
-      <Separator style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0 1px", cursor: "col-resize" }}>
-        <DragHandle />
+      <Separator>
+        <div style={{
+          width: 8,
+          height: "100%",
+          background: "#585b70",
+          cursor: "col-resize",
+          borderRadius: 4,
+        }} />
       </Separator>
 
       <Panel id="atlas-center" defaultSize={hideRightPanel ? 76 : 56} minSize={30}>
@@ -97,8 +84,14 @@ export default function ResizableLayout({ children, rightPanelContent, rightPane
 
       {!hideRightPanel && (
         <>
-          <Separator style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0 1px", cursor: "col-resize" }}>
-            <DragHandle />
+          <Separator>
+            <div style={{
+              width: 8,
+              height: "100%",
+              background: "#585b70",
+              cursor: "col-resize",
+              borderRadius: 4,
+            }} />
           </Separator>
 
           <Panel
@@ -110,11 +103,12 @@ export default function ResizableLayout({ children, rightPanelContent, rightPane
             collapsible
             collapsedSize={4}
             onResize={handleRightResize}
-            className="bg-[#171717] border-l border-border"
           >
-            <RightPanel isCollapsed={rightCollapsed} toggleCollapse={toggleRight} title={rightPanelTitle}>
-              {rightPanelContent}
-            </RightPanel>
+            <div style={{ background: "#171717", height: "100%", borderLeft: "1px solid var(--color-border, #262626)" }}>
+              <RightPanel isCollapsed={rightCollapsed} toggleCollapse={toggleRight} title={rightPanelTitle}>
+                {rightPanelContent}
+              </RightPanel>
+            </div>
           </Panel>
         </>
       )}

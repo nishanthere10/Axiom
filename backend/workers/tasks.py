@@ -87,6 +87,7 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
             from agents.nodes.create_memory import create_memory
             from agents.nodes.store_memory import store_memory
             
+            final_state["session_id"] = session_id
             memory_state = create_memory(final_state)
             store_memory(memory_state)
         except Exception as memory_exc:

@@ -1,5 +1,5 @@
 import uuid
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from api.schemas.compare import (
     CompareRequest, CompareResponse, GetComparisonResponse,
     SaveCompareRequest, SaveCompareResponse, SuggestionsResponse,
@@ -10,8 +10,17 @@ from agents.graph.comparison_graph import comparison_graph
 
 router = APIRouter()
 
+def _run_comparison_memory_task(final_state: dict):
+    try:
+        from agents.nodes.create_memory import create_memory
+        from agents.nodes.store_memory import store_memory
+        memory_state = create_memory(final_state)
+        store_memory(memory_state)
+    except Exception as e:
+        print(f"Comparison memory creation failed: {e}")
+
 @router.post("", response_model=CompareResponse)
-def submit_comparison(body: CompareRequest):
+def submit_comparison(body: CompareRequest, background_tasks: BackgroundTasks):
     if body.session_a == body.session_b:
         raise HTTPException(status_code=400, detail="Cannot compare a session with itself.")
         
@@ -34,8 +43,14 @@ def submit_comparison(body: CompareRequest):
     evo = final_state.get("decision_evolution", "")
     imp = final_state.get("impact_summary", "")
     visuals = final_state.get("visuals", [])
+    memory_context = final_state.get("memory_context", {})
     summary = f"Comparison of {body.session_a} and {body.session_b}"
     
+    # Embed memory_context into impact_summary to avoid needing a Supabase migration for comparisons
+    if memory_context and imp:
+        if isinstance(imp, dict):
+            imp["memory_context"] = memory_context
+            
     # Save the row to the database (saved=false initially)
     created = compare_service.create_comparison(
         comparison_id=comparison_id,
@@ -47,6 +62,10 @@ def submit_comparison(body: CompareRequest):
         impact_summary=imp,
         visuals=visuals
     )
+    
+    # Background memory creation
+    final_state["comparison_id"] = comparison_id
+    background_tasks.add_task(_run_comparison_memory_task, final_state)
     
     return CompareResponse(
         comparison_id=comparison_id,

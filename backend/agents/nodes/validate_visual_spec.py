@@ -6,35 +6,54 @@ from api.schemas.visuals import VisualSpecResponse, VisualType
 def _sanitize_mermaid(syntax: str) -> str:
     """
     Fix common LLM-generated Mermaid syntax errors that cause parse failures.
+    This is the backend defense layer — the frontend has its own sanitizer too.
     """
     # Strip markdown code fences if the LLM wrapped it
     syntax = re.sub(r'^```(?:mermaid)?\s*', '', syntax, flags=re.MULTILINE)
     syntax = re.sub(r'```\s*$', '', syntax, flags=re.MULTILINE)
+    syntax = syntax.strip()
+
+    # Remove trailing periods, commas, semicolons at the end of any line
+    # e.g. "E --> F[Target System]." → "E --> F[Target System]"
+    syntax = re.sub(r'([^\s])[.,;]+\s*$', r'\1', syntax, flags=re.MULTILINE)
 
     # Fix: -->|label|> B  =>  -->|label| B   (trailing > after pipe)
     syntax = re.sub(r'\|>\s', '| ', syntax)
     # Fix: -->|label|-> B  =>  -->|label| B  (trailing -> after pipe)
     syntax = re.sub(r'\|->\s', '| ', syntax)
-    # Fix: ---|label|> B  =>  ---|label| B
-    syntax = re.sub(r'\|>\s', '| ', syntax)
 
-    # Remove angle brackets inside node labels like A[<text>] => A[text]
-    # Match [...] content and strip < >
-    def clean_label(m):
-        content = m.group(1).replace('<', '').replace('>', '')
-        return f'[{content}]'
-    syntax = re.sub(r'\[([^\]]*[<>][^\]]*)\]', clean_label, syntax)
+    # Quote node labels containing special characters that break Mermaid
+    # A[Label (Extra Info)] → A["Label (Extra Info)"]
+    def quote_special_labels(m):
+        content = m.group(1)
+        # Already quoted — leave alone
+        if content.startswith('"') and content.endswith('"'):
+            return f'[{content}]'
+        # Contains parentheses, angle brackets, ampersands, or HTML
+        if re.search(r'[()<>&;#{}]', content):
+            escaped = content.replace('"', "'")
+            return f'["{escaped}"]'
+        return m.group(0)
+    syntax = re.sub(r'\[([^\]]+)\]', quote_special_labels, syntax)
 
-    # Remove & inside node labels
-    def clean_amp(m):
-        content = m.group(1).replace('&', 'and')
-        return f'[{content}]'
-    syntax = re.sub(r'\[([^\]]*&[^\]]*)\]', clean_amp, syntax)
+    # Remove HTML tags inside labels: A[<b>Text</b>] → A["Text"]
+    def strip_html_labels(m):
+        content = re.sub(r'<[^>]+>', '', m.group(1)).strip()
+        return f'["{content}"]'
+    syntax = re.sub(r'\[([^\]]*<[^>]+>[^\]]*)\]', strip_html_labels, syntax)
 
-    # Strip trailing periods at the end of node definitions
-    syntax = re.sub(r'\]\.\s*$', ']', syntax, flags=re.MULTILINE)
+    # Ensure the diagram starts with a valid directive
+    lines = syntax.split('\n')
+    first_content_line = next((l.strip() for l in lines if l.strip()), '')
+    valid_starters = re.compile(
+        r'^(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|gitGraph|mindmap|timeline|journey|%%)',
+        re.IGNORECASE
+    )
+    if not valid_starters.match(first_content_line):
+        syntax = 'graph TD\n' + syntax
 
     return syntax.strip()
+
 
 
 def validate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:

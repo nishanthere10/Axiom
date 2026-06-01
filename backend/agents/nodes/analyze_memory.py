@@ -23,6 +23,8 @@ def analyze_memory(state: Dict[str, Any]) -> Dict[str, Any]:
         }
         
     question = state.get("question", "")
+    if not question and "session_a_id" in state and "session_b_id" in state:
+        question = f"Compare {state['session_a_id']} vs {state['session_b_id']}"
     
     # Format the memories for the LLM prompt
     formatted_memories = []
@@ -56,7 +58,7 @@ def analyze_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     
     try:
         response: MemoryContextSchema = client.chat.completions.create(
-            model=settings.LLM_MODEL,
+            model="groq/llama-3.3-70b-versatile",
             response_model=MemoryContextSchema,
             messages=[
                 {"role": "system", "content": prompt}

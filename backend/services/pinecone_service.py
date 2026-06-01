@@ -8,24 +8,29 @@ pc = None
 index = None
 
 if settings.PINECONE_API_KEY:
-    pc = Pinecone(api_key=settings.PINECONE_API_KEY)
-    # Check if index exists, if not it might fail but spec says user must create it
-    if settings.PINECONE_INDEX in [i.name for i in pc.list_indexes()]:
-        index = pc.Index(settings.PINECONE_INDEX)
-    else:
-        print(f"Warning: Pinecone index '{settings.PINECONE_INDEX}' not found.")
+    try:
+        pc = Pinecone(api_key=settings.PINECONE_API_KEY)
+        index_names = [i.name for i in pc.list_indexes()]
+        if settings.PINECONE_INDEX in index_names:
+            index = pc.Index(settings.PINECONE_INDEX)
+        else:
+            print(f"Warning: Pinecone index '{settings.PINECONE_INDEX}' not found. Available indexes: {index_names}")
+    except Exception as e:
+        print(f"Error initializing Pinecone: {e}")
+        pc = None
+        index = None
 else:
-    print("Warning: PINECONE_API_KEY not set.")
+    print("Warning: PINECONE_API_KEY not set. Memory system will not function.")
 
 # Initialize Gemini for embeddings
 if settings.GEMINI_API_KEY:
     genai.configure(api_key=settings.GEMINI_API_KEY)
 
-def generate_embedding(text: str) -> List[float]:
+def generate_embedding(text: str) -> Optional[List[float]]:
     """Generates an embedding using Gemini text-embedding-004."""
     if not settings.GEMINI_API_KEY:
-        print("Warning: GEMINI_API_KEY not set, returning empty embedding.")
-        return [0.0] * 768 # Fallback dummy embedding
+        print("Warning: GEMINI_API_KEY not set.")
+        return None
         
     try:
         result = genai.embed_content(
@@ -36,7 +41,7 @@ def generate_embedding(text: str) -> List[float]:
         return result['embedding']
     except Exception as e:
         print(f"Error generating embedding: {e}")
-        return [0.0] * 768
+        return None
 
 def upsert_memory(memory_id: str, summary: str, metadata: Dict[str, Any]):
     """Upserts a memory into Pinecone."""
@@ -45,6 +50,9 @@ def upsert_memory(memory_id: str, summary: str, metadata: Dict[str, Any]):
         return
         
     embedding = generate_embedding(summary)
+    if not embedding:
+        print("Failed to generate embedding, skipping upsert.")
+        return
     
     # Store standard payload per spec
     payload = {
@@ -65,6 +73,8 @@ def search_memories(query: str, top_k: int = 5, threshold: float = 0.80) -> List
         return []
         
     embedding = generate_embedding(query)
+    if not embedding:
+        return []
     
     try:
         results = index.query(

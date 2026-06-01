@@ -9,9 +9,16 @@ def create_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     Analyzes the completed research and generates compact, retrieval-optimized memory summaries.
     This runs asynchronously outside the main LangGraph to save latency.
     """
+    is_comparison = "session_a_id" in state and "session_b_id" in state
+    
+    if is_comparison:
+        return _create_comparison_memory(state)
+    else:
+        return _create_decision_memory(state)
+
+def _create_decision_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     question = state.get("question", "")
     decision = state.get("recommendation", "")
-    visuals = state.get("visuals", [])
     
     if not decision:
         return {"new_memories": []}
@@ -28,18 +35,18 @@ def create_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     
     try:
         response = completion(
-            model=settings.LLM_MODEL,
+            model="groq/llama-3.3-70b-versatile",
             messages=[{"role": "system", "content": prompt}]
         )
         summary = response.choices[0].message.content.strip()
         
-        # Create a MemoryItemCreate object for the decision
         memories = []
-        source_id = f"sess_{uuid.uuid4().hex[:8]}" # Placeholder for session id
+        session_id = state.get("session_id")
+        source_id = session_id if session_id else f"sess_{uuid.uuid4().hex[:8]}"
         
         decision_memory = MemoryItemCreate(
             memory_type="decision",
-            source_id=source_id, # Real session_id should be injected if available
+            source_id=source_id,
             source_type="session",
             summary=summary,
             metadata={
@@ -50,12 +57,57 @@ def create_memory(state: Dict[str, Any]) -> Dict[str, Any]:
             scope="temporary"
         )
         memories.append(decision_memory)
-        
-        # Optionally create preference memory if strong preferences were shown
-        # Keeping it simple for V1: just store the decision memory
-        
         return {"new_memories": memories}
         
     except Exception as e:
-        print(f"Error creating memory summary: {e}")
+        print(f"Error creating decision memory: {e}")
+        return {"new_memories": []}
+
+def _create_comparison_memory(state: Dict[str, Any]) -> Dict[str, Any]:
+    session_a = state.get("session_a_id", "A")
+    session_b = state.get("session_b_id", "B")
+    impact_summary = state.get("impact_summary", {})
+    structural_diff = state.get("structural_diff", {})
+    
+    if not impact_summary:
+        return {"new_memories": []}
+        
+    prompt = f"""
+    You are an expert technical architect summarizing a recent architectural comparison between {session_a} and {session_b}.
+    This summary will be embedded in a vector database to help inform future architectural decisions.
+    
+    IMPACT SUMMARY: {impact_summary}
+    STRUCTURAL DIFF: {structural_diff}
+    
+    Task: Write a dense, concise summary of this comparison. Focus purely on the trade-offs evaluated and the key outcome or preference established between the two approaches. Maximum 3 sentences.
+    """
+    
+    try:
+        response = completion(
+            model="groq/llama-3.3-70b-versatile",
+            messages=[{"role": "system", "content": prompt}]
+        )
+        summary = response.choices[0].message.content.strip()
+        
+        memories = []
+        comparison_id = state.get("comparison_id", f"comp_{uuid.uuid4().hex[:8]}")
+        
+        comp_memory = MemoryItemCreate(
+            memory_type="comparison",
+            source_id=comparison_id,
+            source_type="comparison",
+            summary=summary,
+            metadata={
+                "session_a": session_a,
+                "session_b": session_b,
+                "summary": summary,
+                "memory_type": "comparison"
+            },
+            scope="temporary"
+        )
+        memories.append(comp_memory)
+        return {"new_memories": memories}
+        
+    except Exception as e:
+        print(f"Error creating comparison memory: {e}")
         return {"new_memories": []}
