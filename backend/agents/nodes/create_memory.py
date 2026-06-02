@@ -9,11 +9,14 @@ def create_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     Analyzes the completed research and generates compact, retrieval-optimized memory summaries.
     This runs asynchronously outside the main LangGraph to save latency.
     """
+    print("[DEBUG: Node] -> create_memory starting...")
     is_comparison = "session_a_id" in state and "session_b_id" in state
     
     if is_comparison:
+        print("[DEBUG: create_memory] Detected comparison state.")
         return _create_comparison_memory(state)
     else:
+        print("[DEBUG: create_memory] Detected research state.")
         return _create_decision_memory(state)
 
 def _create_decision_memory(state: Dict[str, Any]) -> Dict[str, Any]:

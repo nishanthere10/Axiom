@@ -12,12 +12,16 @@ router = APIRouter()
 
 def _run_comparison_memory_task(final_state: dict):
     try:
+        print("[DEBUG: compare_route] Starting background memory creation for comparison.")
         from agents.nodes.create_memory import create_memory
         from agents.nodes.store_memory import store_memory
+        print("[DEBUG: compare_route] Calling create_memory...")
         memory_state = create_memory(final_state)
+        print("[DEBUG: compare_route] Calling store_memory...")
         store_memory(memory_state)
+        print("[DEBUG: compare_route] Background memory creation completed.")
     except Exception as e:
-        print(f"Comparison memory creation failed: {e}")
+        print(f"[DEBUG: compare_route] Comparison memory creation failed: {e}")
 
 @router.post("", response_model=CompareResponse)
 def submit_comparison(body: CompareRequest, background_tasks: BackgroundTasks):

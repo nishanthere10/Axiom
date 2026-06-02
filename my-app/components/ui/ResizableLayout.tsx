@@ -52,38 +52,23 @@ export default function ResizableLayout({ children, rightPanelContent, rightPane
   }, []);
 
   return (
-    <Group orientation="horizontal">
-      <Panel
-        id="atlas-left"
-        panelRef={leftPanelRef}
-        defaultSize={20}
-        minSize={15}
-        maxSize={30}
-        collapsible
-        collapsedSize={4}
-        onResize={handleLeftResize}
-      >
-        <div style={{ background: "#171717", height: "100%", borderRight: "1px solid var(--color-border, #262626)" }}>
-          <LeftSidebar isCollapsed={leftCollapsed} toggleCollapse={toggleLeft} />
-        </div>
-      </Panel>
+    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <Group orientation="horizontal">
+          <Panel
+            id="atlas-left"
+            panelRef={leftPanelRef}
+            defaultSize={20}
+            minSize={15}
+            maxSize={30}
+            collapsible
+            collapsedSize={4}
+            onResize={handleLeftResize}
+            style={{ background: "#171717", borderRight: "1px solid var(--color-border, #262626)" }}
+          >
+            <LeftSidebar isCollapsed={leftCollapsed} toggleCollapse={toggleLeft} />
+          </Panel>
 
-      <Separator>
-        <div style={{
-          width: 8,
-          height: "100%",
-          background: "#585b70",
-          cursor: "col-resize",
-          borderRadius: 4,
-        }} />
-      </Separator>
-
-      <Panel id="atlas-center" defaultSize={hideRightPanel ? 76 : 56} minSize={30}>
-        <CenterCanvas>{children}</CenterCanvas>
-      </Panel>
-
-      {!hideRightPanel && (
-        <>
           <Separator>
             <div style={{
               width: 8,
@@ -94,24 +79,42 @@ export default function ResizableLayout({ children, rightPanelContent, rightPane
             }} />
           </Separator>
 
-          <Panel
-            id="atlas-right"
-            panelRef={rightPanelRef}
-            defaultSize={20}
-            minSize={15}
-            maxSize={35}
-            collapsible
-            collapsedSize={4}
-            onResize={handleRightResize}
-          >
-            <div style={{ background: "#171717", height: "100%", borderLeft: "1px solid var(--color-border, #262626)" }}>
-              <RightPanel isCollapsed={rightCollapsed} toggleCollapse={toggleRight} title={rightPanelTitle}>
-                {rightPanelContent}
-              </RightPanel>
-            </div>
+          <Panel id="atlas-center" defaultSize={hideRightPanel ? 76 : 56} minSize={30}>
+            <CenterCanvas>{children}</CenterCanvas>
           </Panel>
-        </>
-      )}
-    </Group>
+
+          {!hideRightPanel && (
+            <>
+              <Separator>
+                <div style={{
+                  width: 8,
+                  height: "100%",
+                  background: "#585b70",
+                  cursor: "col-resize",
+                  borderRadius: 4,
+                }} />
+              </Separator>
+
+              <Panel
+                id="atlas-right"
+                panelRef={rightPanelRef}
+                defaultSize={20}
+                minSize={15}
+                maxSize={35}
+                collapsible
+                collapsedSize={4}
+                onResize={handleRightResize}
+                style={{ background: "#171717", borderLeft: "1px solid var(--color-border, #262626)" }}
+              >
+                <RightPanel isCollapsed={rightCollapsed} toggleCollapse={toggleRight} title={rightPanelTitle}>
+                  {rightPanelContent}
+                </RightPanel>
+              </Panel>
+            </>
+          )}
+        </Group>
+      </div>
+    </div>
   );
 }
+

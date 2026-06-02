@@ -17,3 +17,4 @@ clerk-backend-api
 tavily-python
 instructor
 litellm
+requests

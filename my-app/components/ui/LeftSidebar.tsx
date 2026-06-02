@@ -12,7 +12,7 @@ const mockSessions = [
 
 export default function LeftSidebar({ isCollapsed = false, toggleCollapse }: { isCollapsed?: boolean, toggleCollapse?: () => void }) {
   return (
-    <div className="flex flex-col h-full w-full shrink-0">
+    <div className="flex flex-col h-full w-full overflow-hidden">
       <div className="flex items-center justify-between p-4 border-b border-border/50">
         {!isCollapsed && <h2 className="text-sm font-semibold text-foreground tracking-tight">History</h2>}
         {toggleCollapse && (

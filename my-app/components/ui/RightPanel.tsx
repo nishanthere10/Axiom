@@ -13,7 +13,7 @@ interface RightPanelProps {
 
 export default function RightPanel({ children, title = "Auxiliary Data", isCollapsed = false, toggleCollapse }: RightPanelProps) {
   return (
-    <div className="flex flex-col h-full w-full shrink-0">
+    <div className="flex flex-col h-full w-full overflow-hidden">
       <div className="flex items-center justify-between p-4 border-b border-border/50 h-[57px]">
         {!isCollapsed && <h2 className="text-sm font-semibold text-foreground tracking-tight truncate">{title}</h2>}
         {toggleCollapse && (
