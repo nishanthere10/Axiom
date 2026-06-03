@@ -6,13 +6,13 @@ import "reactflow/dist/style.css";
 import dagre from "dagre";
 import { DecisionTreeSpec } from "@/lib/visuals";
 
-const nodeWidth = 200;
-const nodeHeight = 60;
+const nodeWidth = 260;
+const nodeHeight = 70;
 
 function getLayoutedElements(nodes: Node[], edges: Edge[], direction = "TB") {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
-  dagreGraph.setGraph({ rankdir: direction, nodesep: 50, edgesep: 30, ranksep: 80 });
+  dagreGraph.setGraph({ rankdir: direction, nodesep: 80, edgesep: 30, ranksep: 120 });
 
   nodes.forEach((node) => {
     dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
@@ -54,9 +54,14 @@ export default function DecisionTreeRenderer({ spec }: { spec: DecisionTreeSpec 
         border: "1px solid #292524", // tailwind stone-800
         borderRadius: "8px",
         padding: "12px",
-        fontSize: "12px",
+        fontSize: "13px",
         fontWeight: "500",
         width: nodeWidth,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        textAlign: "center",
+        lineHeight: "1.4",
       }
     }));
     
@@ -82,7 +87,7 @@ export default function DecisionTreeRenderer({ spec }: { spec: DecisionTreeSpec 
     <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-4">
       <h4 className="font-semibold text-lg">{spec.title}</h4>
       
-      <div className="w-full h-[400px] bg-background/50 rounded-lg border border-border/50 overflow-hidden">
+      <div className="w-full h-[500px] bg-background/50 rounded-lg border border-border/50 overflow-hidden">
         <ReactFlow 
           nodes={layoutedNodes} 
           edges={layoutedEdges}

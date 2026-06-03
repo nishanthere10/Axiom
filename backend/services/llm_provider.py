@@ -20,7 +20,7 @@ def _build_fallbacks() -> List[Dict[str, str]]:
     
     # Priority 1: Gemini
     if settings.GEMINI_API_KEY:
-        fallbacks.append({"model": "gemini/gemini-1.5-pro"})
+        fallbacks.append({"model": "gemini/gemini-3.5-flash"})
         
     # Priority 2: Mistral
     if settings.MISTRAL_API_KEY:
@@ -43,12 +43,14 @@ def generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/
     fallbacks = _build_fallbacks()
     
     try:
+        print(f"[DEBUG: llm_provider] Requesting LLM completion (Primary: {model})")
         response = completion(
             model=model,
             messages=messages,
             fallbacks=fallbacks,
             **kwargs
         )
+        print(f"[DEBUG: llm_provider] Successfully used model: {response.model}")
         return response
     except Exception as e:
         print(f"[DEBUG: llm_provider] LLM generation failed across all providers. Error: {e}")
@@ -72,6 +74,7 @@ def get_instructor_client():
         if "model" not in kwargs:
             kwargs["model"] = "groq/llama-3.3-70b-versatile"
             
+        print(f"[DEBUG: llm_provider] Requesting Structured LLM completion (Primary: {kwargs['model']})")
         return original_create(*args, **kwargs)
         
     client.chat.completions.create = create_with_fallbacks

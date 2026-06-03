@@ -2,6 +2,7 @@ import {
   ResearchResponse,
   JobStatusResponse,
   SessionDocumentResponse,
+  SessionHistoryResponse,
 } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -42,4 +43,9 @@ export async function getJobStatus(jobId: string): Promise<JobStatusResponse> {
 /** Fetch the completed decision document for a session. */
 export async function getSessionDocument(sessionId: string): Promise<SessionDocumentResponse> {
   return apiFetch<SessionDocumentResponse>(`/research/sessions/${sessionId}`);
+}
+
+/** Fetch the list of recent research sessions. */
+export async function getSessionHistory(): Promise<SessionHistoryResponse> {
+  return apiFetch<SessionHistoryResponse>("/research/history");
 }

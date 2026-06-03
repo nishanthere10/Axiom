@@ -15,6 +15,8 @@
 - F-002: Historical Decision Comparison (Synchronous API, diffing, deterministic suggestions).
 - F-003: Evidence Grounded Research (Tavily integration, caching, Evidence UI).
 - F-004: Evidence-Aware Comparisons (Structural diffs for evidence, consensus tracking, Compare UI fixes).
+- F-005: Research Memory System (Replaced Gemini Embedding Provider with Jina Embeddings v5 Text Small).
+- System Infrastructure: Implemented centralized LLM Fallback Routing via LiteLLM (Groq -> Gemini -> Mistral -> NVIDIA).
 
 ## In Progress
 

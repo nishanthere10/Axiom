@@ -1,5 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import warnings
+
+# Suppress annoying litellm/asyncio warnings about unawaited coroutines and pending tasks
+warnings.filterwarnings("ignore", message="Task was destroyed but it is pending!", category=RuntimeWarning)
+warnings.filterwarnings("ignore", message=".*was never awaited.*", category=RuntimeWarning)
+
 from api.routes.research import router as research_router
 from api.routes.compare import router as compare_router
 from api.routes.memory import router as memory_router

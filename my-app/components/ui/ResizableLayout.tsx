@@ -1,8 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
-import { Panel, Group, Separator } from "react-resizable-panels";
-import type { PanelImperativeHandle } from "react-resizable-panels";
+import { useState, useCallback, Suspense } from "react";
 import LeftSidebar from "./LeftSidebar";
 import RightPanel from "./RightPanel";
 import CenterCanvas from "./CenterCanvas";
@@ -15,106 +13,40 @@ interface ResizableLayoutProps {
 }
 
 export default function ResizableLayout({ children, rightPanelContent, rightPanelTitle, hideRightPanel = false }: ResizableLayoutProps) {
-  const leftPanelRef = useRef<PanelImperativeHandle>(null);
-  const rightPanelRef = useRef<PanelImperativeHandle>(null);
+  const [leftOpen, setLeftOpen] = useState(true);
+  const [rightOpen, setRightOpen] = useState(true);
 
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [rightCollapsed, setRightCollapsed] = useState(false);
-
-  const toggleLeft = useCallback(() => {
-    const panel = leftPanelRef.current;
-    if (panel) {
-      if (panel.isCollapsed()) {
-        panel.expand();
-      } else {
-        panel.collapse();
-      }
-    }
-  }, []);
-
-  const toggleRight = useCallback(() => {
-    const panel = rightPanelRef.current;
-    if (panel) {
-      if (panel.isCollapsed()) {
-        panel.expand();
-      } else {
-        panel.collapse();
-      }
-    }
-  }, []);
-
-  const handleLeftResize = useCallback((size: { asPercentage: number; inPixels: number }) => {
-    setLeftCollapsed(size.asPercentage <= 5);
-  }, []);
-
-  const handleRightResize = useCallback((size: { asPercentage: number; inPixels: number }) => {
-    setRightCollapsed(size.asPercentage <= 5);
-  }, []);
+  const toggleLeft = useCallback(() => setLeftOpen(prev => !prev), []);
+  const toggleRight = useCallback(() => setRightOpen(prev => !prev), []);
 
   return (
-    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, minHeight: 0 }}>
-        <Group orientation="horizontal">
-          <Panel
-            id="atlas-left"
-            panelRef={leftPanelRef}
-            defaultSize={20}
-            minSize={15}
-            maxSize={30}
-            collapsible
-            collapsedSize={4}
-            onResize={handleLeftResize}
-            style={{ background: "#171717", borderRight: "1px solid var(--color-border, #262626)" }}
-          >
-            <LeftSidebar isCollapsed={leftCollapsed} toggleCollapse={toggleLeft} />
-          </Panel>
+    <div className="flex h-full w-full overflow-hidden">
+      {/* Left Sidebar */}
+      <aside
+        className="h-full shrink-0 bg-[#171717] border-r border-border/50 overflow-hidden transition-[width] duration-300 ease-in-out"
+        style={{ width: leftOpen ? 260 : 48 }}
+      >
+        <Suspense fallback={null}>
+          <LeftSidebar isCollapsed={!leftOpen} toggleCollapse={toggleLeft} />
+        </Suspense>
+      </aside>
 
-          <Separator>
-            <div style={{
-              width: 8,
-              height: "100%",
-              background: "#585b70",
-              cursor: "col-resize",
-              borderRadius: 4,
-            }} />
-          </Separator>
-
-          <Panel id="atlas-center" defaultSize={hideRightPanel ? 76 : 56} minSize={30}>
-            <CenterCanvas>{children}</CenterCanvas>
-          </Panel>
-
-          {!hideRightPanel && (
-            <>
-              <Separator>
-                <div style={{
-                  width: 8,
-                  height: "100%",
-                  background: "#585b70",
-                  cursor: "col-resize",
-                  borderRadius: 4,
-                }} />
-              </Separator>
-
-              <Panel
-                id="atlas-right"
-                panelRef={rightPanelRef}
-                defaultSize={20}
-                minSize={15}
-                maxSize={35}
-                collapsible
-                collapsedSize={4}
-                onResize={handleRightResize}
-                style={{ background: "#171717", borderLeft: "1px solid var(--color-border, #262626)" }}
-              >
-                <RightPanel isCollapsed={rightCollapsed} toggleCollapse={toggleRight} title={rightPanelTitle}>
-                  {rightPanelContent}
-                </RightPanel>
-              </Panel>
-            </>
-          )}
-        </Group>
+      {/* Center Content */}
+      <div className="flex-1 min-w-0 h-full overflow-hidden">
+        <CenterCanvas>{children}</CenterCanvas>
       </div>
+
+      {/* Right Panel */}
+      {!hideRightPanel && (
+        <aside
+          className="h-full shrink-0 bg-[#171717] border-l border-border/50 overflow-hidden transition-[width] duration-300 ease-in-out"
+          style={{ width: rightOpen ? 320 : 48 }}
+        >
+          <RightPanel isCollapsed={!rightOpen} toggleCollapse={toggleRight} title={rightPanelTitle}>
+            {rightPanelContent}
+          </RightPanel>
+        </aside>
+      )}
     </div>
   );
 }
-

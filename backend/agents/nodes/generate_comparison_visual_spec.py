@@ -27,21 +27,15 @@ def generate_comparison_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
     1. You MUST generate at least one visual if the comparison involves architecture, system design, or clear tradeoffs. Only return an empty array for trivial or non-technical topics.
     2. Do NOT generate more than 3 visuals.
     3. Do NOT generate duplicate visual types.
-    4. For Architecture Diagrams: Show a side-by-side or unified architecture comparing Option A and Option B if possible. 
-       CRITICAL MERMAID SYNTAX: Never use -->|text|> for labeled arrows. You must use the standard format A -->|text| B or A -- text --> B.
-       - Start with "graph TD" on the first line.
-       - Use ONLY these arrow formats:
-         VALID:   A --> B
-         VALID:   A -->|label text| B
-         VALID:   A --- B
-         VALID:   A ---|label text| B
-         INVALID: A -->|label text|> B   (DO NOT add > after |)
-         INVALID: A -->|label text|-> B  (DO NOT add -> after |)
-       - Node definitions: A["Label Text"] or A{{"Label Text"}} or A("Label Text")
-       - CRITICAL MERMAID SYNTAX: Never use nested shape definitions like NodeID[A(Label)]. Use standard, flat labels.
+    4. For Architecture Diagrams: Show a side-by-side or unified architecture comparing Option A and Option B if possible.
+       - Start with "graph TD" (top-down) for hierarchy, or "graph LR" (left-right) for pipelines.
+       - MAX 8 nodes total. Group related nodes inside `subgraph` blocks for clarity (e.g. `subgraph Option A`).
+       - Node labels MUST be short (max 4-5 words). DO NOT write paragraphs inside nodes.
+       - Use ONLY these arrow formats: A --> B, A -->|label text| B, A --- B.
+       - CRITICAL MERMAID SYNTAX: Never use -->|text|> for labeled arrows. Never use nested shape definitions like NodeID[A(Label)].
        - If a label contains spaces or special characters, you MUST enclose it in double quotes: NodeID["Label Text"].
        - Do NOT wrap in markdown code blocks.
-    5. For Decision Trees: Map out the conditional logic ("If condition X, use Option A. If condition Y, use Option B."). Include at least 4 nodes.
+    5. For Decision Trees: Map out the conditional logic ("If condition X, use Option A."). MAX 8 nodes. Keep labels short (max 4-5 words).
     6. For Summary Cards: Summarize the final verdict, which option wins on which metric, and the core tradeoff.
 
     STRUCTURAL DIFF:
@@ -56,8 +50,10 @@ def generate_comparison_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
     
     try:
         response: VisualSpecResponse = client.chat.completions.create(
-            model="groq/llama-3.1-8b-instant",
+            model="groq/llama-3.3-70b-versatile",
             response_model=VisualSpecResponse,
+            max_retries=3,
+            parallel_tool_calls=False,
             messages=[
                 {"role": "system", "content": prompt}
             ]

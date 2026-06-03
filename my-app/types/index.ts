@@ -48,3 +48,12 @@ export interface SessionDocumentResponse {
 
 export type PollingState = "idle" | "queued" | "running" | "completed" | "failed";
 
+export interface SessionHistoryItem {
+  id: string;
+  question: string;
+  created_at: string;
+}
+
+export interface SessionHistoryResponse {
+  sessions: SessionHistoryItem[];
+}

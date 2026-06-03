@@ -62,6 +62,8 @@ def analyze_memory(state: Dict[str, Any]) -> Dict[str, Any]:
         response: MemoryContextSchema = client.chat.completions.create(
             model="groq/llama-3.3-70b-versatile",
             response_model=MemoryContextSchema,
+            max_retries=3,
+            parallel_tool_calls=False,
             messages=[
                 {"role": "system", "content": prompt}
             ]

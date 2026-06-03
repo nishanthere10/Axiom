@@ -35,27 +35,24 @@ def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
     1. You MUST generate at least one visual if the topic involves architecture, system design, or multi-step decisions. Only return an empty array for trivial or non-technical topics.
     2. Do NOT generate more than 3 visuals.
     3. Do NOT generate duplicate visual types.
-    4. For Decision Trees: Map out the conditional logic or recommendations. Include at least 4 nodes.
-    5. For Architecture Diagrams: Provide valid Mermaid JS syntax. CRITICAL MERMAID SYNTAX: Never use -->|text|> for labeled arrows. You must use the standard format A -->|text| B or A -- text --> B.
-       - Start with "graph TD" on the first line.
-       - Use ONLY these arrow formats:
-         VALID:   A --> B
-         VALID:   A -->|label text| B
-         VALID:   A --- B
-         VALID:   A ---|label text| B
-         INVALID: A -->|label text|> B   (DO NOT add > after |)
-         INVALID: A -->|label text|-> B  (DO NOT add -> after |)
-       - Node definitions: A["Label Text"] or A{{"Label Text"}} or A("Label Text")
-       - CRITICAL MERMAID SYNTAX: Never use nested shape definitions like NodeID[A(Label)]. Use standard, flat labels.
+    4. For Decision Trees: Map out conditional logic cleanly. MAX 8 nodes to prevent clutter. Keep labels short (max 4-5 words).
+    5. For Architecture Diagrams: Provide valid Mermaid JS syntax.
+       - Start with "graph TD" (top-down) for hierarchy, or "graph LR" (left-right) for pipelines.
+       - MAX 8 nodes total. Group related nodes inside `subgraph` blocks for clarity.
+       - Node labels MUST be short (max 4-5 words). DO NOT write paragraphs inside nodes.
+       - Use ONLY these arrow formats: A --> B, A -->|label text| B, A --- B.
+       - CRITICAL MERMAID SYNTAX: Never use -->|text|> for labeled arrows. Never use nested shape definitions like NodeID[A(Label)].
        - If a label contains spaces or special characters, you MUST enclose it in double quotes: NodeID["Label Text"].
        - Do NOT wrap in markdown code blocks.
        - Example:
          graph TD
-         A[Client] -->|HTTPS| B[Load Balancer]
-         B --> C[App Server]
-         B --> D[App Server 2]
-         C --> E[Database]
-         D --> E
+         subgraph Frontend
+           A["Web Client"]
+         end
+         subgraph Backend
+           B["Load Balancer"] --> C["API Server"]
+         end
+         A -->|HTTPS| B
     6. For Summary Cards: Summarize the final recommendation, confidence, and consensus.
 
     QUESTION:
@@ -84,6 +81,8 @@ def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
         response: VisualSpecResponse = client.chat.completions.create(
             model="groq/llama-3.3-70b-versatile",
             response_model=VisualSpecResponse,
+            max_retries=3,
+            parallel_tool_calls=False,
             messages=[
                 {"role": "system", "content": prompt}
             ]

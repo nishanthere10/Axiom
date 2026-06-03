@@ -13,7 +13,7 @@ class DecisionTreeEdge(BaseModel):
 class DecisionTreeSchema(BaseModel):
     type: Literal["decision_tree"] = "decision_tree"
     title: str = Field(description="Title of the decision tree")
-    nodes: List[DecisionTreeNode] = Field(description="List of nodes in the decision tree")
+    nodes: List[DecisionTreeNode] = Field(description="List of nodes in the decision tree. Maximum 8 nodes to ensure readability.", max_length=8)
     edges: List[DecisionTreeEdge] = Field(description="List of directed edges (connections) between nodes")
 
 class ArchitectureDiagramSchema(BaseModel):
@@ -22,14 +22,21 @@ class ArchitectureDiagramSchema(BaseModel):
     mermaid_syntax: str = Field(description='''Raw Mermaid JS syntax. 
 CRITICAL RULES:
 1. ONLY use 'graph TD' or 'graph LR'. No other types.
-2. Node definitions MUST use brackets: ID[Label]
+2. Node definitions MUST use brackets: ID[Label]. Keep labels short (max 4-5 words).
 3. Edge definitions MUST use valid syntax: --> or -->|label|
 4. NEVER use "note right:" or sequence diagram features in graphs.
 5. NEVER use quotes outside brackets (e.g. a -- 'Label' is INVALID).
 6. Do not wrap in markdown ``` codeblocks.
+7. MAX 8 nodes total. Use subgraphs for logical grouping if needed.
 Example:
 graph TD
-  A[Client] -->|HTTPS| B[Server]
+  subgraph Frontend
+    A[Client App]
+  end
+  subgraph Backend
+    B[Load Balancer] --> C[API Server]
+  end
+  A -->|HTTPS| B
 ''')
 
 class SummaryCardHighlight(BaseModel):
