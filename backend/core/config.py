@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     # LLM & Vector Store
     GROQ_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
+    MISTRAL_API_KEY: str = ""
+    NVIDIA_API_KEY: str = ""
     JINA_API_KEY: str = ""
     PINECONE_API_KEY: str = ""
     PINECONE_INDEX: str = "atlas-research-v1"

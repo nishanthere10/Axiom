@@ -1,8 +1,8 @@
 from typing import Dict, Any, List
 import uuid
-from litellm import completion
 from api.schemas.memory import MemoryItemCreate
 from core.config import settings
+from services.llm_provider import generate_chat_completion
 
 def create_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -37,7 +37,7 @@ def _create_decision_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     
     try:
-        response = completion(
+        response = generate_chat_completion(
             model="groq/llama-3.3-70b-versatile",
             messages=[{"role": "system", "content": prompt}]
         )
@@ -86,7 +86,7 @@ def _create_comparison_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     
     try:
-        response = completion(
+        response = generate_chat_completion(
             model="groq/llama-3.3-70b-versatile",
             messages=[{"role": "system", "content": prompt}]
         )

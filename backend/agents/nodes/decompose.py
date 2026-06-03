@@ -1,9 +1,7 @@
-from groq import Groq
+from services.llm_provider import generate_chat_completion
 from core.config import settings
 from agents.state.research_state import ResearchState
 
-_client = Groq(api_key=settings.GROQ_API_KEY)
-_MODEL = "llama-3.3-70b-versatile"
 
 
 def decompose_question(state: ResearchState) -> dict:
@@ -13,8 +11,7 @@ def decompose_question(state: ResearchState) -> dict:
     """
     question = state["question"]
 
-    response = _client.chat.completions.create(
-        model=_MODEL,
+    response = generate_chat_completion(
         messages=[
             {
                 "role": "system",

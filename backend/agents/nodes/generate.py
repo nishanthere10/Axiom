@@ -1,10 +1,7 @@
 import json
-from groq import Groq
 from core.config import settings
 from agents.state.research_state import ResearchState
-
-_client = Groq(api_key=settings.GROQ_API_KEY)
-_MODEL = "llama-3.3-70b-versatile"
+from services.llm_provider import generate_chat_completion
 
 
 def generate_decision(state: ResearchState) -> dict:
@@ -48,8 +45,7 @@ Return only valid JSON. Ensure all strings correctly escape quotes and newlines 
         return str(val)
 
     try:
-        response = _client.chat.completions.create(
-            model=_MODEL,
+        response = generate_chat_completion(
             messages=[
                 {"role": "system", "content": "You are an elite Principal Engineer. You write context-rich, highly scannable technical docs. Rely heavily on bullet points and bold text for at-a-glance readability. Zero fluff. Return only valid JSON."},
                 {"role": "user", "content": prompt},

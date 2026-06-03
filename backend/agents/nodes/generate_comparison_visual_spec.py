@@ -1,7 +1,7 @@
 from typing import Any, Dict
 from pydantic import BaseModel
 import instructor
-from groq import Groq
+from services.llm_provider import get_instructor_client
 from api.schemas.visuals import VisualSpecResponse
 from core.config import settings
 
@@ -16,7 +16,7 @@ def generate_comparison_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
     impact_summary = state.get("impact_summary", {})
     
     # We will use the structured output format with Instructor and Groq
-    client = instructor.from_groq(Groq(api_key=settings.GROQ_API_KEY))
+    client = get_instructor_client()
     
     prompt = f"""
     You are an expert technical architect and visual designer.
@@ -56,7 +56,7 @@ def generate_comparison_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
     
     try:
         response: VisualSpecResponse = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="groq/llama-3.1-8b-instant",
             response_model=VisualSpecResponse,
             messages=[
                 {"role": "system", "content": prompt}

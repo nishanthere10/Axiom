@@ -1,10 +1,8 @@
 import json
-from groq import Groq
+from services.llm_provider import generate_chat_completion
 from core.config import settings
 from agents.state.research_state import ResearchState
 
-_client = Groq(api_key=settings.GROQ_API_KEY)
-_MODEL = "llama-3.3-70b-versatile"
 
 
 def build_confidence(state: ResearchState) -> dict:
@@ -36,8 +34,7 @@ Return a JSON object with exactly these keys and float values between 0.0 and 1.
 Return only valid JSON."""
 
     try:
-        response = _client.chat.completions.create(
-            model=_MODEL,
+        response = generate_chat_completion(
             messages=[
                 {"role": "system", "content": "You are a calibrated uncertainty estimator. Return only valid JSON."},
                 {"role": "user", "content": prompt},

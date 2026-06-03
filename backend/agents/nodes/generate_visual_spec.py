@@ -1,7 +1,7 @@
 from typing import Any, Dict
 from pydantic import BaseModel
 import instructor
-from groq import Groq
+from services.llm_provider import get_instructor_client
 from api.schemas.visuals import VisualSpecResponse
 from core.config import settings
 
@@ -19,7 +19,7 @@ def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
     confidence = state.get("confidence", {})
     
     # We will use the structured output format with Instructor and Groq
-    client = instructor.from_groq(Groq(api_key=settings.GROQ_API_KEY))
+    client = get_instructor_client()
     
     # Build a rich evidence summary for the prompt
     evidence_text = "\n".join(
@@ -82,7 +82,7 @@ def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
     
     try:
         response: VisualSpecResponse = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="groq/llama-3.3-70b-versatile",
             response_model=VisualSpecResponse,
             messages=[
                 {"role": "system", "content": prompt}

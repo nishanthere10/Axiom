@@ -1,10 +1,8 @@
 import json
-from groq import Groq
+from services.llm_provider import generate_chat_completion
 from core.config import settings
 from agents.state.comparison_state import ComparisonState
 
-_client = Groq(api_key=settings.GROQ_API_KEY)
-_MODEL = "llama-3.3-70b-versatile"
 
 _SYSTEM_PROMPT = """You are an elite Principal Software Architect performing an architectural teardown of how a system design evolved.
 Your goal is to explain the engineering WHY behind the decision evolution. 
@@ -33,8 +31,7 @@ def generate_explanation(state: ComparisonState) -> dict:
     
     prompt = f"Question: {q}\n\nStructural Diff:\n{diff_text}\n\nGenerate the structured architectural evolution."
     
-    response = _client.chat.completions.create(
-        model=_MODEL,
+    response = generate_chat_completion(
         messages=[
             {"role": "system", "content": _SYSTEM_PROMPT},
             {"role": "user", "content": prompt}

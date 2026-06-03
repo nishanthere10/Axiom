@@ -1,10 +1,8 @@
 import json
-from groq import Groq
+from services.llm_provider import generate_chat_completion
 from core.config import settings
 from agents.state.comparison_state import ComparisonState
 
-_client = Groq(api_key=settings.GROQ_API_KEY)
-_MODEL = "llama-3.3-70b-versatile"
 
 _SYSTEM_PROMPT = """You are an elite Principal Software Architect analyzing the fallout of a major architectural shift.
 Given the decision evolution and structural diff, describe the rigorous engineering IMPACT of this change.
@@ -31,8 +29,7 @@ def generate_impact(state: ComparisonState) -> dict:
     
     prompt = f"Decision Evolution:\n{evo_str}\n\nGenerate the structured impact summary."
     
-    response = _client.chat.completions.create(
-        model=_MODEL,
+    response = generate_chat_completion(
         messages=[
             {"role": "system", "content": _SYSTEM_PROMPT},
             {"role": "user", "content": prompt}

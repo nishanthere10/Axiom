@@ -1,12 +1,10 @@
 from agents.state.research_state import ResearchState
 from services.search_provider import search_tavily
 from services.evidence_service import get_cached_evidence, set_cached_evidence
-from groq import Groq
+from services.llm_provider import generate_chat_completion
 from core.config import settings
 import json
 
-_client = Groq(api_key=settings.GROQ_API_KEY)
-_MODEL = "llama-3.3-70b-versatile"
 
 def collect_and_score_evidence(state: ResearchState) -> dict:
     """
@@ -72,8 +70,7 @@ Return ONLY a JSON object with this exact schema:
 }}"""
 
     try:
-        response = _client.chat.completions.create(
-            model=_MODEL,
+        response = generate_chat_completion(
             messages=[{"role": "user", "content": prompt}],
             response_format={"type": "json_object"},
             temperature=0.1,

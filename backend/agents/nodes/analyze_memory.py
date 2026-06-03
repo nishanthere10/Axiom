@@ -1,8 +1,7 @@
 from typing import Dict, Any
-import instructor
-from litellm import completion
 from api.schemas.memory import MemoryContextSchema
 from core.config import settings
+from services.llm_provider import get_instructor_client
 
 def analyze_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -38,7 +37,7 @@ def analyze_memory(state: Dict[str, Any]) -> Dict[str, Any]:
         
     memories_text = "\n".join(formatted_memories)
         
-    client = instructor.from_litellm(completion)
+    client = get_instructor_client()
     
     prompt = f"""
     You are analyzing the user's historical architectural memories to inform a new decision.
