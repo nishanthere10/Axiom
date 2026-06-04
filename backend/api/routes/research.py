@@ -81,12 +81,12 @@ def get_session_document(session_id: str):
 
 
 @router.get("/history", response_model=SessionHistoryResponse)
-def get_session_history():
+def get_session_history(limit: int = 10, offset: int = 0):
     """
-    GET /research/history
-    Returns a list of recent completed sessions for the user to select from.
+    GET /research/history?limit=10&offset=0
+    Returns a paginated list of recent completed sessions.
     """
-    sessions = research_service.get_recent_sessions(limit=20)
+    sessions = research_service.get_recent_sessions(limit=limit, offset=offset)
     return SessionHistoryResponse(sessions=sessions)
 
 @router.post("/regenerate-visuals", response_model=RegenerateVisualsResponse)

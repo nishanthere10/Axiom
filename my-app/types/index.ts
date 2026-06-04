@@ -57,3 +57,15 @@ export interface SessionHistoryItem {
 export interface SessionHistoryResponse {
   sessions: SessionHistoryItem[];
 }
+
+export interface SavedComparisonItem {
+  id: string;
+  session_a: string;
+  session_b: string;
+  summary: string;
+  created_at: string;
+}
+
+export interface SavedComparisonsResponse {
+  comparisons: SavedComparisonItem[];
+}

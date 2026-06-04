@@ -30,32 +30,40 @@ mermaid.initialize({
 
 /**
  * Comprehensive sanitizer for LLM-generated Mermaid syntax.
- * Handles the most common hallucinations and formatting errors.
+ * Handles the most common hallucinations, encoding errors, and formatting issues.
  */
 function sanitizeMermaid(raw: string): string {
+  if (!raw) return "";
   let s = raw;
 
-  // 0. Handle escaped JSON newlines and carriage returns
+  // 0. Strip accidental markdown code block wrappers (inline or full-line)
+  s = s.replace(/```mermaid/g, "").replace(/```/g, "");
+
+  // 1. Fix JSON serialization string leaks (escaped newlines in JSON payloads)
   s = s.replace(/\\n/g, '\n');
   s = s.replace(/\\r/g, '');
 
-  // 1. Strip markdown code fences
-  s = s.replace(/^```(?:mermaid)?\s*\n?/g, "");
-  s = s.replace(/\n?```\s*$/g, "");
-  s = s.trim();
+  // 2. CRITICAL PRODUCTION FIX: Normalize ALL non-standard whitespace to regular spaces.
+  //    LLMs frequently output non-breaking spaces (U+00A0) for subgraph indentation.
+  //    Mermaid treats these as illegal characters and crashes hard.
+  s = s.replace(/\u00a0/g, " "); // Non-breaking space — most common LLM culprit
+  s = s.replace(/\xa0/g, " ");   // Explicit hex alias for U+00A0
+  s = s.replace(/\u202f/g, " "); // Narrow no-break space
+  s = s.replace(/[\u2000-\u200A]/g, " "); // Thin/hair/en-quad spaces
+  s = s.replace(/\u3000/g, " "); // Ideographic (full-width) space
 
-  // 2. Remove trailing periods, commas, semicolons at end of lines
+  // 3. Remove trailing periods, commas, semicolons at end of lines
   s = s.replace(/([^\s])[.,;]+\s*$/gm, "$1");
 
-  // 3. Fix LLM arrow hallucinations (e.g. -->|label|>)
+  // 4. Fix LLM arrow hallucinations: -->|label|> B → -->|label| B
   s = s.replace(/-->\s*\|([^|]+)\|\s*>/g, '-->|$1|');
   s = s.replace(/\|>\s/g, "| ");
   s = s.replace(/\|->\s/g, "| ");
 
-  // 4. Fix nested node hallucinations e.g. A[Label(Text)] -> A["Label(Text)"]
+  // 5. Fix nested node hallucinations e.g. A[Label(Text)] → A["Label(Text)"]
   s = s.replace(/\[\w*\(([^)]+)\)\]/g, '["$1"]');
 
-  // 5. Quote node labels containing special characters that break Mermaid
+  // 6. Quote node labels containing special characters that break Mermaid
   s = s.replace(/\[([^\]"]+)\]/g, (match, content) => {
     if (/[()<>&;#{}]/.test(content)) {
       const escaped = content.replace(/"/g, "'");
@@ -64,22 +72,38 @@ function sanitizeMermaid(raw: string): string {
     return match;
   });
 
-  // 6. Also fix round-bracket node labels: A(Label (stuff)) -> A("Label (stuff)")
+  // 7. Fix round-bracket node labels: A(Label (stuff)) → A("Label (stuff)")
   s = s.replace(/([A-Za-z0-9_]+)\((?!\()([^)]*[<>&;#].*?)\)/g, (_, id, content) => {
     const escaped = content.replace(/"/g, "'");
     return `${id}("${escaped}")`;
   });
 
-  // 7. Remove HTML tags inside labels: A[<b>Text</b>] -> A["Text"]
+  // 8. Remove HTML tags inside labels: A[<b>Text</b>] → A["Text"]
   s = s.replace(/\[([^\]]*<[^>]+>[^\]]*)\]/g, (_, content) => {
     const stripped = content.replace(/<[^>]+>/g, "").trim();
     return `["${stripped}"]`;
   });
 
-  // 8. Fix lines that end with just a period
+  // 9. Fix lines that end with just a period
   s = s.replace(/\.\s*$/gm, "");
 
-  // 9. Ensure the diagram starts with a valid directive
+  // 10. Fix double-escaped JSON quotes: \" → "
+  s = s.replace(/\\"/g, '"');
+
+  // 11. Fix unquoted multi-word subgraph names:
+  //     "subgraph Frontend Layer"  →  "subgraph frontend_layer ["Frontend Layer"]"
+  s = s.replace(/^(\s*)subgraph\s+(.+)$/gm, (_, indent, name) => {
+    const trimmed = name.trim();
+    // Already has bracket alias syntax — leave it alone
+    if (trimmed.includes("[")) return `${indent}subgraph ${trimmed}`;
+    // Single-word ID — safe as-is
+    if (!trimmed.includes(" ")) return `${indent}subgraph ${trimmed}`;
+    // Multi-word without alias — convert to alias syntax
+    const safeId = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+    return `${indent}subgraph ${safeId} ["${trimmed}"]`;
+  });
+
+  // 12. Ensure the diagram starts with a valid directive
   const firstLine = s.split("\n").find(l => l.trim().length > 0)?.trim() || "";
   const validStarters = /^(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|gitGraph|mindmap|timeline|journey|%%)/i;
   if (!validStarters.test(firstLine)) {

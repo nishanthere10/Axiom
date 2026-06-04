@@ -40,7 +40,7 @@ export default function ResizableLayout({ children, rightPanelContent, rightPane
       {!hideRightPanel && (
         <aside
           className="h-full shrink-0 bg-[#171717] border-l border-border/50 overflow-hidden transition-[width] duration-300 ease-in-out"
-          style={{ width: rightOpen ? 320 : 48 }}
+          style={{ width: rightOpen ? 450 : 48 }}
         >
           <RightPanel isCollapsed={!rightOpen} toggleCollapse={toggleRight} title={rightPanelTitle}>
             {rightPanelContent}

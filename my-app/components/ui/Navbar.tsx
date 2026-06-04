@@ -10,7 +10,7 @@ export default function Navbar() {
           </Link>
           <div className="flex gap-4 md:gap-6">
             <Link
-              href="/"
+              href="/research"
               className="text-sm font-medium transition-colors hover:text-foreground/80 text-foreground/60"
             >
               Research

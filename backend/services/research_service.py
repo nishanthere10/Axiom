@@ -51,6 +51,7 @@ def save_document(session_id: str, question: str, state: dict) -> dict:
         "evidence": evidence,
         "consensus": state.get("consensus", ""),
         "visuals": visuals,
+        "memory_context": state.get("memory_context", {}),
         "evidence_generated_at": datetime.utcnow().isoformat() if evidence else None,
         "version": 1,
     }
@@ -81,14 +82,14 @@ def get_document_by_session(session_id: str) -> dict | None:
     return None
 
 
-def get_recent_sessions(limit: int = 15) -> list[dict]:
-    """Fetch recent completed research sessions."""
+def get_recent_sessions(limit: int = 10, offset: int = 0) -> list[dict]:
+    """Fetch recent completed research sessions with pagination."""
     response = (
         supabase.table("research_sessions")
         .select("id, question, created_at")
         .eq("status", "complete")
         .order("created_at", desc=True)
-        .limit(limit)
+        .range(offset, offset + limit - 1)
         .execute()
     )
     return response.data or []

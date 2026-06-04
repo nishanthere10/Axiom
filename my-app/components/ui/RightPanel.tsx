@@ -27,7 +27,7 @@ export default function RightPanel({ children, title = "Auxiliary Data", isColla
         )}
       </div>
       
-      <div className={cn("flex-1 overflow-y-auto p-4 space-y-6", isCollapsed && "hidden")}>
+      <div className={cn("flex-1 overflow-y-auto px-6 py-6 space-y-6", isCollapsed && "hidden")}>
         {children}
       </div>
     </div>

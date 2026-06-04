@@ -78,8 +78,10 @@ def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     
     try:
+        # Use Gemini specifically for visual generation — it produces
+        # significantly cleaner Mermaid syntax than the default Groq model.
         response: VisualSpecResponse = client.chat.completions.create(
-            model="groq/llama-3.3-70b-versatile",
+            model="gemini/gemini-1.5-pro-latest",
             response_model=VisualSpecResponse,
             max_retries=3,
             parallel_tool_calls=False,

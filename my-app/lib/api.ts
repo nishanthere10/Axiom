@@ -3,6 +3,7 @@ import {
   JobStatusResponse,
   SessionDocumentResponse,
   SessionHistoryResponse,
+  SavedComparisonsResponse,
 } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -45,7 +46,12 @@ export async function getSessionDocument(sessionId: string): Promise<SessionDocu
   return apiFetch<SessionDocumentResponse>(`/research/sessions/${sessionId}`);
 }
 
-/** Fetch the list of recent research sessions. */
-export async function getSessionHistory(): Promise<SessionHistoryResponse> {
-  return apiFetch<SessionHistoryResponse>("/research/history");
+/** Fetch a paginated list of recent research sessions. */
+export async function getSessionHistory(limit: number = 10, offset: number = 0): Promise<SessionHistoryResponse> {
+  return apiFetch<SessionHistoryResponse>(`/research/history?limit=${limit}&offset=${offset}`);
+}
+
+/** Fetch all saved comparisons. */
+export async function getSavedComparisons(): Promise<SavedComparisonsResponse> {
+  return apiFetch<SavedComparisonsResponse>("/compare/saved");
 }
