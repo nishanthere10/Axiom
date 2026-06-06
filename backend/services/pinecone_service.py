@@ -49,7 +49,7 @@ def upsert_memory(memory_id: str, summary: str, metadata: Dict[str, Any]):
     except Exception as e:
         print(f"[DEBUG: pinecone_service] Error upserting to Pinecone: {e}")
 
-def search_memories(query: str, top_k: int = 5, threshold: float = 0.80) -> List[Dict[str, Any]]:
+def search_memories(query: str, top_k: int = 5, threshold: float = 0.70) -> List[Dict[str, Any]]:
     """Searches Pinecone for relevant memories above a similarity threshold."""
     print(f"[DEBUG: pinecone_service] search_memories called with query='{query}'")
     if not index:

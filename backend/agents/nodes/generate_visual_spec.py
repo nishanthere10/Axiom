@@ -36,23 +36,12 @@ def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
     2. Do NOT generate more than 3 visuals.
     3. Do NOT generate duplicate visual types.
     4. For Decision Trees: Map out conditional logic cleanly. MAX 8 nodes to prevent clutter. Keep labels short (max 4-5 words).
-    5. For Architecture Diagrams: Provide valid Mermaid JS syntax.
-       - Start with "graph TD" (top-down) for hierarchy, or "graph LR" (left-right) for pipelines.
-       - MAX 8 nodes total. Group related nodes inside `subgraph` blocks for clarity.
-       - Node labels MUST be short (max 4-5 words). DO NOT write paragraphs inside nodes.
-       - Use ONLY these arrow formats: A --> B, A -->|label text| B, A --- B.
-       - CRITICAL MERMAID SYNTAX: Never use -->|text|> for labeled arrows. Never use nested shape definitions like NodeID[A(Label)].
-       - If a label contains spaces or special characters, you MUST enclose it in double quotes: NodeID["Label Text"].
-       - Do NOT wrap in markdown code blocks.
-       - Example:
-         graph TD
-         subgraph Frontend
-           A["Web Client"]
-         end
-         subgraph Backend
-           B["Load Balancer"] --> C["API Server"]
-         end
-         A -->|HTTPS| B
+    5. For Architecture Diagrams: Provide a structured JSON layout.
+       - Create an array of `nodes` representing system components. Keep labels short.
+       - Use `type: "custom"` for all nodes.
+       - Create an array of `edges` representing data flow or connections between nodes.
+       - Set `animated: true` on edges if representing active data flow.
+       - Use `group` on nodes to cluster related components under a parent node.
     6. For Summary Cards: Summarize the final recommendation, confidence, and consensus.
 
     QUESTION:
@@ -79,9 +68,9 @@ def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
     
     try:
         # Use Gemini specifically for visual generation — it produces
-        # significantly cleaner Mermaid syntax than the default Groq model.
+        # significantly better JSON architecture structures than the default model.
         response: VisualSpecResponse = client.chat.completions.create(
-            model="gemini/gemini-1.5-pro-latest",
+            model="gemini/gemini-2.5-pro",
             response_model=VisualSpecResponse,
             max_retries=3,
             parallel_tool_calls=False,
