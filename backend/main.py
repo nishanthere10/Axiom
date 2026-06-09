@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import warnings
+from contextlib import asynccontextmanager
 
-# Suppress annoying litellm/asyncio warnings about unawaited coroutines and pending tasks
-warnings.filterwarnings("ignore", message="Task was destroyed but it is pending!", category=RuntimeWarning)
-warnings.filterwarnings("ignore", message=".*was never awaited.*", category=RuntimeWarning)
+from core.logging_config import setup_logging
+setup_logging()
 
 from api.routes.research import router as research_router
 from api.routes.compare import router as compare_router
@@ -19,12 +19,17 @@ app = FastAPI(
 )
 
 # CORS — allow requests from Next.js frontend (dev + prod)
+import os
+
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
+if prod_origin := os.environ.get("FRONTEND_ORIGIN"):
+    ALLOWED_ORIGINS.append(prod_origin)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://*.vercel.app",  # production Vercel deployments
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

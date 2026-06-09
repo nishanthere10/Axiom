@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { saveComparison } from "@/lib/compare";
 
 export default function SaveComparison({ comparisonId, initialSaved = false }: { comparisonId: string, initialSaved?: boolean }) {
+  const { getToken } = useAuth();
   const [saved, setSaved] = useState(initialSaved);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -12,7 +14,8 @@ export default function SaveComparison({ comparisonId, initialSaved = false }: {
     setLoading(true);
     setError(null);
     try {
-      const success = await saveComparison(comparisonId);
+      const token = await getToken() ?? "";
+      const success = await saveComparison(comparisonId, token);
       if (success) {
         setSaved(true);
       }

@@ -1,7 +1,10 @@
+import logging
 from services.db import supabase
 from api.schemas.memory import MemoryItemCreate, MemoryScope, MemoryType
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
 
 def create_memory_item(data: MemoryItemCreate) -> Optional[Dict[str, Any]]:
     """Creates a memory item in Supabase."""
@@ -27,7 +30,7 @@ def create_memory_item(data: MemoryItemCreate) -> Optional[Dict[str, Any]]:
         if response.data:
             return response.data[0]
     except Exception as e:
-        print(f"Error creating memory item in Supabase: {e}")
+        logger.error("Error creating memory item in Supabase: %s", e, exc_info=True)
     return None
 
 def get_active_memories(limit: int = 50) -> List[Dict[str, Any]]:
@@ -53,7 +56,7 @@ def get_active_memories(limit: int = 50) -> List[Dict[str, Any]]:
                 
         return valid_memories
     except Exception as e:
-        print(f"Error fetching memories: {e}")
+        logger.error("Error fetching memories: %s", e, exc_info=True)
         return []
 
 def promote_memory(memory_id: str) -> bool:
@@ -65,7 +68,7 @@ def promote_memory(memory_id: str) -> bool:
         }).eq("id", memory_id).execute()
         return len(response.data) > 0
     except Exception as e:
-        print(f"Error promoting memory: {e}")
+        logger.error("Error promoting memory: %s", e, exc_info=True)
         return False
 
 def get_memory_by_id(memory_id: str) -> Optional[Dict[str, Any]]:
@@ -74,5 +77,5 @@ def get_memory_by_id(memory_id: str) -> Optional[Dict[str, Any]]:
         if response.data:
             return response.data[0]
     except Exception as e:
-        print(f"Error fetching memory {memory_id}: {e}")
+        logger.error("Error fetching memory %s: %s", memory_id, e, exc_info=True)
     return None

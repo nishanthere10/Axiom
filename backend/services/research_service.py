@@ -1,11 +1,11 @@
 from services.db import supabase
 
 
-def create_session(question: str) -> dict:
+def create_session(question: str, user_id: str = "anonymous") -> dict:
     """Create a research session row. Returns the created row."""
     response = (
         supabase.table("research_sessions")
-        .insert({"question": question, "status": "draft", "version": 1})
+        .insert({"question": question, "status": "draft", "version": 1, "user_id": user_id})
         .execute()
     )
     return response.data[0]
@@ -33,7 +33,7 @@ def update_session_status(session_id: str, status: str) -> None:
     supabase.table("research_sessions").update({"status": status}).eq("id", session_id).execute()
 
 
-def save_document(session_id: str, question: str, state: dict) -> dict:
+def save_document(session_id: str, question: str, state: dict, user_id: str = "anonymous") -> dict:
     """Save the final decision document to Supabase."""
     from datetime import datetime
     confidence = state.get("confidence", {})
@@ -54,6 +54,7 @@ def save_document(session_id: str, question: str, state: dict) -> dict:
         "memory_context": state.get("memory_context", {}),
         "evidence_generated_at": datetime.utcnow().isoformat() if evidence else None,
         "version": 1,
+        "user_id": user_id,
     }
     response = supabase.table("decision_documents").insert(payload).execute()
     return response.data[0]
@@ -82,12 +83,13 @@ def get_document_by_session(session_id: str) -> dict | None:
     return None
 
 
-def get_recent_sessions(limit: int = 10, offset: int = 0) -> list[dict]:
-    """Fetch recent completed research sessions with pagination."""
+def get_recent_sessions(limit: int = 10, offset: int = 0, user_id: str = "anonymous") -> list[dict]:
+    """Fetch recent completed research sessions for a specific user with pagination."""
     response = (
         supabase.table("research_sessions")
         .select("id, question, created_at")
         .eq("status", "complete")
+        .eq("user_id", user_id)
         .order("created_at", desc=True)
         .range(offset, offset + limit - 1)
         .execute()

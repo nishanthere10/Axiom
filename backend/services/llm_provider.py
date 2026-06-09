@@ -1,9 +1,12 @@
 import os
+import logging
 import litellm
 import instructor
 from litellm import completion
 from core.config import settings
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 # Pre-configure environment variables for litellm based on our settings
 os.environ["GROQ_API_KEY"] = settings.GROQ_API_KEY
@@ -43,17 +46,17 @@ def generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/
     fallbacks = _build_fallbacks()
     
     try:
-        print(f"[DEBUG: llm_provider] Requesting LLM completion (Primary: {model})")
+        logger.debug("Requesting LLM completion (Primary: %s)", model)
         response = completion(
             model=model,
             messages=messages,
             fallbacks=fallbacks,
             **kwargs
         )
-        print(f"[DEBUG: llm_provider] Successfully used model: {response.model}")
+        logger.debug("Successfully used model: %s", response.model)
         return response
     except Exception as e:
-        print(f"[DEBUG: llm_provider] LLM generation failed across all providers. Error: {e}")
+        logger.error("LLM generation failed across all providers: %s", e, exc_info=True)
         raise e
 
 def get_instructor_client():
@@ -74,7 +77,7 @@ def get_instructor_client():
         if "model" not in kwargs:
             kwargs["model"] = "groq/llama-3.3-70b-versatile"
             
-        print(f"[DEBUG: llm_provider] Requesting Structured LLM completion (Primary: {kwargs['model']})")
+        logger.debug("Requesting Structured LLM completion (Primary: %s)", kwargs['model'])
         return original_create(*args, **kwargs)
         
     client.chat.completions.create = create_with_fallbacks

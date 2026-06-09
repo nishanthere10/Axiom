@@ -11,7 +11,7 @@ class Settings(BaseSettings):
 
     # Clerk
     CLERK_SECRET_KEY: str = ""
-    
+    CLERK_JWT_ISSUER: str = ""  # e.g. "https://your-app.clerk.accounts.dev"
 
     # LLM & Vector Store
     GROQ_API_KEY: str = ""

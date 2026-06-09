@@ -1,26 +1,30 @@
+import logging
 from typing import Dict, Any
 from services.memory_service import create_memory_item
 from services.pinecone_service import upsert_memory
 
+logger = logging.getLogger(__name__)
+
 def store_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     Saves new memories to Postgres (source of truth) and Pinecone (vector search).
+    Non-critical node — keeps graceful degradation.
     """
-    print("[DEBUG: Node] -> store_memory starting...")
+    logger.debug("Node -> store_memory starting...")
     new_memories = state.get("new_memories", [])
     
     if not new_memories:
-        print("[DEBUG: store_memory] No new_memories to store.")
+        logger.debug("No new_memories to store.")
         return {"status": "memory_stored"}
         
     for memory_create in new_memories:
         try:
-            print(f"[DEBUG: store_memory] Saving to Postgres (source_id={memory_create.source_id})...")
+            logger.debug("Saving to Postgres (source_id=%s)...", memory_create.source_id)
             # Save to Postgres
             pg_memory = create_memory_item(memory_create)
             
             if pg_memory:
-                print(f"[DEBUG: store_memory] Saved to Postgres (id={pg_memory['id']}). Upserting to Pinecone...")
+                logger.debug("Saved to Postgres (id=%s). Upserting to Pinecone...", pg_memory['id'])
                 # Upsert to Pinecone if Postgres insert succeeded
                 # Use the UUID assigned by Postgres
                 memory_id = pg_memory["id"]
@@ -37,9 +41,9 @@ def store_memory(state: Dict[str, Any]) -> Dict[str, Any]:
                     metadata=metadata
                 )
             else:
-                print("[DEBUG: store_memory] Postgres insert failed, skipping Pinecone.")
+                logger.warning("Postgres insert failed, skipping Pinecone.")
         except Exception as e:
-            print(f"[DEBUG: store_memory] Error storing memory: {e}")
+            logger.warning("Error storing memory (non-fatal): %s", e)
             
-    print("[DEBUG: store_memory] Finished storing memories.")
+    logger.debug("Finished storing memories.")
     return {"status": "memory_stored"}

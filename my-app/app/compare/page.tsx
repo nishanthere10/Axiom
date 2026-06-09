@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import { submitComparison, getComparison, Comparison } from "@/lib/compare";
 import SessionSelector from "@/components/compare/SessionSelector";
 import ComparisonProgress from "@/components/compare/ComparisonProgress";
@@ -18,6 +19,7 @@ import ResizableLayout from "@/components/ui/ResizableLayout";
 
 function CompareContent() {
   const searchParams = useSearchParams();
+  const { getToken } = useAuth();
   const idParam = searchParams.get("id");
 
   const [comparing, setComparing] = useState(false);
@@ -28,10 +30,12 @@ function CompareContent() {
     if (idParam) {
       setComparing(true);
       setError(null);
-      getComparison(idParam)
-        .then((data) => setComparison(data))
-        .catch((err) => setError(err instanceof Error ? err.message : "Failed to load comparison."))
-        .finally(() => setComparing(false));
+      getToken().then(token => {
+        getComparison(idParam, token ?? "")
+          .then((data) => setComparison(data))
+          .catch((err) => setError(err instanceof Error ? err.message : "Failed to load comparison."))
+          .finally(() => setComparing(false));
+      });
     }
   }, [idParam]);
 
@@ -41,7 +45,8 @@ function CompareContent() {
     setComparison(null);
     
     try {
-      const data = await submitComparison(sessionA, sessionB);
+      const token = await getToken() ?? "";
+      const data = await submitComparison(sessionA, sessionB, token);
       setComparison(data.comparison);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Comparison failed.");

@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { RefreshCw } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
 import { submitResearch, getJobStatus } from "@/lib/api";
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLLS = 30; // 60 seconds max
 
 export default function RefreshEvidence({ question, onRefresh }: { question: string; onRefresh: (sessionId: string) => void }) {
+  const { getToken } = useAuth();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,15 +18,16 @@ export default function RefreshEvidence({ question, onRefresh }: { question: str
       setIsRefreshing(true);
       setError(null);
 
+      const token = await getToken() ?? "";
       // Start a new research run with force_refresh=true
-      const res = await submitResearch(question, true);
+      const res = await submitResearch(question, true, token);
       const { session_id, job_id } = res;
 
       // Poll until job is done or failed
       let polls = 0;
       while (polls < MAX_POLLS) {
         await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
-        const job = await getJobStatus(job_id);
+        const job = await getJobStatus(job_id, token);
 
         if (job.status === "completed") {
           onRefresh(session_id);

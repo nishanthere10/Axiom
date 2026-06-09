@@ -1,8 +1,9 @@
 import json
+import logging
 from services.llm_provider import generate_chat_completion
-from core.config import settings
 from agents.state.research_state import ResearchState
 
+logger = logging.getLogger(__name__)
 
 
 def build_confidence(state: ResearchState) -> dict:
@@ -33,20 +34,17 @@ Return a JSON object with exactly these keys and float values between 0.0 and 1.
 
 Return only valid JSON."""
 
-    try:
-        response = generate_chat_completion(
-            messages=[
-                {"role": "system", "content": "You are a calibrated uncertainty estimator. Return only valid JSON."},
-                {"role": "user", "content": prompt},
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.2,
-            max_tokens=300,
-        )
-        confidence_raw = json.loads(response.choices[0].message.content)
-    except Exception as e:
-        print(f"Error in build_confidence: {e}")
-        confidence_raw = {}
+    # Critical node — let exceptions propagate to fail the pipeline
+    response = generate_chat_completion(
+        messages=[
+            {"role": "system", "content": "You are a calibrated uncertainty estimator. Return only valid JSON."},
+            {"role": "user", "content": prompt},
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.2,
+        max_tokens=300,
+    )
+    confidence_raw = json.loads(response.choices[0].message.content)
 
     valid_keys = {"evidence_coverage", "source_quality", "contradiction_risk", "decision_confidence"}
     clamped = {}

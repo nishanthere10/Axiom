@@ -1,6 +1,9 @@
+import logging
 import requests
 from typing import List, Optional
 from core.config import settings
+
+logger = logging.getLogger(__name__)
 
 class JinaEmbeddingProvider:
     def __init__(self):
@@ -9,11 +12,11 @@ class JinaEmbeddingProvider:
         self.expected_dimension = 1024
 
     def generate_embedding(self, text: str) -> Optional[List[float]]:
-        print("[DEBUG: embedding_provider] Embedding generation started")
+        logger.debug("Embedding generation started")
         
         api_key = settings.JINA_API_KEY
         if not api_key:
-            print("[DEBUG: embedding_provider] Warning: JINA_API_KEY not set.")
+            logger.warning("JINA_API_KEY not set.")
             return None
             
         headers = {
@@ -30,28 +33,27 @@ class JinaEmbeddingProvider:
             response = requests.post(self.url, headers=headers, json=data)
             
             if response.status_code != 200:
-                print(f"[DEBUG: embedding_provider] Failed embedding request. Status: {response.status_code}, Body: {response.text}")
+                logger.error("Failed embedding request. Status: %d, Body: %s", response.status_code, response.text[:200])
                 return None
                 
             json_resp = response.json()
             if "data" not in json_resp or len(json_resp["data"]) == 0 or "embedding" not in json_resp["data"][0]:
-                print("[DEBUG: embedding_provider] Invalid embedding response format.")
+                logger.error("Invalid embedding response format.")
                 return None
                 
             embedding = json_resp["data"][0]["embedding"]
             dimension = len(embedding)
             
-            print("[DEBUG: embedding_provider] Embedding generation completed")
-            print(f"[DEBUG: embedding_provider] Embedding dimension returned: {dimension}")
+            logger.debug("Embedding generation completed (dimension=%d)", dimension)
             
             if dimension != self.expected_dimension:
-                print(f"[DEBUG: embedding_provider] Error: Vector dimension mismatch. Expected {self.expected_dimension}, got {dimension}")
+                logger.error("Vector dimension mismatch. Expected %d, got %d", self.expected_dimension, dimension)
                 return None
                 
             return embedding
             
         except Exception as e:
-            print(f"[DEBUG: embedding_provider] Error generating embedding: {e}")
+            logger.error("Error generating embedding: %s", e, exc_info=True)
             return None
 
 # Singleton instance for easy import

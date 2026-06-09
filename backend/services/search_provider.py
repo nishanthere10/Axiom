@@ -1,7 +1,10 @@
 import os
+import logging
 import concurrent.futures
 from tavily import TavilyClient
 from core.config import settings
+
+logger = logging.getLogger(__name__)
 
 def search_tavily(queries: list[str]) -> list[dict]:
     """
@@ -10,7 +13,7 @@ def search_tavily(queries: list[str]) -> list[dict]:
     """
     api_key = settings.TAVILY_API_KEY
     if not api_key:
-        print("WARNING: TAVILY_API_KEY not set. Returning empty results.")
+        logger.warning("TAVILY_API_KEY not set. Returning empty results.")
         return []
         
     client = TavilyClient(api_key=api_key)
@@ -19,7 +22,7 @@ def search_tavily(queries: list[str]) -> list[dict]:
         try:
             return client.search(q, max_results=3, include_raw_content=True)
         except Exception as e:
-            print(f"Error executing Tavily search for query '{q}': {e}")
+            logger.error("Error executing Tavily search for query '%s': %s", q, e)
             return {"results": []}
 
     all_results = []

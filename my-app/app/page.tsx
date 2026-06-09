@@ -3,6 +3,8 @@ import { ArrowRight, BrainCircuit, LineChart, FileDiff } from "lucide-react";
 import Footer from "@/components/ui/Footer";
 import SplitText from "@/components/SplitText";
 import LightRays from "@/components/LightRays";
+import CardSwap, { Card } from "@/components/CardSwap";
+import GlassIcons from "@/components/GlassIcons";
 
 export default function Home() {
   return (
@@ -75,42 +77,44 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {/* Feature 1 */}
-              <div className="group flex flex-col items-start space-y-6 p-12 rounded-2xl bg-surface/30 backdrop-blur-2xl border border-white/5 shadow-2xl hover:bg-surface/50 hover:border-white/10 transition-all duration-500 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full blur-3xl -mr-20 -mt-20 transition-opacity group-hover:opacity-100 opacity-50" />
-                <div className="p-4 rounded-lg bg-black/40 border border-white/5 text-primary shadow-inner">
-                  <BrainCircuit className="w-6 h-6" />
-                </div>
-                <h3 className="text-2xl font-bold tracking-tight">AI Deep Dives</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  Generate extensive decision documents covering executive summaries, alternatives, and tradeoffs instantly.
-                </p>
-              </div>
+            <div className="flex justify-center items-center relative h-[500px] w-full max-w-4xl mx-auto">
+              <CardSwap pauseOnHover={true} width={400} height={450} delay={4000}>
+                {/* Feature 1 */}
+                <Card className="flex flex-col items-center justify-center space-y-6 p-10 bg-surface/80 backdrop-blur-2xl border border-white/10 shadow-2xl">
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-primary/20 rounded-full blur-3xl -mr-20 -mt-20 opacity-50" />
+                  <GlassIcons 
+                    className="!flex !py-0 !gap-0 !my-0 items-center justify-center" 
+                    items={[{ icon: <BrainCircuit className="w-8 h-8 text-white" />, color: 'blue', label: 'AI Deep Dives' }]} 
+                  />
+                  <p className="text-muted-foreground leading-relaxed text-center text-lg mt-4">
+                    Generate extensive decision documents covering executive summaries, alternatives, and tradeoffs instantly.
+                  </p>
+                </Card>
 
-              {/* Feature 2 */}
-              <div className="group flex flex-col items-start space-y-6 p-12 rounded-2xl bg-surface/30 backdrop-blur-2xl border border-white/5 shadow-2xl hover:bg-surface/50 hover:border-white/10 transition-all duration-500 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl -mr-20 -mt-20 transition-opacity group-hover:opacity-100 opacity-50" />
-                <div className="p-4 rounded-lg bg-black/40 border border-white/5 text-emerald-500 shadow-inner">
-                  <LineChart className="w-6 h-6" />
-                </div>
-                <h3 className="text-2xl font-bold tracking-tight">Decision Evolution</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  Track how your architecture choices evolve over time with detailed reasoning and confidence scoring.
-                </p>
-              </div>
+                {/* Feature 2 */}
+                <Card className="flex flex-col items-center justify-center space-y-6 p-10 bg-surface/80 backdrop-blur-2xl border border-white/10 shadow-2xl">
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/20 rounded-full blur-3xl -mr-20 -mt-20 opacity-50" />
+                  <GlassIcons 
+                    className="!flex !py-0 !gap-0 !my-0 items-center justify-center" 
+                    items={[{ icon: <LineChart className="w-8 h-8 text-white" />, color: 'green', label: 'Decision Evolution' }]} 
+                  />
+                  <p className="text-muted-foreground leading-relaxed text-center text-lg mt-4">
+                    Track how your architecture choices evolve over time with detailed reasoning and confidence scoring.
+                  </p>
+                </Card>
 
-              {/* Feature 3 */}
-              <div className="group flex flex-col items-start space-y-6 p-12 rounded-2xl bg-surface/30 backdrop-blur-2xl border border-white/5 shadow-2xl hover:bg-surface/50 hover:border-white/10 transition-all duration-500 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20 transition-opacity group-hover:opacity-100 opacity-50" />
-                <div className="p-4 rounded-lg bg-black/40 border border-white/5 text-indigo-400 shadow-inner">
-                  <FileDiff className="w-6 h-6" />
-                </div>
-                <h3 className="text-2xl font-bold tracking-tight">Structural Diffs</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  Compare saved research sessions side-by-side to understand exactly what changed between two approaches.
-                </p>
-              </div>
+                {/* Feature 3 */}
+                <Card className="flex flex-col items-center justify-center space-y-6 p-10 bg-surface/80 backdrop-blur-2xl border border-white/10 shadow-2xl">
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/20 rounded-full blur-3xl -mr-20 -mt-20 opacity-50" />
+                  <GlassIcons 
+                    className="!flex !py-0 !gap-0 !my-0 items-center justify-center" 
+                    items={[{ icon: <FileDiff className="w-8 h-8 text-white" />, color: 'indigo', label: 'Structural Diffs' }]} 
+                  />
+                  <p className="text-muted-foreground leading-relaxed text-center text-lg mt-4">
+                    Compare saved research sessions side-by-side to understand exactly what changed between two approaches.
+                  </p>
+                </Card>
+              </CardSwap>
             </div>
           </div>
         </section>

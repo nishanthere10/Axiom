@@ -1,7 +1,10 @@
 import json
+import logging
 from core.config import settings
 from agents.state.research_state import ResearchState
 from services.llm_provider import generate_chat_completion
+
+logger = logging.getLogger(__name__)
 
 
 def generate_decision(state: ResearchState) -> dict:
@@ -44,20 +47,17 @@ Return only valid JSON. Ensure all strings correctly escape quotes and newlines 
             return "\n".join(f"- **{k}**: {v}" for k, v in val.items())
         return str(val)
 
-    try:
-        response = generate_chat_completion(
-            messages=[
-                {"role": "system", "content": "You are an elite Principal Engineer. You write context-rich, highly scannable technical docs. Rely heavily on bullet points and bold text for at-a-glance readability. Zero fluff. Return only valid JSON."},
-                {"role": "user", "content": prompt},
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.4,
-            max_tokens=6000,
-        )
-        content = json.loads(response.choices[0].message.content)
-    except Exception as e:
-        print(f"Error in generate_decision: {e}")
-        content = {}
+    # Critical node — let exceptions propagate to fail the pipeline
+    response = generate_chat_completion(
+        messages=[
+            {"role": "system", "content": "You are an elite Principal Engineer. You write context-rich, highly scannable technical docs. Rely heavily on bullet points and bold text for at-a-glance readability. Zero fluff. Return only valid JSON."},
+            {"role": "user", "content": prompt},
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.4,
+        max_tokens=6000,
+    )
+    content = json.loads(response.choices[0].message.content)
 
     return {
         "recommendation": enforce_string(content.get("recommendation_context", "Could not generate recommendation.")),

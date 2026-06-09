@@ -1,30 +1,35 @@
+import logging
 import uuid
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from api.schemas.compare import (
     CompareRequest, CompareResponse, GetComparisonResponse,
     SaveCompareRequest, SaveCompareResponse, SuggestionsResponse,
     SavedComparisonsResponse
 )
 from services import suggestion_service, compare_service
+from services.cache_service import cache
 from agents.graph.comparison_graph import comparison_graph
+from core.auth import get_current_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 def _run_comparison_memory_task(final_state: dict):
     try:
-        print("[DEBUG: compare_route] Starting background memory creation for comparison.")
+        logger.debug("Starting background memory creation for comparison.")
         from agents.nodes.create_memory import create_memory
         from agents.nodes.store_memory import store_memory
-        print("[DEBUG: compare_route] Calling create_memory...")
+        logger.debug("Calling create_memory...")
         memory_state = create_memory(final_state)
-        print("[DEBUG: compare_route] Calling store_memory...")
+        logger.debug("Calling store_memory...")
         store_memory(memory_state)
-        print("[DEBUG: compare_route] Background memory creation completed.")
+        logger.debug("Background memory creation completed.")
     except Exception as e:
-        print(f"[DEBUG: compare_route] Comparison memory creation failed: {e}")
+        logger.warning("Comparison memory creation failed (non-fatal): %s", e)
 
 @router.post("", response_model=CompareResponse)
-def submit_comparison(body: CompareRequest, background_tasks: BackgroundTasks):
+def submit_comparison(body: CompareRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user)):
     if body.session_a == body.session_b:
         raise HTTPException(status_code=400, detail="Cannot compare a session with itself.")
         
@@ -64,7 +69,8 @@ def submit_comparison(body: CompareRequest, background_tasks: BackgroundTasks):
         structural_diff=diff,
         decision_evolution=evo,
         impact_summary=imp,
-        visuals=visuals
+        visuals=visuals,
+        user_id=user_id,
     )
     
     # Background memory creation
@@ -77,14 +83,12 @@ def submit_comparison(body: CompareRequest, background_tasks: BackgroundTasks):
     )
 
 @router.get("/saved", response_model=SavedComparisonsResponse)
-def get_saved_comparisons():
-    comps = compare_service.get_saved_comparisons()
+def get_saved_comparisons(user_id: str = Depends(get_current_user)):
+    comps = compare_service.get_saved_comparisons(user_id=user_id)
     return SavedComparisonsResponse(comparisons=comps)
 
-from services.cache_service import cache
-
 @router.get("/{comparison_id}", response_model=GetComparisonResponse)
-def get_comparison(comparison_id: str):
+def get_comparison(comparison_id: str, user_id: str = Depends(get_current_user)):
     cache_key = f"comp_{comparison_id}"
     cached_comp = cache.get(cache_key)
     if cached_comp:
@@ -98,11 +102,11 @@ def get_comparison(comparison_id: str):
     return GetComparisonResponse(comparison=comp)
 
 @router.post("/save", response_model=SaveCompareResponse)
-def save_comparison(body: SaveCompareRequest):
+def save_comparison(body: SaveCompareRequest, user_id: str = Depends(get_current_user)):
     success = compare_service.save_comparison(body.comparison_id)
     return SaveCompareResponse(saved=success)
 
 @router.get("/suggestions/{session_id}", response_model=SuggestionsResponse)
-def get_suggestions(session_id: str):
+def get_suggestions(session_id: str, user_id: str = Depends(get_current_user)):
     suggs = suggestion_service.get_suggestions(session_id)
     return SuggestionsResponse(suggestions=suggs)

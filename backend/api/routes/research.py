@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from api.schemas.research import (
     ResearchRequest,
     ResearchResponse,
@@ -11,19 +11,20 @@ from api.schemas.research import (
 from services import research_service
 from services.cache_service import cache
 from workers.tasks import run_research_background_task
+from core.auth import get_current_user
 
 router = APIRouter()
 
 
 @router.post("", response_model=ResearchResponse, status_code=202)
-def submit_research(body: ResearchRequest, background_tasks: BackgroundTasks):
+def submit_research(body: ResearchRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user)):
     """
     POST /research
     Accepts a technical question, creates a session and job in Supabase,
     enqueues the FastAPI background task, and returns immediately.
     """
     # Create session and job records in Supabase
-    session = research_service.create_session(body.question)
+    session = research_service.create_session(body.question, user_id=user_id)
     job = research_service.create_job(session["id"])
 
     # Enqueue background task (Runs natively inside the FastAPI process)
@@ -33,6 +34,7 @@ def submit_research(body: ResearchRequest, background_tasks: BackgroundTasks):
         job_id=job["id"],
         question=body.question,
         force_refresh=body.force_refresh,
+        user_id=user_id,
     )
 
     return ResearchResponse(
@@ -43,7 +45,7 @@ def submit_research(body: ResearchRequest, background_tasks: BackgroundTasks):
 
 
 @router.get("/jobs/{job_id}", response_model=JobStatusResponse)
-def get_job_status(job_id: str):
+def get_job_status(job_id: str, user_id: str = Depends(get_current_user)):
     """
     GET /research/jobs/{job_id}
     Returns the current status, progress (0-100), and step of a background job.
@@ -61,7 +63,7 @@ def get_job_status(job_id: str):
 
 
 @router.get("/sessions/{session_id}", response_model=SessionDocumentResponse)
-def get_session_document(session_id: str):
+def get_session_document(session_id: str, user_id: str = Depends(get_current_user)):
     """
     GET /research/sessions/{session_id}
     Returns the completed decision document for the given session, checking cache first.
@@ -81,16 +83,16 @@ def get_session_document(session_id: str):
 
 
 @router.get("/history", response_model=SessionHistoryResponse)
-def get_session_history(limit: int = 10, offset: int = 0):
+def get_session_history(limit: int = 10, offset: int = 0, user_id: str = Depends(get_current_user)):
     """
     GET /research/history?limit=10&offset=0
-    Returns a paginated list of recent completed sessions.
+    Returns a paginated list of recent completed sessions for the current user.
     """
-    sessions = research_service.get_recent_sessions(limit=limit, offset=offset)
+    sessions = research_service.get_recent_sessions(limit=limit, offset=offset, user_id=user_id)
     return SessionHistoryResponse(sessions=sessions)
 
 @router.post("/regenerate-visuals", response_model=RegenerateVisualsResponse)
-def regenerate_visuals(body: RegenerateVisualsRequest):
+def regenerate_visuals(body: RegenerateVisualsRequest, user_id: str = Depends(get_current_user)):
     """
     POST /research/regenerate-visuals
     Regenerates only the visuals for an existing session and updates the database.

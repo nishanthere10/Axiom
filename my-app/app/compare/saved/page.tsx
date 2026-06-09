@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@clerk/nextjs";
 import { getSavedComparisons, SavedComparisonItem } from "@/lib/compare";
 
 import ResizableLayout from "@/components/ui/ResizableLayout";
 
 export default function SavedComparisonsPage() {
+  const { getToken } = useAuth();
   const [comparisons, setComparisons] = useState<SavedComparisonItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +16,8 @@ export default function SavedComparisonsPage() {
   useEffect(() => {
     async function loadComparisons() {
       try {
-        const data = await getSavedComparisons();
+        const token = await getToken() ?? "";
+        const data = await getSavedComparisons(token);
         setComparisons(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load saved comparisons.");

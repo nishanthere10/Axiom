@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@clerk/nextjs";
 import { getRecentSessions } from "@/lib/compare";
 
 interface ResearchSessionItem {
@@ -13,6 +14,7 @@ interface ResearchSessionItem {
 import ResizableLayout from "@/components/ui/ResizableLayout";
 
 export default function SavedResearchPage() {
+  const { getToken } = useAuth();
   const [sessions, setSessions] = useState<ResearchSessionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +22,8 @@ export default function SavedResearchPage() {
   useEffect(() => {
     async function loadSessions() {
       try {
-        const data = await getRecentSessions();
+        const token = await getToken() ?? "";
+        const data = await getRecentSessions(token);
         setSessions(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load saved research documents.");
@@ -60,7 +63,7 @@ export default function SavedResearchPage() {
               onClick={() => {
                 setLoading(true);
                 setError(null);
-                getRecentSessions().then(setSessions).catch(e => setError(e.message)).finally(() => setLoading(false));
+                getToken().then(t => getRecentSessions(t ?? "")).then(setSessions).catch(e => setError(e.message)).finally(() => setLoading(false));
               }}
               className="text-xs text-primary hover:underline"
             >

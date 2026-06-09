@@ -11,7 +11,8 @@ def create_comparison(
     structural_diff: Dict[str, Any],
     decision_evolution: Dict[str, Any],
     impact_summary: Dict[str, Any],
-    visuals: Optional[list[Any]] = None
+    visuals: Optional[list[Any]] = None,
+    user_id: str = "anonymous",
 ) -> Dict[str, Any]:
     # Fetch internal decision_documents IDs to satisfy the foreign key constraint
     doc_a = supabase.table("decision_documents").select("id").eq("session_id", session_a).execute()
@@ -33,7 +34,8 @@ def create_comparison(
         "decision_evolution": json.dumps(decision_evolution),
         "impact_summary": json.dumps(impact_summary),
         "visuals": visuals or [],
-        "saved": False
+        "saved": False,
+        "user_id": user_id,
     }).execute()
     
     # Return the data, but swap the internal IDs back to the public session IDs
@@ -66,11 +68,12 @@ def save_comparison(comparison_id: str) -> bool:
     res = supabase.table("comparisons").update({"saved": True}).eq("id", comparison_id).execute()
     return bool(res.data)
 
-def get_saved_comparisons() -> list[Dict[str, Any]]:
+def get_saved_comparisons(user_id: str = "anonymous") -> list[Dict[str, Any]]:
     # We query the comparisons table where saved is True and join with decision_documents to get original session IDs
     res = supabase.table("comparisons") \
         .select("id, summary, created_at, doc_a:decision_documents!session_a(session_id), doc_b:decision_documents!session_b(session_id)") \
         .eq("saved", True) \
+        .eq("user_id", user_id) \
         .order("created_at", desc=True) \
         .execute()
     

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { VisualSpec } from "@/lib/visuals";
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default function RegenerateVisualButton({ sessionId, onRegenerated }: Props) {
+  const { getToken } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,9 +18,10 @@ export default function RegenerateVisualButton({ sessionId, onRegenerated }: Pro
     setLoading(true);
     setError(null);
     try {
+      const token = await getToken() ?? "";
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/research/regenerate-visuals`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ session_id: sessionId })
       });
       

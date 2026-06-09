@@ -1,15 +1,18 @@
+import json
+import logging
 from agents.state.research_state import ResearchState
 from services.search_provider import search_tavily
 from services.evidence_service import get_cached_evidence, set_cached_evidence
 from services.llm_provider import generate_chat_completion
-from core.config import settings
-import json
+
+logger = logging.getLogger(__name__)
 
 
 def collect_and_score_evidence(state: ResearchState) -> dict:
     """
     Node: Fetches search results and uses LLM to extract and score claims.
     Uses cache if available unless force_refresh logic dictates otherwise.
+    Non-critical node — keeps graceful degradation.
     """
     slug = state.get("canonical_slug")
     
@@ -80,7 +83,7 @@ Return ONLY a JSON object with this exact schema:
         evidence = content.get("evidence", [])
         consensus = content.get("consensus", "Unknown Consensus")
     except Exception as e:
-        print(f"Error extracting claims: {e}")
+        logger.warning("Error extracting claims (non-fatal): %s", e)
         evidence = []
         consensus = "Error Processing Evidence"
         

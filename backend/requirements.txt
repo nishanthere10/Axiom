@@ -18,3 +18,8 @@ tavily-python
 instructor
 litellm
 requests
+cachetools
+PyJWT
+cryptography
+httpx
+pytest

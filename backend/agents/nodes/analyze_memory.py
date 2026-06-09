@@ -1,19 +1,21 @@
+import logging
 from typing import Dict, Any
 from api.schemas.memory import MemoryContextSchema
-from core.config import settings
 from services.llm_provider import get_instructor_client
+
+logger = logging.getLogger(__name__)
 
 def analyze_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     Analyzes retrieved memories to extract preferences, patterns, and warnings.
     If no memories were retrieved, short-circuits and returns an empty context.
     """
-    print("[DEBUG: Node] -> analyze_memory starting...")
+    logger.debug("Node -> analyze_memory starting...")
     memories = state.get("retrieved_memories", [])
     
     if not memories:
         # Short-circuit logic to save LLM calls if no highly relevant memories were found
-        print("[DEBUG: analyze_memory] No highly relevant memories retrieved. Short-circuiting LLM analysis.")
+        logger.debug("No highly relevant memories retrieved. Short-circuiting LLM analysis.")
         return {
             "memory_context": {
                 "preferences": [],
@@ -58,7 +60,7 @@ def analyze_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     
     try:
-        print("[DEBUG: analyze_memory] Querying LLM to analyze memory context...")
+        logger.debug("Querying LLM to analyze memory context...")
         response: MemoryContextSchema = client.chat.completions.create(
             model="groq/llama-3.3-70b-versatile",
             response_model=MemoryContextSchema,
@@ -68,10 +70,10 @@ def analyze_memory(state: Dict[str, Any]) -> Dict[str, Any]:
                 {"role": "system", "content": prompt}
             ]
         )
-        print("[DEBUG: analyze_memory] Successfully parsed LLM memory context. Exiting node.")
+        logger.debug("Successfully parsed LLM memory context. Exiting node.")
         return {"memory_context": response.model_dump()}
     except Exception as e:
-        print(f"[DEBUG: analyze_memory] Memory Analysis Error: {e}")
+        logger.warning("Memory Analysis Error (non-fatal): %s", e)
         # Fallback to empty context on error to not crash pipeline
         return {
             "memory_context": {

@@ -1,9 +1,11 @@
+import logging
 from typing import Any, Dict
 from pydantic import BaseModel
 import instructor
 from services.llm_provider import get_instructor_client
 from api.schemas.visuals import VisualSpecResponse
-from core.config import settings
+
+logger = logging.getLogger(__name__)
 
 def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -80,6 +82,6 @@ def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
         )
         return {"visual_specs": [v.model_dump() for v in response.visuals]}
     except Exception as e:
-        print(f"Visual Generation Error: {e}")
+        logger.warning("Visual Generation Error (non-fatal): %s", e)
         # Graceful fallback: return no visuals
         return {"visual_specs": []}

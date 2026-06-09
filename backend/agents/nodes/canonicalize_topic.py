@@ -1,8 +1,10 @@
+import json
+import logging
+import hashlib
 from agents.state.research_state import ResearchState
 from services.llm_provider import generate_chat_completion
-from core.config import settings
-import json
-import hashlib
+
+logger = logging.getLogger(__name__)
 
 
 def canonicalize_topic(state: ResearchState) -> dict:

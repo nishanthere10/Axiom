@@ -1,5 +1,8 @@
+import logging
 from agents.graph.decision_graph import decision_graph
 from services import research_service
+
+logger = logging.getLogger(__name__)
 
 # Progress milestones per node (used when streaming the graph)
 _NODE_PROGRESS = {
@@ -17,7 +20,7 @@ _NODE_PROGRESS = {
 }
 
 
-def run_research_background_task(session_id: str, job_id: str, question: str, force_refresh: bool = False) -> dict:
+def run_research_background_task(session_id: str, job_id: str, question: str, force_refresh: bool = False, user_id: str = "anonymous") -> dict:
     """
     Background task that runs the LangGraph decision pipeline natively via FastAPI.
 
@@ -75,6 +78,7 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
             session_id=session_id,
             question=question,
             state=final_state,
+            user_id=user_id,
         )
 
         # 4. Mark session and job as complete
@@ -84,22 +88,23 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
         # 5. Background Memory Creation
         # This executes safely in the background worker thread *after* the user sees 100% complete
         try:
-            print("[DEBUG: tasks] Starting background memory creation for research session.")
+            logger.debug("Starting background memory creation for research session.")
             from agents.nodes.create_memory import create_memory
             from agents.nodes.store_memory import store_memory
             
             final_state["session_id"] = session_id
-            print("[DEBUG: tasks] Calling create_memory...")
+            logger.debug("Calling create_memory...")
             memory_state = create_memory(final_state)
-            print("[DEBUG: tasks] Calling store_memory...")
+            logger.debug("Calling store_memory...")
             store_memory(memory_state)
-            print("[DEBUG: tasks] Background memory creation completed.")
+            logger.debug("Background memory creation completed.")
         except Exception as memory_exc:
-            print(f"[DEBUG: tasks] Memory creation failed (non-fatal): {memory_exc}")
+            logger.warning("Memory creation failed (non-fatal): %s", memory_exc)
 
         return {"session_id": session_id, "job_id": job_id, "status": "completed"}
 
     except Exception as exc:
+        logger.error("Research background task failed: %s", exc, exc_info=True)
         research_service.update_job_status(job_id, status="failed", progress=0, step="error")
         research_service.update_session_status(session_id, "failed")
         raise

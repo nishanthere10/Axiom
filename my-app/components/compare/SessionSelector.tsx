@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { getRecentSessions } from "@/lib/compare";
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default function SessionSelector({ onCompare, disabled }: Props) {
+  const { getToken } = useAuth();
   const [sessionA, setSessionA] = useState("");
   const [sessionB, setSessionB] = useState("");
   const [recentSessions, setRecentSessions] = useState<{ id: string; question: string; created_at: string }[]>([]);
@@ -17,7 +19,8 @@ export default function SessionSelector({ onCompare, disabled }: Props) {
   useEffect(() => {
     async function load() {
       try {
-        const sessions = await getRecentSessions();
+        const token = await getToken() ?? "";
+        const sessions = await getRecentSessions(token);
         setRecentSessions(sessions);
       } catch (err) {
         console.error(err);

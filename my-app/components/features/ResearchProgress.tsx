@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { getJobStatus } from "@/lib/api";
 import { PollingState } from "@/types";
 
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export default function ResearchProgress({ jobId, onComplete, onFailed }: Props) {
+  const { getToken } = useAuth();
   const [status, setStatus] = useState<PollingState>("queued");
   const [progress, setProgress] = useState(0);
   const [step, setStep] = useState("");
@@ -30,7 +32,8 @@ export default function ResearchProgress({ jobId, onComplete, onFailed }: Props)
   useEffect(() => {
     intervalRef.current = setInterval(async () => {
       try {
-        const data = await getJobStatus(jobId);
+        const token = await getToken() ?? "";
+        const data = await getJobStatus(jobId, token);
         setStatus(data.status as PollingState);
         setProgress(data.progress);
         setStep(data.step);

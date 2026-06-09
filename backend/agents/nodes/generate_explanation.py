@@ -1,8 +1,9 @@
 import json
+import logging
 from services.llm_provider import generate_chat_completion
-from core.config import settings
 from agents.state.comparison_state import ComparisonState
 
+logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = """You are an elite Principal Software Architect performing an architectural teardown of how a system design evolved.
 Your goal is to explain the engineering WHY behind the decision evolution. 
@@ -25,12 +26,14 @@ Return ONLY a valid JSON object with EXACTLY the following schema:
 def generate_explanation(state: ComparisonState) -> dict:
     """
     Node 4: Uses LLM to explain the decision evolution.
+    Critical node — let exceptions propagate.
     """
     diff_text = json.dumps(state["structural_diff"], indent=2)
     q = state["document_b"].get("question", "Unknown")
     
     prompt = f"Question: {q}\n\nStructural Diff:\n{diff_text}\n\nGenerate the structured architectural evolution."
     
+    # Critical node — let exceptions propagate
     response = generate_chat_completion(
         messages=[
             {"role": "system", "content": _SYSTEM_PROMPT},
@@ -41,16 +44,8 @@ def generate_explanation(state: ComparisonState) -> dict:
         max_tokens=4000,
     )
     
-    try:
-        content = response.choices[0].message.content
-        parsed = json.loads(content)
-        evolution = parsed
-    except Exception:
-        evolution = {
-            "verdict": "Error parsing LLM output.",
-            "key_changes": [],
-            "reasoning": "Could not parse the reasoning."
-        }
+    content = response.choices[0].message.content
+    evolution = json.loads(content)
         
     return {
         "decision_evolution": evolution,

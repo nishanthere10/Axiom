@@ -1,22 +1,25 @@
-from typing import Dict, Any, List
+import logging
 import uuid
+from typing import Dict, Any, List
 from api.schemas.memory import MemoryItemCreate
-from core.config import settings
 from services.llm_provider import generate_chat_completion
+
+logger = logging.getLogger(__name__)
 
 def create_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     Analyzes the completed research and generates compact, retrieval-optimized memory summaries.
     This runs asynchronously outside the main LangGraph to save latency.
+    Non-critical node — keeps graceful degradation.
     """
-    print("[DEBUG: Node] -> create_memory starting...")
+    logger.debug("Node -> create_memory starting...")
     is_comparison = "session_a_id" in state and "session_b_id" in state
     
     if is_comparison:
-        print("[DEBUG: create_memory] Detected comparison state.")
+        logger.debug("Detected comparison state.")
         return _create_comparison_memory(state)
     else:
-        print("[DEBUG: create_memory] Detected research state.")
+        logger.debug("Detected research state.")
         return _create_decision_memory(state)
 
 def _create_decision_memory(state: Dict[str, Any]) -> Dict[str, Any]:
@@ -63,7 +66,7 @@ def _create_decision_memory(state: Dict[str, Any]) -> Dict[str, Any]:
         return {"new_memories": memories}
         
     except Exception as e:
-        print(f"Error creating decision memory: {e}")
+        logger.warning("Error creating decision memory (non-fatal): %s", e)
         return {"new_memories": []}
 
 def _create_comparison_memory(state: Dict[str, Any]) -> Dict[str, Any]:
@@ -112,5 +115,5 @@ def _create_comparison_memory(state: Dict[str, Any]) -> Dict[str, Any]:
         return {"new_memories": memories}
         
     except Exception as e:
-        print(f"Error creating comparison memory: {e}")
+        logger.warning("Error creating comparison memory (non-fatal): %s", e)
         return {"new_memories": []}

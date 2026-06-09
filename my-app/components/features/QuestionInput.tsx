@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useAuth } from "@clerk/nextjs";
 import { submitResearch } from "@/lib/api";
 import { ResearchResponse } from "@/types";
 
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export default function QuestionInput({ onSubmitted }: Props) {
+  const { getToken } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -37,7 +39,8 @@ export default function QuestionInput({ onSubmitted }: Props) {
     setIsSubmitting(true);
     setApiError(null);
     try {
-      const response = await submitResearch(data.question);
+      const token = await getToken() ?? "";
+      const response = await submitResearch(data.question, false, token);
       onSubmitted(response);
     } catch (err) {
       setApiError(err instanceof Error ? err.message : "An unexpected error occurred.");

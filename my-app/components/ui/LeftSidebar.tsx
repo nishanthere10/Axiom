@@ -3,13 +3,16 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { ChevronLeft, ChevronRight, MessageSquare, Plus, Settings, Loader2, GitCompare } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { getSessionHistory, getSavedComparisons } from "@/lib/api";
 import type { SessionHistoryItem, SavedComparisonItem } from "@/types";
+import AnimatedList from "@/components/AnimatedList";
 
 const PAGE_SIZE = 10;
 
 export default function LeftSidebar({ isCollapsed = false, toggleCollapse }: { isCollapsed?: boolean, toggleCollapse?: () => void }) {
+  const { getToken } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -32,13 +35,15 @@ export default function LeftSidebar({ isCollapsed = false, toggleCollapse }: { i
       setLoading(true);
       try {
         if (isCompareMode) {
-          const data = await getSavedComparisons();
+          const token = await getToken() ?? "";
+          const data = await getSavedComparisons(token);
           if (isMounted) {
             setComparisons(data.comparisons);
             setHasMore(false); // /compare/saved doesn't have pagination yet
           }
         } else {
-          const data = await getSessionHistory(PAGE_SIZE, 0);
+          const token = await getToken() ?? "";
+          const data = await getSessionHistory(PAGE_SIZE, 0, token);
           if (isMounted) {
             setSessions(data.sessions);
             setHasMore(data.sessions.length === PAGE_SIZE);
@@ -59,7 +64,8 @@ export default function LeftSidebar({ isCollapsed = false, toggleCollapse }: { i
     if (isCompareMode || loadingMore || !hasMore) return;
     setLoadingMore(true);
     try {
-      const data = await getSessionHistory(PAGE_SIZE, sessions.length);
+      const token = await getToken() ?? "";
+      const data = await getSessionHistory(PAGE_SIZE, sessions.length, token);
       setSessions(prev => [...prev, ...data.sessions]);
       setHasMore(data.sessions.length === PAGE_SIZE);
     } catch (err) {
@@ -148,41 +154,31 @@ export default function LeftSidebar({ isCollapsed = false, toggleCollapse }: { i
               </p>
             )
           ) : (
-            <>
-              {!isCollapsed ? (
-                comparisons.map((comp) => (
-                  <button
-                    key={comp.id}
-                    onClick={() => handleCompareClick(comp.id)}
+            <AnimatedList
+              className="!w-full !p-0 !max-w-none"
+              innerClassName="overflow-visible p-0"
+              displayScrollbar={false}
+              showGradients={false}
+              items={comparisons.map(comp => ({
+                id: comp.id,
+                render: () => (
+                  <div
                     className={cn(
                       "w-full flex items-center gap-3 p-2 rounded-md transition-colors text-sm text-left truncate",
                       activeComparisonId === comp.id
                         ? "bg-white/10 text-foreground"
-                        : "hover:bg-white/5 text-muted-foreground hover:text-foreground"
+                        : "hover:bg-white/5 text-muted-foreground hover:text-foreground",
+                      isCollapsed && "justify-center"
                     )}
+                    title={isCollapsed ? comp.summary : undefined}
                   >
                     <GitCompare className="w-4 h-4 shrink-0" />
-                    <span className="truncate">{comp.summary}</span>
-                  </button>
-                ))
-              ) : (
-                comparisons.map((comp) => (
-                  <button
-                    key={comp.id}
-                    onClick={() => handleCompareClick(comp.id)}
-                    className={cn(
-                      "w-full flex justify-center p-2 rounded-md transition-colors",
-                      activeComparisonId === comp.id
-                        ? "bg-white/10 text-foreground"
-                        : "hover:bg-white/5 text-muted-foreground hover:text-foreground"
-                    )}
-                    title={comp.summary}
-                  >
-                    <GitCompare className="w-4 h-4 shrink-0" />
-                  </button>
-                ))
-              )}
-            </>
+                    {!isCollapsed && <span className="truncate">{comp.summary}</span>}
+                  </div>
+                )
+              }))}
+              onItemSelect={(item) => handleCompareClick(item.id)}
+            />
           )
         ) : (
           // RESEARCH MODE RENDERING
@@ -194,39 +190,31 @@ export default function LeftSidebar({ isCollapsed = false, toggleCollapse }: { i
             )
           ) : (
             <>
-              {!isCollapsed ? (
-                sessions.map((session) => (
-                  <button
-                    key={session.id}
-                    onClick={() => handleSessionClick(session.id)}
-                    className={cn(
-                      "w-full flex items-center gap-3 p-2 rounded-md transition-colors text-sm text-left truncate",
-                      activeSessionId === session.id
-                        ? "bg-white/10 text-foreground"
-                        : "hover:bg-white/5 text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <MessageSquare className="w-4 h-4 shrink-0" />
-                    <span className="truncate">{session.question}</span>
-                  </button>
-                ))
-              ) : (
-                sessions.map((session) => (
-                  <button
-                    key={session.id}
-                    onClick={() => handleSessionClick(session.id)}
-                    className={cn(
-                      "w-full flex justify-center p-2 rounded-md transition-colors",
-                      activeSessionId === session.id
-                        ? "bg-white/10 text-foreground"
-                        : "hover:bg-white/5 text-muted-foreground hover:text-foreground"
-                    )}
-                    title={session.question}
-                  >
-                    <MessageSquare className="w-4 h-4 shrink-0" />
-                  </button>
-                ))
-              )}
+              <AnimatedList
+                className="!w-full !p-0 !max-w-none"
+                innerClassName="overflow-visible p-0 space-y-1"
+                displayScrollbar={false}
+                showGradients={false}
+                items={sessions.map(session => ({
+                  id: session.id,
+                  render: () => (
+                    <div
+                      className={cn(
+                        "w-full flex items-center gap-3 p-2 rounded-md transition-colors text-sm text-left truncate",
+                        activeSessionId === session.id
+                          ? "bg-white/10 text-foreground"
+                          : "hover:bg-white/5 text-muted-foreground hover:text-foreground",
+                        isCollapsed && "justify-center"
+                      )}
+                      title={isCollapsed ? session.question : undefined}
+                    >
+                      <MessageSquare className="w-4 h-4 shrink-0" />
+                      {!isCollapsed && <span className="truncate">{session.question}</span>}
+                    </div>
+                  )
+                }))}
+                onItemSelect={(item) => handleSessionClick(item.id)}
+              />
 
               {/* Load more indicator */}
               {loadingMore && (

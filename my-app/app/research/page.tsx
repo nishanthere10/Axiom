@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import QuestionInput from "@/components/features/QuestionInput";
 import ResearchProgress from "@/components/features/ResearchProgress";
 import { getSessionDocument } from "@/lib/api";
@@ -12,6 +13,7 @@ import DecisionDocument, { AuxiliaryDocumentData } from "@/components/features/D
 type PageState = "idle" | "polling" | "done" | "failed";
 
 function ResearchPageInner() {
+  const { getToken } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -32,7 +34,8 @@ function ResearchPageInner() {
 
   const fetchDoc = useCallback(async (id: string) => {
     try {
-      const data = await getSessionDocument(id);
+      const token = await getToken() ?? "";
+      const data = await getSessionDocument(id, token);
       setDoc(data.document);
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Failed to load document.");

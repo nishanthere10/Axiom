@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any
 from pydantic import BaseModel
 from services import memory_service
 from api.schemas.memory import MemoryItemResponse
+from core.auth import get_current_user
 
 router = APIRouter()
 
@@ -19,16 +20,16 @@ class PromoteMemoryResponse(BaseModel):
     promoted: bool
 
 @router.get("", response_model=MemoryListResponse)
-def get_all_memories():
+def get_all_memories(user_id: str = Depends(get_current_user)):
     """
     GET /memory
-    Returns all active memories (permanent and unexpired temporary).
+    Returns all active memories (permanent and unexpired temporary) for the current user.
     """
     memories = memory_service.get_active_memories(limit=100)
     return MemoryListResponse(memories=memories)
 
 @router.get("/{memory_id}", response_model=MemoryDetailResponse)
-def get_memory(memory_id: str):
+def get_memory(memory_id: str, user_id: str = Depends(get_current_user)):
     """
     GET /memory/{id}
     Returns details for a specific memory.
@@ -39,7 +40,7 @@ def get_memory(memory_id: str):
     return MemoryDetailResponse(memory=memory)
 
 @router.post("/promote", response_model=PromoteMemoryResponse)
-def promote_memory(body: PromoteMemoryRequest):
+def promote_memory(body: PromoteMemoryRequest, user_id: str = Depends(get_current_user)):
     """
     POST /memory/promote
     Promotes a temporary memory to permanent status.

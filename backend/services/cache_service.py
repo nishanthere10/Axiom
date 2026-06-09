@@ -1,31 +1,27 @@
-from datetime import datetime, timedelta
+import threading
 from typing import Any, Optional
+from cachetools import TTLCache
 
-class SimpleCache:
-    def __init__(self):
-        self._store = {}
+# Bounded in-memory cache: 256 items max, 24-hour TTL (86400 seconds)
+_lock = threading.Lock()
+_store = TTLCache(maxsize=256, ttl=86400)
+
+
+class Cache:
+    """Thread-safe TTL cache wrapper with the same interface as SimpleCache."""
 
     def set(self, key: str, value: Any, ttl_hours: int = 24) -> None:
-        expires_at = datetime.now() + timedelta(hours=ttl_hours)
-        self._store[key] = {
-            "data": value,
-            "expires_at": expires_at
-        }
+        with _lock:
+            _store[key] = value
 
     def get(self, key: str) -> Optional[Any]:
-        if key not in self._store:
-            return None
-            
-        entry = self._store[key]
-        if datetime.now() > entry["expires_at"]:
-            del self._store[key]
-            return None
-            
-        return entry["data"]
+        with _lock:
+            return _store.get(key)
 
     def delete(self, key: str) -> None:
-        if key in self._store:
-            del self._store[key]
+        with _lock:
+            _store.pop(key, None)
 
-# Global singleton instance
-cache = SimpleCache()
+
+# Global singleton instance — same import interface as before
+cache = Cache()

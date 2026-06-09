@@ -1,7 +1,8 @@
+import logging
 from services.llm_provider import generate_chat_completion
-from core.config import settings
 from agents.state.research_state import ResearchState
 
+logger = logging.getLogger(__name__)
 
 
 def decompose_question(state: ResearchState) -> dict:
