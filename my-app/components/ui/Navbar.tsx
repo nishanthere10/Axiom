@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import {
-  SignedIn,
-  SignedOut,
-  UserButton,
+  SignInButton,
+  SignOutButton,
+  useAuth,
 } from "@clerk/nextjs";
 
 export default function Navbar() {
+  const { isSignedIn } = useAuth();
+
   return (
     <nav className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center justify-between px-4 md:px-8">
@@ -46,24 +48,19 @@ export default function Navbar() {
 
         {/* Right: Auth */}
         <div className="flex items-center gap-3">
-          <SignedIn>
-            <UserButton
-              afterSignOutUrl="/"
-              appearance={{
-                elements: {
-                  avatarBox: "w-8 h-8",
-                },
-              }}
-            />
-          </SignedIn>
-          <SignedOut>
-            <Link
-              href="/sign-in"
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-9 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              Sign In
-            </Link>
-          </SignedOut>
+          {isSignedIn ? (
+            <SignOutButton>
+              <button className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-9 px-4 py-2 border border-border bg-background text-foreground hover:bg-muted">
+                Sign Out
+              </button>
+            </SignOutButton>
+          ) : (
+            <SignInButton>
+              <button className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-9 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90">
+                Sign In
+              </button>
+            </SignInButton>
+          )}
         </div>
       </div>
     </nav>

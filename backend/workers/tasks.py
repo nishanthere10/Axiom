@@ -93,6 +93,7 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
             from agents.nodes.store_memory import store_memory
             
             final_state["session_id"] = session_id
+            final_state["user_id"] = user_id
             logger.debug("Calling create_memory...")
             memory_state = create_memory(final_state)
             logger.debug("Calling store_memory...")

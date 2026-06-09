@@ -3,8 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import warnings
 from contextlib import asynccontextmanager
 
-from core.logging_config import setup_logging
-setup_logging()
+from core.logging_config import configure_human_readable_logging
+configure_human_readable_logging()
 
 from api.routes.research import router as research_router
 from api.routes.compare import router as compare_router

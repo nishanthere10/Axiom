@@ -38,7 +38,7 @@ def test_pinecone_flow():
     # 2. Test Retrieval
     try:
         query = "Which OS should I use for ethical hacking?"
-        results = search_memories(query, top_k=1, threshold=0.5)
+        results = search_memories(query, user_id="test_user", top_k=1, threshold=0.5)
         
         print(f"Pinecone retrieval executed. Found {len(results)} results.")
         # We don't strictly assert length > 0 because Pinecone takes a moment to index

@@ -46,7 +46,7 @@ export interface Comparison {
   created_at: string;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://localhost:8000";
 
 function authHeaders(token: string): HeadersInit {
   return {
@@ -55,8 +55,17 @@ function authHeaders(token: string): HeadersInit {
   };
 }
 
+async function safeFetch(url: string, options?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, options);
+  } catch (err: any) {
+    console.error(`Network or CORS error fetching ${url}:`, err);
+    throw new Error(`Failed to reach the server. Please ensure the backend is running at ${API_BASE}. Details: ${err.message}`);
+  }
+}
+
 export async function getRecentSessions(token: string): Promise<{ id: string; question: string; created_at: string }[]> {
-  const res = await fetch(`${API_BASE}/research/history`, {
+  const res = await safeFetch(`${API_BASE}/research/history`, {
     cache: "no-store",
     headers: authHeaders(token),
   });
@@ -66,7 +75,7 @@ export async function getRecentSessions(token: string): Promise<{ id: string; qu
 }
 
 export async function getSuggestions(sessionId: string, token: string): Promise<SuggestionItem[]> {
-  const res = await fetch(`${API_BASE}/compare/suggestions/${sessionId}`, {
+  const res = await safeFetch(`${API_BASE}/compare/suggestions/${sessionId}`, {
     cache: "no-store",
     headers: authHeaders(token),
   });
@@ -76,7 +85,7 @@ export async function getSuggestions(sessionId: string, token: string): Promise<
 }
 
 export async function submitComparison(sessionA: string, sessionB: string, token: string): Promise<{ comparison_id: string; comparison: Comparison }> {
-  const res = await fetch(`${API_BASE}/compare`, {
+  const res = await safeFetch(`${API_BASE}/compare`, {
     method: "POST",
     headers: authHeaders(token),
     body: JSON.stringify({ session_a: sessionA, session_b: sessionB }),
@@ -92,7 +101,7 @@ export async function submitComparison(sessionA: string, sessionB: string, token
 }
 
 export async function getComparison(comparisonId: string, token: string): Promise<Comparison> {
-  const res = await fetch(`${API_BASE}/compare/${comparisonId}`, {
+  const res = await safeFetch(`${API_BASE}/compare/${comparisonId}`, {
     cache: "no-store",
     headers: authHeaders(token),
   });
@@ -102,7 +111,7 @@ export async function getComparison(comparisonId: string, token: string): Promis
 }
 
 export async function saveComparison(comparisonId: string, token: string): Promise<boolean> {
-  const res = await fetch(`${API_BASE}/compare/save`, {
+  const res = await safeFetch(`${API_BASE}/compare/save`, {
     method: "POST",
     headers: authHeaders(token),
     body: JSON.stringify({ comparison_id: comparisonId })
@@ -121,7 +130,7 @@ export interface SavedComparisonItem {
 }
 
 export async function getSavedComparisons(token: string): Promise<SavedComparisonItem[]> {
-  const res = await fetch(`${API_BASE}/compare/saved`, {
+  const res = await safeFetch(`${API_BASE}/compare/saved`, {
     cache: "no-store",
     headers: authHeaders(token),
   });

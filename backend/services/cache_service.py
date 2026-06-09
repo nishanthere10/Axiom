@@ -2,9 +2,9 @@ import threading
 from typing import Any, Optional
 from cachetools import TTLCache
 
-# Bounded in-memory cache: 256 items max, 24-hour TTL (86400 seconds)
+# Bounded in-memory cache: 1024 items max, 24-hour TTL (86400 seconds)
 _lock = threading.Lock()
-_store = TTLCache(maxsize=256, ttl=86400)
+_store = TTLCache(maxsize=1024, ttl=86400)
 
 
 class Cache:

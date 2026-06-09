@@ -24,7 +24,7 @@ def retrieve_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     
     # We use a threshold of 0.70 as specified in the optimization plan
     logger.debug("Calling search_memories...")
-    memories = search_memories(query=question, top_k=5, threshold=0.70)
-    
-    logger.debug("Retrieved %d memories. Exiting node.", len(memories))
+    user_id = state.get("user_id", "anonymous")
+    memories = search_memories(query=question, user_id=user_id, top_k=5, threshold=0.70)
+    logger.debug("search_memories returned %d results", len(memories))
     return {"retrieved_memories": memories}

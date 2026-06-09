@@ -22,7 +22,8 @@ def create_memory_item(data: MemoryItemCreate) -> Optional[Dict[str, Any]]:
         "metadata": data.metadata,
         "scope": data.scope,
         "is_active": True,
-        "expires_at": expires_at.isoformat() if expires_at else None
+        "expires_at": expires_at.isoformat() if expires_at else None,
+        "user_id": data.user_id
     }
     
     try:
@@ -33,12 +34,12 @@ def create_memory_item(data: MemoryItemCreate) -> Optional[Dict[str, Any]]:
         logger.error("Error creating memory item in Supabase: %s", e, exc_info=True)
     return None
 
-def get_active_memories(limit: int = 50) -> List[Dict[str, Any]]:
-    """Retrieves all active memories."""
+def get_active_memories(user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+    """Retrieves all active memories for the user."""
     now = datetime.utcnow().isoformat()
     try:
         # Get permanent memories, or temporary ones that haven't expired
-        response = supabase.table("memory_items").select("*").eq("is_active", True).order("created_at", desc=True).limit(limit).execute()
+        response = supabase.table("memory_items").select("*").eq("is_active", True).eq("user_id", user_id).order("created_at", desc=True).limit(limit).execute()
         
         valid_memories = []
         for row in response.data:

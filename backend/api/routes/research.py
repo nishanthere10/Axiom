@@ -130,7 +130,7 @@ def regenerate_visuals(body: RegenerateVisualsRequest, user_id: str = Depends(ge
     
     supabase.table("decision_documents").update({
         "visuals": visuals,
-        "visuals_generated_at": datetime.utcnow().isoformat()
+        "visuals_updated_at": datetime.utcnow().isoformat()
     }).eq("session_id", body.session_id).execute()
     
     # Clear cache

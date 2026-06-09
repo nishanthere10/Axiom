@@ -60,7 +60,8 @@ def _create_decision_memory(state: Dict[str, Any]) -> Dict[str, Any]:
                 "summary": summary,
                 "memory_type": "decision"
             },
-            scope="temporary"
+            scope="temporary",
+            user_id=state.get("user_id", "anonymous")
         )
         memories.append(decision_memory)
         return {"new_memories": memories}
@@ -109,7 +110,8 @@ def _create_comparison_memory(state: Dict[str, Any]) -> Dict[str, Any]:
                 "summary": summary,
                 "memory_type": "comparison"
             },
-            scope="temporary"
+            scope="temporary",
+            user_id=state.get("user_id", "anonymous")
         )
         memories.append(comp_memory)
         return {"new_memories": memories}

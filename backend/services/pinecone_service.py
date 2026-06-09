@@ -51,7 +51,7 @@ def upsert_memory(memory_id: str, summary: str, metadata: Dict[str, Any]):
     except Exception as e:
         logger.error("Error upserting to Pinecone: %s", e, exc_info=True)
 
-def search_memories(query: str, top_k: int = 5, threshold: float = 0.70) -> List[Dict[str, Any]]:
+def search_memories(query: str, user_id: str, top_k: int = 5, threshold: float = 0.70) -> List[Dict[str, Any]]:
     """Searches Pinecone for relevant memories above a similarity threshold."""
     logger.debug("search_memories called with query='%s'", query[:80])
     if not index:
@@ -68,7 +68,8 @@ def search_memories(query: str, top_k: int = 5, threshold: float = 0.70) -> List
         results = index.query(
             vector=embedding,
             top_k=top_k,
-            include_metadata=True
+            include_metadata=True,
+            filter={"user_id": {"$eq": user_id}}
         )
         
         # Filter by threshold

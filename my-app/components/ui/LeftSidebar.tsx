@@ -34,15 +34,24 @@ export default function LeftSidebar({ isCollapsed = false, toggleCollapse }: { i
     async function fetchInitial() {
       setLoading(true);
       try {
+        const token = await getToken();
+        if (!token) {
+          // If the user isn't signed in, don't attempt to fetch
+          if (isMounted) {
+            setComparisons([]);
+            setSessions([]);
+            setHasMore(false);
+          }
+          return;
+        }
+
         if (isCompareMode) {
-          const token = await getToken() ?? "";
           const data = await getSavedComparisons(token);
           if (isMounted) {
             setComparisons(data.comparisons);
             setHasMore(false); // /compare/saved doesn't have pagination yet
           }
         } else {
-          const token = await getToken() ?? "";
           const data = await getSessionHistory(PAGE_SIZE, 0, token);
           if (isMounted) {
             setSessions(data.sessions);
@@ -57,14 +66,17 @@ export default function LeftSidebar({ isCollapsed = false, toggleCollapse }: { i
     }
     fetchInitial();
     return () => { isMounted = false; };
-  }, [isCompareMode]);
+  }, [isCompareMode, getToken]);
 
   // Load more when scrolling to bottom (only for research mode right now)
   const loadMore = useCallback(async () => {
     if (isCompareMode || loadingMore || !hasMore) return;
+    
+    const token = await getToken();
+    if (!token) return;
+
     setLoadingMore(true);
     try {
-      const token = await getToken() ?? "";
       const data = await getSessionHistory(PAGE_SIZE, sessions.length, token);
       setSessions(prev => [...prev, ...data.sessions]);
       setHasMore(data.sessions.length === PAGE_SIZE);
@@ -73,7 +85,7 @@ export default function LeftSidebar({ isCollapsed = false, toggleCollapse }: { i
     } finally {
       setLoadingMore(false);
     }
-  }, [isCompareMode, loadingMore, hasMore, sessions.length]);
+  }, [isCompareMode, loadingMore, hasMore, sessions.length, getToken]);
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;

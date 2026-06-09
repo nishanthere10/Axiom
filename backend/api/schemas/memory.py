@@ -13,6 +13,7 @@ class MemoryItemCreate(BaseModel):
     metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
     scope: MemoryScope = "temporary"
     expires_at: Optional[datetime] = None
+    user_id: str = "anonymous"
 
 class MemoryItemResponse(BaseModel):
     id: str

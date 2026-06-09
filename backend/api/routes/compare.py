@@ -6,7 +6,7 @@ from api.schemas.compare import (
     SaveCompareRequest, SaveCompareResponse, SuggestionsResponse,
     SavedComparisonsResponse
 )
-from services import suggestion_service, compare_service
+
 from services.cache_service import cache
 from agents.graph.comparison_graph import comparison_graph
 from core.auth import get_current_user
@@ -105,8 +105,3 @@ def get_comparison(comparison_id: str, user_id: str = Depends(get_current_user))
 def save_comparison(body: SaveCompareRequest, user_id: str = Depends(get_current_user)):
     success = compare_service.save_comparison(body.comparison_id)
     return SaveCompareResponse(saved=success)
-
-@router.get("/suggestions/{session_id}", response_model=SuggestionsResponse)
-def get_suggestions(session_id: str, user_id: str = Depends(get_current_user)):
-    suggs = suggestion_service.get_suggestions(session_id)
-    return SuggestionsResponse(suggestions=suggs)
