@@ -3,6 +3,7 @@ import logging
 import concurrent.futures
 from tavily import TavilyClient
 from core.config import settings
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 logger = logging.getLogger(__name__)
 
@@ -18,12 +19,13 @@ def search_tavily(queries: list[str]) -> list[dict]:
         
     client = TavilyClient(api_key=api_key)
     
+    @retry(stop=stop_after_attempt(2), wait=wait_fixed(2))
     def fetch_query(q):
         try:
             return client.search(q, max_results=3, include_raw_content=True)
         except Exception as e:
             logger.error("Error executing Tavily search for query '%s': %s", q, e)
-            return {"results": []}
+            raise e
 
     all_results = []
     seen_urls = set()
@@ -35,7 +37,12 @@ def search_tavily(queries: list[str]) -> list[dict]:
         futures = [executor.submit(fetch_query, q) for q in top_queries]
         
         for future in concurrent.futures.as_completed(futures):
-            response = future.result()
+            try:
+                response = future.result()
+            except Exception as e:
+                logger.error("Tavily search failed after retries: %s", e)
+                continue
+                
             for result in response.get("results", []):
                 url = result.get("url")
                 if url and url not in seen_urls:

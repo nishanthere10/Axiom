@@ -17,6 +17,9 @@ def store_memory(state: Dict[str, Any]) -> Dict[str, Any]:
         logger.debug("No new_memories to store.")
         return {"status": "memory_stored"}
         
+    warnings = state.get("warnings", [])
+    failed_count = 0
+    
     for memory_create in new_memories:
         try:
             logger.debug("Saving to Postgres (source_id=%s)...", memory_create.source_id)
@@ -42,8 +45,13 @@ def store_memory(state: Dict[str, Any]) -> Dict[str, Any]:
                 )
             else:
                 logger.warning("Postgres insert failed, skipping Pinecone.")
+                failed_count += 1
         except Exception as e:
             logger.warning("Error storing memory (non-fatal): %s", e)
+            failed_count += 1
+    
+    if failed_count > 0:
+        warnings.append(f"⚠️ Memory storage failed for {failed_count} item(s) — this decision may not be remembered for future sessions.")
             
     logger.debug("Finished storing memories.")
-    return {"status": "memory_stored"}
+    return {"status": "memory_stored", "warnings": warnings}

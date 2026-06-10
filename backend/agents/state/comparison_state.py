@@ -1,4 +1,8 @@
-from typing import TypedDict, Dict, Any, Optional
+from typing import TypedDict, Dict, Any, Optional, Annotated
+
+def override_status(left: str | None, right: str | None) -> str | None:
+    """Always keep the most recent status update during concurrent node execution."""
+    return right if right is not None else left
 
 class ComparisonState(TypedDict):
     session_a_id: str
@@ -20,4 +24,4 @@ class ComparisonState(TypedDict):
     retrieved_memories: Optional[list[Dict[str, Any]]]
     memory_context: Optional[Dict[str, Any]]
     
-    status: str
+    status: Annotated[str | None, override_status]

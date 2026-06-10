@@ -2,6 +2,7 @@ import logging
 from pinecone import Pinecone
 from core.config import settings
 from typing import List, Dict, Any, Optional
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,9 @@ else:
 
 from services.embedding_provider import generate_embedding
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def upsert_memory(memory_id: str, summary: str, metadata: Dict[str, Any]):
-    """Upserts a memory into Pinecone."""
+    """Upserts a memory into Pinecone. Retries on transient failures."""
     logger.debug("upsert_memory called for memory_id=%s", memory_id)
     if not index:
         logger.warning("Pinecone index not initialized, skipping upsert.")
@@ -51,8 +53,9 @@ def upsert_memory(memory_id: str, summary: str, metadata: Dict[str, Any]):
     except Exception as e:
         logger.error("Error upserting to Pinecone: %s", e, exc_info=True)
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def search_memories(query: str, user_id: str, top_k: int = 5, threshold: float = 0.70) -> List[Dict[str, Any]]:
-    """Searches Pinecone for relevant memories above a similarity threshold."""
+    """Searches Pinecone for relevant memories above a similarity threshold. Retries on transient failures."""
     logger.debug("search_memories called with query='%s'", query[:80])
     if not index:
         logger.warning("Pinecone index not initialized, returning empty search.")

@@ -1,5 +1,8 @@
-from typing import TypedDict
+from typing import TypedDict, Annotated
 
+def override_status(left: str | None, right: str | None) -> str | None:
+    """Always keep the most recent status update during concurrent node execution."""
+    return right if right is not None else left
 
 class ResearchState(TypedDict):
     """Represents the state of the LangGraph research pipeline."""
@@ -19,5 +22,6 @@ class ResearchState(TypedDict):
     
     retrieved_memories: list[dict]
     memory_context: dict
+    warnings: list[str]
     
-    status: str
+    status: Annotated[str | None, override_status]

@@ -7,6 +7,7 @@ from api.schemas.compare import (
     SavedComparisonsResponse
 )
 from services.cache_service import cache
+from services import compare_service
 from agents.graph.comparison_graph import comparison_graph
 from core.auth import get_current_user
 

@@ -9,6 +9,7 @@ configure_human_readable_logging()
 from api.routes.research import router as research_router
 from api.routes.compare import router as compare_router
 from api.routes.memory import router as memory_router
+from api.routes.webhooks import router as webhooks_router
 
 app = FastAPI(
     title="Atlas Research v1 API",
@@ -39,6 +40,7 @@ app.add_middleware(
 app.include_router(research_router, prefix="/research", tags=["research"])
 app.include_router(compare_router, prefix="/compare", tags=["compare"])
 app.include_router(memory_router, prefix="/memory", tags=["memory"])
+app.include_router(webhooks_router, prefix="/webhooks", tags=["webhooks"])
 
 
 @app.get("/health", tags=["system"])

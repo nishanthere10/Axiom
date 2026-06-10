@@ -59,11 +59,17 @@ def generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/
         logger.error("LLM generation failed across all providers: %s", e, exc_info=True)
         raise e
 
+_instructor_client = None
+
 def get_instructor_client():
     """
-    Returns an instructor client patched with litellm.
-    This allows us to use standard Pydantic models with fallbacks natively.
+    Returns a cached instructor client patched with litellm.
+    Uses a module-level singleton to avoid re-creating and monkey-patching on every call.
     """
+    global _instructor_client
+    if _instructor_client is not None:
+        return _instructor_client
+        
     client = instructor.from_litellm(completion)
     
     # Wrap the create method to inject fallbacks automatically
@@ -81,4 +87,5 @@ def get_instructor_client():
         return original_create(*args, **kwargs)
         
     client.chat.completions.create = create_with_fallbacks
-    return client
+    _instructor_client = client
+    return _instructor_client

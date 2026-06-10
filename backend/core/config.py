@@ -11,6 +11,7 @@ class Settings(BaseSettings):
 
     # Clerk
     CLERK_SECRET_KEY: str = ""
+    CLERK_WEBHOOK_SECRET: str = ""
     CLERK_JWT_ISSUER: str = ""  # e.g. "https://your-app.clerk.accounts.dev"
 
     # LLM & Vector Store

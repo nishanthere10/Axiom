@@ -33,7 +33,7 @@ def update_session_status(session_id: str, status: str) -> None:
     supabase.table("research_sessions").update({"status": status}).eq("id", session_id).execute()
 
 
-def save_document(session_id: str, question: str, state: dict, user_id: str = "anonymous") -> dict:
+def save_document(session_id: str, question: str, state: dict, user_id: str = "anonymous", warnings: list = None) -> dict:
     """Save the final decision document to Supabase."""
     from datetime import datetime
     confidence = state.get("confidence", {})
@@ -52,6 +52,7 @@ def save_document(session_id: str, question: str, state: dict, user_id: str = "a
         "consensus": state.get("consensus", ""),
         "visuals": visuals,
         "memory_context": state.get("memory_context", {}),
+        "warnings": warnings or [],
         "evidence_generated_at": datetime.utcnow().isoformat() if evidence else None,
         "version": 1,
         "user_id": user_id,

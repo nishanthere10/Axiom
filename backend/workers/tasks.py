@@ -51,6 +51,7 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
             "visuals": [],
             "retrieved_memories": [],
             "memory_context": {},
+            "warnings": [],
             "status": "starting"
         }
         
@@ -78,11 +79,13 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
             raise ValueError("Graph did not complete successfully.")
 
         # 3. Save the decision document
+        pipeline_warnings = final_state.get("warnings", [])
         research_service.save_document(
             session_id=session_id,
             question=question,
             state=final_state,
             user_id=user_id,
+            warnings=pipeline_warnings,
         )
 
         # 4. Mark session and job as complete

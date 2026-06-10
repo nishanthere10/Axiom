@@ -6,12 +6,16 @@ import {
   SavedComparisonsResponse,
 } from "@/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://localhost:8000";
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://localhost:8000";
+export const API_BASE_URL = RAW_API_URL.replace(/\/$/, "");
 
-async function apiFetch<T>(path: string, token: string, options?: RequestInit): Promise<T> {
+export async function apiFetch<T>(endpoint: string, token: string, options?: RequestInit): Promise<T> {
   let res: Response;
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `${API_BASE_URL}${cleanEndpoint}`;
+
   try {
-    res = await fetch(`${API_BASE_URL}${path}`, {
+    res = await fetch(url, {
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`,
@@ -19,7 +23,7 @@ async function apiFetch<T>(path: string, token: string, options?: RequestInit): 
       ...options,
     });
   } catch (err: any) {
-    console.error(`Network or CORS error fetching ${path}:`, err);
+    console.error(`Network or CORS error fetching ${url}:`, err);
     throw new Error(`Failed to reach the server. Please ensure the backend is running at ${API_BASE_URL}. Details: ${err.message}`);
   }
 

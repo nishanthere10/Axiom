@@ -2,6 +2,7 @@ import logging
 import requests
 from typing import List, Optional
 from core.config import settings
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 logger = logging.getLogger(__name__)
 
@@ -11,6 +12,7 @@ class JinaEmbeddingProvider:
         self.model = "jina-embeddings-v5-text-small"
         self.expected_dimension = 1024
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_exception_type(requests.RequestException))
     def generate_embedding(self, text: str) -> Optional[List[float]]:
         logger.debug("Embedding generation started")
         

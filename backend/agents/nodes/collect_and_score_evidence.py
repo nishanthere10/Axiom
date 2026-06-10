@@ -87,6 +87,10 @@ Return ONLY a JSON object with this exact schema:
         evidence = []
         consensus = "Error Processing Evidence"
         
+    warnings = state.get("warnings", [])
+    if not evidence and slug:
+        warnings.append("⚠️ Evidence collection failed — decision is based on general knowledge only.")
+        
     # Save to cache ONLY on success — never cache an error state
     if slug and evidence:
         set_cached_evidence(slug, {"evidence": evidence, "consensus": consensus})
@@ -94,5 +98,6 @@ Return ONLY a JSON object with this exact schema:
     return {
         "evidence": evidence,
         "consensus": consensus,
+        "warnings": warnings,
         "status": "evidence_collected"
     }

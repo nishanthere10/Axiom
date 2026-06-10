@@ -23,3 +23,5 @@ PyJWT
 cryptography
 httpx
 pytest
+tenacity
+svix

@@ -16,7 +16,11 @@ export default function SavedComparisonsPage() {
   useEffect(() => {
     async function loadComparisons() {
       try {
-        const token = await getToken() ?? "";
+        const token = await getToken();
+        if (!token) {
+          setComparisons([]);
+          return;
+        }
         const data = await getSavedComparisons(token);
         setComparisons(data);
       } catch (err) {
