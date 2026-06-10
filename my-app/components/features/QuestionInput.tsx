@@ -7,6 +7,7 @@ import { z } from "zod";
 import { useAuth } from "@clerk/nextjs";
 import { submitResearch } from "@/lib/api";
 import { ResearchResponse } from "@/types";
+import { ArrowRight, Loader2 } from "lucide-react";
 
 const schema = z.object({
   question: z
@@ -39,11 +40,13 @@ export default function QuestionInput({ onSubmitted }: Props) {
     setIsSubmitting(true);
     setApiError(null);
     try {
-      const token = await getToken() ?? "";
+      const token = (await getToken()) ?? "";
       const response = await submitResearch(data.question, false, token);
       onSubmitted(response);
     } catch (err) {
-      setApiError(err instanceof Error ? err.message : "An unexpected error occurred.");
+      setApiError(
+        err instanceof Error ? err.message : "An unexpected error occurred."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -51,49 +54,80 @@ export default function QuestionInput({ onSubmitted }: Props) {
 
   return (
     <div className="w-full max-w-2xl mx-auto">
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-semibold text-foreground tracking-tight mb-2">
+      {/* Heading */}
+      <div className="mb-8 text-center space-y-2">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-sm bg-surface border border-border text-primary text-xs font-mono tracking-widest uppercase mb-3">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
+          </span>
+          Ready
+        </div>
+        <h1 className="text-2xl font-semibold text-foreground tracking-tight">
           Atlas Research
         </h1>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           Ask a technical question. Get a structured engineering decision.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="relative">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+        {/* Textarea — grows with content */}
+        <div className="relative group">
           <textarea
             id="question-input"
             {...register("question")}
-            rows={5}
+            rows={4}
             placeholder="e.g. Should I use PostgreSQL or MongoDB for a high-write event log system?"
             disabled={isSubmitting}
-            className="w-full rounded-md bg-surface border border-border text-foreground placeholder:text-muted-foreground text-sm p-4 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:opacity-50 transition-colors"
+            style={{ resize: "vertical", minHeight: "120px", maxHeight: "400px" }}
+            className="w-full rounded-lg bg-surface border border-border text-foreground text-sm placeholder:text-muted-foreground p-4 pr-16 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 disabled:opacity-50 transition-all duration-200 font-mono leading-relaxed"
           />
-          <span className="absolute bottom-3 right-3 text-xs text-muted-foreground tabular-nums">
-            {questionValue?.length ?? 0}/1000
-          </span>
+          {/* Character counter with visual warning */}
+          {(() => {
+            const len = questionValue?.length ?? 0;
+            const counterColor =
+              len >= 950 ? "text-destructive-foreground" :
+              len >= 800 ? "text-amber-500" :
+              "text-muted-foreground";
+            return (
+              <span className={`absolute bottom-3 right-3 text-xs tabular-nums font-mono select-none transition-colors duration-200 ${counterColor}`}>
+                {len}/1000
+              </span>
+            );
+          })()}
         </div>
 
+        {/* Validation errors */}
         {errors.question && (
-          <p className="text-sm text-destructive" role="alert">
+          <p className="text-xs text-destructive-foreground bg-destructive/10 border border-destructive/30 px-3 py-2 rounded-md" role="alert">
             {errors.question.message}
           </p>
         )}
-
         {apiError && (
-          <p className="text-sm text-destructive" role="alert">
+          <p className="text-xs text-destructive-foreground bg-destructive/10 border border-destructive/30 px-3 py-2 rounded-md" role="alert">
             {apiError}
           </p>
         )}
 
+        {/* Submit */}
         <button
           id="submit-research-btn"
           type="submit"
           disabled={isSubmitting}
-          className="w-full py-2 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 focus:ring-offset-background disabled:opacity-50 transition-all duration-200"
+          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 focus:ring-offset-background disabled:opacity-50 transition-all duration-200"
         >
-          {isSubmitting ? "Submitting…" : "Generate Decision"}
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Submitting…
+            </>
+          ) : (
+            <>
+              Generate Decision
+              <ArrowRight className="w-4 h-4" />
+            </>
+          )}
         </button>
       </form>
     </div>

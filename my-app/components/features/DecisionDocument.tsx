@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { motion } from "framer-motion";
 import type { DecisionDocument as DecisionDocumentType } from "@/types";
 import EvidenceCard from "./EvidenceCard";
 import EvidenceConsensus from "./EvidenceConsensus";
@@ -10,16 +11,22 @@ import MemoryUsed from "../memory/MemoryUsed";
 
 export const ConfidenceBar = memo(function ConfidenceBar({ label, value }: { label: string; value: number }) {
   const pct = Math.round(value * 100);
+  const fillColor =
+    pct >= 75 ? "bg-success"
+    : pct >= 45 ? "bg-amber-500"
+    : "bg-destructive";
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-xs">
         <span className="text-muted-foreground">{label}</span>
-        <span className="text-foreground font-mono">{pct}%</span>
+        <span className="text-foreground font-mono tabular-nums">{pct}%</span>
       </div>
-      <div className="h-1 bg-secondary rounded-full overflow-hidden">
-        <div
-          className="h-full bg-primary rounded-full transition-all duration-300 ease-out"
-          style={{ width: `${pct}%` }}
+      <div className="h-1 bg-surface-hover rounded-full overflow-hidden">
+        <motion.div
+          className={`h-full rounded-full ${fillColor}`}
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
         />
       </div>
     </div>
@@ -28,10 +35,13 @@ export const ConfidenceBar = memo(function ConfidenceBar({ label, value }: { lab
 
 const Section = memo(function Section({ title, content }: { title: string; content: string }) {
   return (
-    <div className="space-y-2">
-      <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-        {title}
-      </h3>
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <div className="w-0.5 h-4 rounded-full bg-primary shrink-0" />
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          {title}
+        </h3>
+      </div>
       <MarkdownRenderer content={content} />
     </div>
   );
@@ -45,15 +55,23 @@ interface Props {
 
 export default function DecisionDocument({ doc, sessionId, setDoc }: Props) {
   return (
-    <div id="decision-document" className="w-full space-y-8 animate-in fade-in duration-300">
+    <motion.div
+      id="decision-document"
+      className="w-full space-y-8"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       {/* Header */}
-      <div className="border-b border-border pb-4 space-y-1 flex justify-between items-start">
-        <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-widest">
-            Decision Document · v{doc.version}
-          </p>
-          <h2 className="text-xl font-semibold text-foreground leading-snug">{doc.question}</h2>
+      <div className="border-b border-border pb-5 space-y-1">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+          <span className="uppercase tracking-widest">Decision Document</span>
+          <span className="text-border">·</span>
+          <span>v{doc.version}</span>
+          <span className="text-border">·</span>
+          <span>{new Date(doc.created_at).toLocaleDateString()}</span>
         </div>
+        <h2 className="text-xl font-semibold text-foreground leading-snug mt-2">{doc.question}</h2>
       </div>
 
       {/* Executive Summary */}
@@ -91,27 +109,32 @@ export default function DecisionDocument({ doc, sessionId, setDoc }: Props) {
 
       {/* Alternatives */}
       <Section title="Alternatives" content={doc.alternatives} />
-    </div>
+    </motion.div>
   );
 }
 
 export function AuxiliaryDocumentData({ doc, sessionId, onRefresh }: { doc: DecisionDocumentType, sessionId: string, onRefresh: (id: string) => void }) {
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+    <motion.div
+      className="space-y-6"
+      initial={{ opacity: 0, x: 8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       {/* Confidence */}
-      <div className="space-y-3 rounded-md border border-border bg-card p-4">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+      <div className="space-y-3 rounded-lg border border-border bg-surface p-4">
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
           Confidence Breakdown
         </h3>
-        <ConfidenceBar label="Evidence Coverage" value={doc.confidence.evidence_coverage} />
-        <ConfidenceBar label="Source Quality" value={doc.confidence.source_quality} />
-        <ConfidenceBar label="Contradiction Risk" value={doc.confidence.contradiction_risk} />
-        <ConfidenceBar label="Decision Confidence" value={doc.confidence.decision_confidence} />
+        <ConfidenceBar label="Evidence Coverage"   value={doc.confidence.evidence_coverage} />
+        <ConfidenceBar label="Source Quality"       value={doc.confidence.source_quality} />
+        <ConfidenceBar label="Contradiction Risk"   value={doc.confidence.contradiction_risk} />
+        <ConfidenceBar label="Decision Confidence"  value={doc.confidence.decision_confidence} />
       </div>
 
       {/* Evidence Section */}
       {doc.evidence && doc.evidence.length > 0 && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <EvidenceCard evidence={doc.evidence} />
           <EvidenceConsensus consensus={doc.consensus} />
         </div>
@@ -120,11 +143,12 @@ export function AuxiliaryDocumentData({ doc, sessionId, onRefresh }: { doc: Deci
       <RefreshEvidence question={doc.question} onRefresh={onRefresh} />
 
       {/* Footer */}
-      <p className="text-xs text-muted-foreground">
-        Generated at {new Date(doc.created_at).toLocaleString()}
-        {doc.evidence_generated_at && <br />}
-        {doc.evidence_generated_at && `(Evidence: ${new Date(doc.evidence_generated_at).toLocaleString()})`}
+      <p className="text-xs text-muted-foreground font-mono border-t border-border/50 pt-3">
+        Generated {new Date(doc.created_at).toLocaleString()}
+        {doc.evidence_generated_at && (
+          <><br />Evidence refreshed {new Date(doc.evidence_generated_at).toLocaleString()}</>
+        )}
       </p>
-    </div>
+    </motion.div>
   );
 }

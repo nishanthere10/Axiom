@@ -27,14 +27,23 @@ def build_comparison_graph() -> StateGraph:
     
     workflow.set_entry_point("load_sessions")
     
+    # Phase 1: Fan-out Data loading and independent ops
     workflow.add_edge("load_sessions", "retrieve_memory")
+    workflow.add_edge("load_sessions", "normalize_documents")
+
+    # Phase 2: Parallel ops
     workflow.add_edge("retrieve_memory", "analyze_memory")
-    workflow.add_edge("analyze_memory", "normalize_documents")
     workflow.add_edge("normalize_documents", "generate_structural_diff")
-    workflow.add_edge("generate_structural_diff", "generate_explanation")
+
+    # Phase 3: Fan-In to explanation
+    workflow.add_edge(["analyze_memory", "generate_structural_diff"], "generate_explanation")
+
+    # Phase 4: Sequential downstream dependencies
     workflow.add_edge("generate_explanation", "generate_impact")
     workflow.add_edge("generate_impact", "generate_comparison_visual_spec")
     workflow.add_edge("generate_comparison_visual_spec", "validate_visual_spec")
+
+    # Phase 5: Final Fan-in formatting
     workflow.add_edge("validate_visual_spec", "format_comparison")
     workflow.add_edge("format_comparison", END)
     

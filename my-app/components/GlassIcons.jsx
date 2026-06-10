@@ -1,10 +1,13 @@
+// GlassIcons — all colors now use CSS variables from the design system.
+// Gradients map to the project's --primary, --success, --destructive etc. tokens.
+
 const gradientMapping = {
-  blue: 'linear-gradient(hsl(223, 90%, 50%), hsl(208, 90%, 50%))',
-  purple: 'linear-gradient(hsl(283, 90%, 50%), hsl(268, 90%, 50%))',
-  red: 'linear-gradient(hsl(3, 90%, 50%), hsl(348, 90%, 50%))',
-  indigo: 'linear-gradient(hsl(253, 90%, 50%), hsl(238, 90%, 50%))',
-  orange: 'linear-gradient(hsl(43, 90%, 50%), hsl(28, 90%, 50%))',
-  green: 'linear-gradient(hsl(123, 90%, 40%), hsl(108, 90%, 40%))'
+  blue:   'linear-gradient(hsl(var(--primary)), hsl(217.2 91.2% 45%))',
+  purple: 'linear-gradient(hsl(283 90% 50%), hsl(268 90% 50%))',
+  red:    'linear-gradient(hsl(var(--destructive)), hsl(0 62.8% 22%))',
+  indigo: 'linear-gradient(hsl(238 84% 65%), hsl(253 84% 55%))',
+  orange: 'linear-gradient(hsl(32 95% 55%), hsl(20 95% 45%))',
+  green:  'linear-gradient(hsl(var(--success)), hsl(142.1 76.2% 25%))',
 };
 
 const GlassIcons = ({ items, className }) => {

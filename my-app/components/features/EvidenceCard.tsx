@@ -5,51 +5,52 @@ export default function EvidenceCard({ evidence }: { evidence: Evidence[] }) {
   if (!evidence || evidence.length === 0) return null;
 
   return (
-    <div className="space-y-4 mb-8">
+    <div className="space-y-3">
       <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground border-b border-border pb-2">
         Evidence Sources
       </h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-2">
         {evidence.map((item, index) => {
-          const isHighTrust = item.trust_score >= 0.8;
+          const isHighTrust   = item.trust_score >= 0.8;
           const isMediumTrust = item.trust_score >= 0.5 && item.trust_score < 0.8;
+          const trustColor = isHighTrust
+            ? "text-success"
+            : isMediumTrust
+            ? "text-amber-500"
+            : "text-destructive-foreground";
+          const TrustIcon = isHighTrust ? CheckCircle : AlertTriangle;
+
           return (
             <div
               key={item.url}
-              className="p-4 rounded-md border border-border bg-card shadow-sm hover:border-primary/50 transition-colors flex flex-col justify-between"
+              className="p-3 rounded-lg border border-border bg-surface hover:border-primary/40 hover:bg-surface-hover transition-all duration-200 flex flex-col justify-between gap-2"
             >
               <div>
-                <div className="flex items-start justify-between mb-2">
-                  <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                    [Source {index + 1}]
+                <div className="flex items-start justify-between mb-1.5">
+                  <span className="text-xs font-mono text-muted-foreground bg-surface-hover px-2 py-0.5 rounded-sm">
+                    [{index + 1}]
                   </span>
-                  <div className="flex items-center space-x-1">
-                    {isHighTrust ? (
-                      <CheckCircle className="w-4 h-4 text-emerald-500" />
-                    ) : isMediumTrust ? (
-                      <AlertTriangle className="w-4 h-4 text-amber-500" />
-                    ) : (
-                      <AlertTriangle className="w-4 h-4 text-destructive" />
-                    )}
-                    <span className={`text-xs font-medium ${isHighTrust ? "text-emerald-500" : isMediumTrust ? "text-amber-500" : "text-destructive"}`}>
-                      {(item.trust_score * 100).toFixed(0)}% Trust
+                  <div className={`flex items-center gap-1 ${trustColor}`}>
+                    <TrustIcon className="w-3.5 h-3.5" />
+                    <span className="text-xs font-mono tabular-nums">
+                      {(item.trust_score * 100).toFixed(0)}%
                     </span>
                   </div>
                 </div>
-                <h4 className="text-sm font-medium text-foreground mb-1 line-clamp-2">
+                <h4 className="text-xs font-medium text-foreground mb-1 line-clamp-2 leading-relaxed">
                   {item.title}
                 </h4>
-                <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
-                  "{item.claim}"
+                <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                  &ldquo;{item.claim}&rdquo;
                 </p>
               </div>
               <a
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-primary flex items-center hover:underline mt-auto"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline underline-offset-2 mt-1 w-fit"
               >
-                <ExternalLink className="w-3 h-3 mr-1" />
+                <ExternalLink className="w-3 h-3" />
                 View Source
               </a>
             </div>

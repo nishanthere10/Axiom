@@ -1,48 +1,63 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   SignInButton,
   SignOutButton,
   useAuth,
 } from "@clerk/nextjs";
+import { cn } from "@/lib/utils";
+
+const NAV_LINKS = [
+  { href: "/research",           label: "Research",          exact: false },
+  { href: "/research-documents", label: "Saved Research",     exact: true  },
+  { href: "/compare",            label: "Compare",           exact: true  },
+  { href: "/compare/saved",      label: "Saved Comparisons", exact: true  },
+];
 
 export default function Navbar() {
   const { isSignedIn } = useAuth();
+  const pathname = usePathname();
 
   return (
-    <nav className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-14 items-center justify-between px-4 md:px-8">
+    <nav className="shrink-0 border-b border-border bg-surface/80 backdrop-blur-md supports-[backdrop-filter]:bg-surface/60">
+      <div className="flex h-12 items-center justify-between px-4 md:px-6">
+
         {/* Left: Brand + Nav Links */}
-        <div className="flex items-center">
-          <Link href="/" className="mr-6 flex items-center space-x-2">
-            <span className="font-bold sm:inline-block">Atlas Research</span>
+        <div className="flex items-center gap-6">
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-sm font-semibold text-foreground tracking-tight hover:text-foreground/80 transition-colors"
+          >
+            {/* Subtle accent dot */}
+            <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+            Atlas Research
           </Link>
-          <div className="flex gap-4 md:gap-6">
-            <Link
-              href="/research"
-              className="text-sm font-medium transition-colors hover:text-foreground/80 text-foreground/60"
-            >
-              Research
-            </Link>
-            <Link
-              href="/research-documents"
-              className="text-sm font-medium transition-colors hover:text-foreground/80 text-foreground/60"
-            >
-              Saved Research
-            </Link>
-            <Link
-              href="/compare"
-              className="text-sm font-medium transition-colors hover:text-foreground/80 text-foreground/60"
-            >
-              Compare
-            </Link>
-            <Link
-              href="/compare/saved"
-              className="text-sm font-medium transition-colors hover:text-foreground/80 text-foreground/60"
-            >
-              Saved Comparisons
-            </Link>
+
+          <div className="hidden md:flex items-center gap-1">
+            {NAV_LINKS.map(({ href, label, exact }) => {
+              const isActive = exact
+                ? pathname === href
+                : pathname === href || pathname?.startsWith(href + "?") || pathname?.startsWith(href + "/");
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    "relative px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200",
+                    isActive
+                      ? "text-foreground bg-surface-hover"
+                      : "text-muted-foreground hover:text-foreground hover:bg-surface-hover/60"
+                  )}
+                >
+                  {label}
+                  {isActive && (
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-px bg-primary rounded-full" />
+                  )}
+                </Link>
+              );
+            })}
           </div>
         </div>
 
@@ -50,18 +65,19 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           {isSignedIn ? (
             <SignOutButton>
-              <button className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-9 px-4 py-2 border border-border bg-background text-foreground hover:bg-muted">
+              <button className="inline-flex items-center justify-center rounded-md text-xs font-medium transition-colors h-8 px-3 border border-border bg-transparent text-muted-foreground hover:text-foreground hover:bg-surface-hover">
                 Sign Out
               </button>
             </SignOutButton>
           ) : (
             <SignInButton>
-              <button className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-9 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90">
+              <button className="inline-flex items-center justify-center rounded-md text-xs font-semibold transition-colors h-8 px-3 bg-primary text-primary-foreground hover:bg-primary/90">
                 Sign In
               </button>
             </SignInButton>
           )}
         </div>
+
       </div>
     </nav>
   );

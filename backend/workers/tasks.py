@@ -54,6 +54,7 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
             "status": "starting"
         }
         
+        max_progress = 5
         for chunk in decision_graph.stream(current_state):
             for node_name, node_state in chunk.items():
                 # LangGraph stream yields only the updates from the current node.
@@ -61,10 +62,13 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
                 current_state.update(node_state)
                 
                 _, progress = _NODE_PROGRESS.get(node_name, (0, 0))
+                if progress > max_progress:
+                    max_progress = progress
+                    
                 research_service.update_job_status(
                     job_id,
                     status="running",
-                    progress=progress,
+                    progress=max_progress,
                     step=node_name,
                 )
                 

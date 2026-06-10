@@ -1,53 +1,35 @@
 import Link from "next/link";
-import { Code, Globe, MessageCircle } from "lucide-react"; // Using generic icons since brands were removed
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="w-full border-t border-border/50 bg-background py-8 md:py-12 mt-auto">
-      <div className="container px-4 md:px-6 mx-auto max-w-7xl flex flex-col md:flex-row justify-between items-center gap-6">
-        {/* Left Side: Brand & Copyright */}
-        <div className="flex flex-col items-center md:items-start gap-2">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="font-bold text-lg tracking-tight">Atlas Research</span>
+    <footer className="w-full border-t border-border/50 bg-background py-8 mt-auto">
+      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+
+        {/* Brand */}
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+          <Link href="/" className="font-semibold text-foreground tracking-tight hover:text-foreground/80 transition-colors">
+            Atlas Research
           </Link>
-          <p className="text-xs text-muted-foreground">
-            &copy; {currentYear} Atlas. All rights reserved.
-          </p>
+          <span className="text-border">·</span>
+          <span>&copy; {currentYear}</span>
         </div>
 
-        {/* Center: Secondary Links */}
-        <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground font-medium">
-          <Link href="/research" className="hover:text-foreground transition-colors">
-            App
-          </Link>
-          <Link href="/research-documents" className="hover:text-foreground transition-colors">
-            Docs
-          </Link>
-          <Link href="/compare" className="hover:text-foreground transition-colors">
-            Compare
-          </Link>
-          <Link href="#" className="hover:text-foreground transition-colors">
-            Terms
-          </Link>
-          <Link href="#" className="hover:text-foreground transition-colors">
-            Privacy
-          </Link>
+        {/* Nav links */}
+        <div className="flex items-center gap-5 font-mono">
+          {[
+            { href: "/research",           label: "App" },
+            { href: "/research-documents", label: "Docs" },
+            { href: "/compare",            label: "Compare" },
+          ].map(({ href, label }) => (
+            <Link key={href} href={href} className="hover:text-foreground transition-colors">
+              {label}
+            </Link>
+          ))}
         </div>
 
-        {/* Right Side: Socials */}
-        <div className="flex items-center gap-4 text-muted-foreground">
-          <Link href="#" className="hover:text-foreground transition-colors" aria-label="GitHub">
-            <Code className="w-5 h-5" />
-          </Link>
-          <Link href="#" className="hover:text-foreground transition-colors" aria-label="Twitter">
-            <Globe className="w-5 h-5" />
-          </Link>
-          <Link href="#" className="hover:text-foreground transition-colors" aria-label="Reddit / Community">
-            <MessageCircle className="w-5 h-5" />
-          </Link>
-        </div>
       </div>
     </footer>
   );

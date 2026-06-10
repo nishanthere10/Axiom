@@ -32,17 +32,31 @@ def build_decision_graph():
     graph.add_node("format_document", format_document)
 
     # Wire edges
+    # Phase 1: Parallel initial data gathering
     graph.add_edge(START, "decompose_question")
-    graph.add_edge("decompose_question", "retrieve_memory")
+    graph.add_edge(START, "retrieve_memory")
+    graph.add_edge(START, "canonicalize_topic")
+
+    # Phase 2: Analyze memory and generate queries
     graph.add_edge("retrieve_memory", "analyze_memory")
-    graph.add_edge("analyze_memory", "canonicalize_topic")
-    graph.add_edge("canonicalize_topic", "generate_queries")
-    graph.add_edge("generate_queries", "collect_and_score_evidence")
+    graph.add_edge("decompose_question", "generate_queries")
+
+    # Phase 3: Wait for both queries and memory to collect evidence
+    graph.add_edge(["generate_queries", "analyze_memory"], "collect_and_score_evidence")
+    
+    # Phase 4: Decision generation
     graph.add_edge("collect_and_score_evidence", "generate_decision")
+    
+    # Phase 5: Parallel post-decision processing
     graph.add_edge("generate_decision", "build_confidence")
-    graph.add_edge("build_confidence", "generate_visual_spec")
+    graph.add_edge("generate_decision", "generate_visual_spec")
+    
+    # Phase 6: Visual validation
     graph.add_edge("generate_visual_spec", "validate_visual_spec")
-    graph.add_edge("validate_visual_spec", "format_document")
+    
+    # Phase 7: Wait for all post-processing to format the final document
+    graph.add_edge(["build_confidence", "validate_visual_spec", "canonicalize_topic"], "format_document")
+    
     graph.add_edge("format_document", END)
 
     return graph.compile()

@@ -2,7 +2,15 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { ChevronLeft, ChevronRight, MessageSquare, Plus, Settings, Loader2, GitCompare } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  MessageSquare,
+  Plus,
+  Settings,
+  Loader2,
+  GitCompare,
+} from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { getSessionHistory, getSavedComparisons } from "@/lib/api";
@@ -11,7 +19,28 @@ import AnimatedList from "@/components/AnimatedList";
 
 const PAGE_SIZE = 10;
 
-export default function LeftSidebar({ isCollapsed = false, toggleCollapse }: { isCollapsed?: boolean, toggleCollapse?: () => void }) {
+/** Skeleton loader that mimics the shape of a history row */
+function HistorySkeleton() {
+  return (
+    <div className="space-y-1 px-1 pt-1">
+      {[80, 60, 90, 50, 75].map((w, i) => (
+        <div
+          key={i}
+          className="h-8 rounded-md bg-surface-hover/60 animate-pulse"
+          style={{ width: `${w}%` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+export default function LeftSidebar({
+  isCollapsed = false,
+  toggleCollapse,
+}: {
+  isCollapsed?: boolean;
+  toggleCollapse?: () => void;
+}) {
   const { getToken } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -36,27 +65,15 @@ export default function LeftSidebar({ isCollapsed = false, toggleCollapse }: { i
       try {
         const token = await getToken();
         if (!token) {
-          // If the user isn't signed in, don't attempt to fetch
-          if (isMounted) {
-            setComparisons([]);
-            setSessions([]);
-            setHasMore(false);
-          }
+          if (isMounted) { setComparisons([]); setSessions([]); setHasMore(false); }
           return;
         }
-
         if (isCompareMode) {
           const data = await getSavedComparisons(token);
-          if (isMounted) {
-            setComparisons(data.comparisons);
-            setHasMore(false); // /compare/saved doesn't have pagination yet
-          }
+          if (isMounted) { setComparisons(data.comparisons); setHasMore(false); }
         } else {
           const data = await getSessionHistory(PAGE_SIZE, 0, token);
-          if (isMounted) {
-            setSessions(data.sessions);
-            setHasMore(data.sessions.length === PAGE_SIZE);
-          }
+          if (isMounted) { setSessions(data.sessions); setHasMore(data.sessions.length === PAGE_SIZE); }
         }
       } catch (err) {
         console.error("Failed to fetch sidebar history:", err);
@@ -68,13 +85,10 @@ export default function LeftSidebar({ isCollapsed = false, toggleCollapse }: { i
     return () => { isMounted = false; };
   }, [isCompareMode, getToken]);
 
-  // Load more when scrolling to bottom (only for research mode right now)
   const loadMore = useCallback(async () => {
     if (isCompareMode || loadingMore || !hasMore) return;
-    
     const token = await getToken();
     if (!token) return;
-
     setLoadingMore(true);
     try {
       const data = await getSessionHistory(PAGE_SIZE, sessions.length, token);
@@ -90,78 +104,70 @@ export default function LeftSidebar({ isCollapsed = false, toggleCollapse }: { i
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el || !hasMore || loadingMore || isCompareMode) return;
-    // Trigger load more when within 50px of the bottom
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 50) {
-      loadMore();
-    }
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 50) loadMore();
   }, [loadMore, hasMore, loadingMore, isCompareMode]);
 
-  const handleNewAction = () => {
-    if (isCompareMode) {
-      router.push("/compare");
-    } else {
-      router.push("/research");
-    }
-  };
-
-  const handleSessionClick = (sessionId: string) => {
-    router.push(`/research?session_id=${sessionId}`);
-  };
-
-  const handleCompareClick = (compId: string) => {
-    router.push(`/compare/saved?comparison_id=${compId}`);
-  };
+  const handleNewAction = () => router.push(isCompareMode ? "/compare" : "/research");
+  const handleSessionClick = (sessionId: string) => router.push(`/research?session_id=${sessionId}`);
+  const handleCompareClick = (compId: string) => router.push(`/compare/saved?comparison_id=${compId}`);
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
-      <div className="flex items-center justify-between p-4 border-b border-border/50">
-        {!isCollapsed && <h2 className="text-sm font-semibold text-foreground tracking-tight">
-          {isCompareMode ? "Compare History" : "History"}
-        </h2>}
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 border-b border-border/50 h-12 shrink-0">
+        {!isCollapsed && (
+          <span className="text-xs font-semibold text-muted-foreground tracking-widest uppercase select-none">
+            {isCompareMode ? "Compare History" : "History"}
+          </span>
+        )}
         {toggleCollapse && (
           <button
             onClick={toggleCollapse}
-            className="p-1.5 rounded-md hover:bg-white/10 text-muted-foreground transition-colors mx-auto"
+            className={cn(
+              "p-1.5 rounded-md hover:bg-surface-hover text-muted-foreground hover:text-foreground transition-colors",
+              isCollapsed && "mx-auto"
+            )}
             aria-label="Toggle Sidebar"
           >
-            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            {isCollapsed
+              ? <ChevronRight className="w-4 h-4" />
+              : <ChevronLeft className="w-4 h-4" />}
           </button>
         )}
       </div>
 
+      {/* Scrollable body */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto p-2 space-y-1"
       >
+        {/* New action button */}
         <button
           onClick={handleNewAction}
           className={cn(
-            "w-full flex items-center gap-3 p-2 rounded-md hover:bg-white/10 transition-colors text-foreground text-sm font-medium mb-4",
+            "w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-surface-hover transition-colors text-muted-foreground hover:text-foreground text-xs font-medium mb-2",
             isCollapsed && "justify-center"
           )}
         >
           <Plus className="w-4 h-4 shrink-0" />
-          {!isCollapsed && <span>{isCompareMode ? "New Comparison" : "New Research"}</span>}
+          {!isCollapsed && (
+            <span>{isCompareMode ? "New Comparison" : "New Research"}</span>
+          )}
         </button>
 
+        {/* Content */}
         {loading ? (
-          !isCollapsed ? (
-            <div className="space-y-2 px-1">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-9 bg-white/5 rounded-md animate-pulse" />
-              ))}
-            </div>
-          ) : (
-            <div className="flex justify-center">
+          !isCollapsed ? <HistorySkeleton /> : (
+            <div className="flex justify-center pt-2">
               <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
             </div>
           )
         ) : isCompareMode ? (
-          // COMPARE MODE RENDERING
           comparisons.length === 0 ? (
             !isCollapsed && (
-              <p className="text-xs text-muted-foreground text-center px-2 py-4">
+              <p className="text-xs text-muted-foreground text-center px-2 py-6">
                 No saved comparisons yet.
               </p>
             )
@@ -176,10 +182,10 @@ export default function LeftSidebar({ isCollapsed = false, toggleCollapse }: { i
                 render: () => (
                   <div
                     className={cn(
-                      "w-full flex items-center gap-3 p-2 rounded-md transition-colors text-sm text-left truncate",
+                      "w-full flex items-center gap-2.5 px-2 py-2 rounded-md transition-colors text-xs text-left",
                       activeComparisonId === comp.id
-                        ? "bg-white/10 text-foreground"
-                        : "hover:bg-white/5 text-muted-foreground hover:text-foreground",
+                        ? "bg-surface-hover text-foreground"
+                        : "text-muted-foreground hover:bg-surface-hover/60 hover:text-foreground",
                       isCollapsed && "justify-center"
                     )}
                     title={isCollapsed ? comp.summary : undefined}
@@ -187,24 +193,29 @@ export default function LeftSidebar({ isCollapsed = false, toggleCollapse }: { i
                     <GitCompare className="w-4 h-4 shrink-0" />
                     {!isCollapsed && <span className="truncate">{comp.summary}</span>}
                   </div>
-                )
+                ),
               }))}
               onItemSelect={(item) => handleCompareClick(item.id)}
             />
           )
         ) : (
-          // RESEARCH MODE RENDERING
           sessions.length === 0 ? (
             !isCollapsed && (
-              <p className="text-xs text-muted-foreground text-center px-2 py-4">
-                No research sessions yet. Start your first one above!
+              <p className="text-xs text-muted-foreground text-center px-2 py-6">
+                No research sessions yet.{" "}
+                <button
+                  onClick={handleNewAction}
+                  className="text-primary underline underline-offset-2"
+                >
+                  Start one above.
+                </button>
               </p>
             )
           ) : (
             <>
               <AnimatedList
                 className="!w-full !p-0 !max-w-none"
-                innerClassName="overflow-visible p-0 space-y-1"
+                innerClassName="overflow-visible p-0 space-y-0.5"
                 displayScrollbar={false}
                 showGradients={false}
                 items={sessions.map(session => ({
@@ -212,23 +223,21 @@ export default function LeftSidebar({ isCollapsed = false, toggleCollapse }: { i
                   render: () => (
                     <div
                       className={cn(
-                        "w-full flex items-center gap-3 p-2 rounded-md transition-colors text-sm text-left truncate",
+                        "w-full flex items-center gap-2.5 px-2 py-2 rounded-md transition-colors text-xs text-left",
                         activeSessionId === session.id
-                          ? "bg-white/10 text-foreground"
-                          : "hover:bg-white/5 text-muted-foreground hover:text-foreground",
+                          ? "bg-surface-hover text-foreground"
+                          : "text-muted-foreground hover:bg-surface-hover/60 hover:text-foreground",
                         isCollapsed && "justify-center"
                       )}
                       title={isCollapsed ? session.question : undefined}
                     >
-                      <MessageSquare className="w-4 h-4 shrink-0" />
+                      <MessageSquare className="w-3.5 h-3.5 shrink-0" />
                       {!isCollapsed && <span className="truncate">{session.question}</span>}
                     </div>
-                  )
+                  ),
                 }))}
                 onItemSelect={(item) => handleSessionClick(item.id)}
               />
-
-              {/* Load more indicator */}
               {loadingMore && (
                 <div className="flex justify-center py-2">
                   <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
@@ -239,15 +248,19 @@ export default function LeftSidebar({ isCollapsed = false, toggleCollapse }: { i
         )}
       </div>
 
-      <div className="p-4 border-t border-border/50">
-        <button className={cn(
-          "w-full flex items-center gap-3 p-2 rounded-md hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground text-sm",
-          isCollapsed && "justify-center"
-        )}>
+      {/* Footer: Settings */}
+      <div className="px-2 py-2 border-t border-border/50 shrink-0">
+        <button
+          className={cn(
+            "w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-surface-hover transition-colors text-muted-foreground hover:text-foreground text-xs",
+            isCollapsed && "justify-center"
+          )}
+        >
           <Settings className="w-4 h-4 shrink-0" />
           {!isCollapsed && <span>Settings</span>}
         </button>
       </div>
+
     </div>
   );
 }
