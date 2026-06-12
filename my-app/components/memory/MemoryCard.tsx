@@ -14,7 +14,7 @@ export default function MemoryCard({ memory, onPromoted }: Props) {
   const handlePromote = async () => {
     setPromoting(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/memory/promote`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/memory/promote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ memory_id: memory.id }),

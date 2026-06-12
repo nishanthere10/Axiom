@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 };
 
 import Navbar from "@/components/ui/Navbar";
+import { SystemStatusBanner } from "@/components/system/SystemStatusBanner";
 
 export default function RootLayout({
   children,
@@ -33,6 +34,7 @@ export default function RootLayout({
       >
         <body className="h-screen w-screen overflow-hidden flex flex-col" suppressHydrationWarning>
           <Navbar />
+          <SystemStatusBanner />
           <main className="flex-1 overflow-hidden flex">{children}</main>
         </body>
       </html>

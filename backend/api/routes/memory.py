@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from typing import List, Dict, Any
 from pydantic import BaseModel
 from services import memory_service
 from api.schemas.memory import MemoryItemResponse
 from core.auth import get_current_user
+from middleware.rate_limit import limiter
 
 router = APIRouter()
 
@@ -20,7 +21,8 @@ class PromoteMemoryResponse(BaseModel):
     promoted: bool
 
 @router.get("", response_model=MemoryListResponse)
-def get_all_memories(user_id: str = Depends(get_current_user)):
+@limiter.limit("20/minute")
+def get_all_memories(request: Request, user_id: str = Depends(get_current_user)):
     """
     GET /memory
     Returns all active memories (permanent and unexpired temporary) for the current user.
@@ -29,7 +31,8 @@ def get_all_memories(user_id: str = Depends(get_current_user)):
     return MemoryListResponse(memories=memories)
 
 @router.get("/{memory_id}", response_model=MemoryDetailResponse)
-def get_memory(memory_id: str, user_id: str = Depends(get_current_user)):
+@limiter.limit("20/minute")
+def get_memory(request: Request, memory_id: str, user_id: str = Depends(get_current_user)):
     """
     GET /memory/{id}
     Returns details for a specific memory.
@@ -40,7 +43,8 @@ def get_memory(memory_id: str, user_id: str = Depends(get_current_user)):
     return MemoryDetailResponse(memory=memory)
 
 @router.post("/promote", response_model=PromoteMemoryResponse)
-def promote_memory(body: PromoteMemoryRequest, user_id: str = Depends(get_current_user)):
+@limiter.limit("20/minute")
+def promote_memory(request: Request, body: PromoteMemoryRequest, user_id: str = Depends(get_current_user)):
     """
     POST /memory/promote
     Promotes a temporary memory to permanent status.

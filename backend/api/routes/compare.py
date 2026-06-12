@@ -1,6 +1,6 @@
 import logging
 import uuid
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Request
 from api.schemas.compare import (
     CompareRequest, CompareResponse, GetComparisonResponse,
     SaveCompareRequest, SaveCompareResponse, SuggestionsResponse,
@@ -10,26 +10,15 @@ from services.cache_service import cache
 from services import compare_service
 from agents.graph.comparison_graph import comparison_graph
 from core.auth import get_current_user
+from middleware.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-def _run_comparison_memory_task(final_state: dict):
-    try:
-        logger.debug("Starting background memory creation for comparison.")
-        from agents.nodes.create_memory import create_memory
-        from agents.nodes.store_memory import store_memory
-        logger.debug("Calling create_memory...")
-        memory_state = create_memory(final_state)
-        logger.debug("Calling store_memory...")
-        store_memory(memory_state)
-        logger.debug("Background memory creation completed.")
-    except Exception as e:
-        logger.warning("Comparison memory creation failed (non-fatal): %s", e)
-
 @router.post("", response_model=CompareResponse)
-def submit_comparison(body: CompareRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user)):
+@limiter.limit("3/minute")
+def submit_comparison(request: Request, body: CompareRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user)):
     if body.session_a == body.session_b:
         raise HTTPException(status_code=400, detail="Cannot compare a session with itself.")
         
@@ -73,9 +62,30 @@ def submit_comparison(body: CompareRequest, background_tasks: BackgroundTasks, u
         user_id=user_id,
     )
     
-    # Background memory creation
-    final_state["comparison_id"] = comparison_id
-    background_tasks.add_task(_run_comparison_memory_task, final_state)
+    # Queue persistent memory job
+    try:
+        from services import memory_job_service
+        payload = {
+            "session_a_id": body.session_a,
+            "session_b_id": body.session_b,
+            "comparison_id": comparison_id,
+            "structural_diff": diff,
+            "decision_evolution": evo,
+            "impact_summary": imp
+        }
+        memory_job_service.create_job(
+            user_id=user_id,
+            session_id=comparison_id,
+            payload=payload
+        )
+    except Exception as memory_exc:
+        logger.warning("Failed to queue comparison memory job: %s", memory_exc)
+
+    try:
+        from services.metrics_service import increment_comparison_count
+        increment_comparison_count()
+    except Exception as e:
+        logger.warning(f"Failed to increment comparison metric: {e}")
     
     return CompareResponse(
         comparison_id=comparison_id,

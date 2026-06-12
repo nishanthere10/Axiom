@@ -6,25 +6,48 @@ import {
   SavedComparisonsResponse,
 } from "@/types";
 
-const RAW_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://localhost:8000";
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://127.0.0.1:8000";
 export const API_BASE_URL = RAW_API_URL.replace(/\/$/, "");
 
-export async function apiFetch<T>(endpoint: string, token: string, options?: RequestInit): Promise<T> {
-  let res: Response;
+export async function apiFetch<T>(
+  endpoint: string,
+  token: string,
+  options?: RequestInit & { getToken?: () => Promise<string | null> },
+): Promise<T> {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = `${API_BASE_URL}${cleanEndpoint}`;
 
-  try {
-    res = await fetch(url, {
+  // Extract getToken before spreading options into fetch
+  const { getToken, ...fetchOptions } = options ?? {};
+
+  async function doFetch(bearerToken: string): Promise<Response> {
+    return fetch(url, {
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        "Authorization": `Bearer ${bearerToken}`,
       },
-      ...options,
+      ...fetchOptions,
     });
+  }
+
+  let res: Response;
+  try {
+    res = await doFetch(token);
   } catch (err: any) {
     console.error(`Network or CORS error fetching ${url}:`, err);
     throw new Error(`Failed to reach the server. Please ensure the backend is running at ${API_BASE_URL}. Details: ${err.message}`);
+  }
+
+  // On 401, silently refresh the Clerk token and retry once
+  if (res.status === 401 && getToken) {
+    try {
+      const freshToken = await getToken();
+      if (freshToken) {
+        res = await doFetch(freshToken);
+      }
+    } catch {
+      // If refresh itself fails, fall through to the error below
+    }
   }
 
   if (!res.ok) {
@@ -42,29 +65,30 @@ export async function apiFetch<T>(endpoint: string, token: string, options?: Req
 }
 
 /** Submit a technical question and start a research job. */
-export async function submitResearch(question: string, forceRefresh: boolean = false, token: string): Promise<ResearchResponse> {
+export async function submitResearch(question: string, forceRefresh: boolean = false, token: string, getToken?: () => Promise<string | null>): Promise<ResearchResponse> {
   return apiFetch<ResearchResponse>("/research", token, {
     method: "POST",
     body: JSON.stringify({ question, force_refresh: forceRefresh }),
+    getToken,
   });
 }
 
 /** Poll the status of a background research job. */
-export async function getJobStatus(jobId: string, token: string): Promise<JobStatusResponse> {
-  return apiFetch<JobStatusResponse>(`/research/jobs/${jobId}`, token);
+export async function getJobStatus(jobId: string, token: string, getToken?: () => Promise<string | null>): Promise<JobStatusResponse> {
+  return apiFetch<JobStatusResponse>(`/research/jobs/${jobId}`, token, { getToken });
 }
 
 /** Fetch the completed decision document for a session. */
-export async function getSessionDocument(sessionId: string, token: string): Promise<SessionDocumentResponse> {
-  return apiFetch<SessionDocumentResponse>(`/research/sessions/${sessionId}`, token);
+export async function getSessionDocument(sessionId: string, token: string, getToken?: () => Promise<string | null>): Promise<SessionDocumentResponse> {
+  return apiFetch<SessionDocumentResponse>(`/research/sessions/${sessionId}`, token, { getToken });
 }
 
 /** Fetch a paginated list of recent research sessions. */
-export async function getSessionHistory(limit: number = 10, offset: number = 0, token: string): Promise<SessionHistoryResponse> {
-  return apiFetch<SessionHistoryResponse>(`/research/history?limit=${limit}&offset=${offset}`, token);
+export async function getSessionHistory(limit: number = 10, offset: number = 0, token: string, getToken?: () => Promise<string | null>): Promise<SessionHistoryResponse> {
+  return apiFetch<SessionHistoryResponse>(`/research/history?limit=${limit}&offset=${offset}`, token, { getToken });
 }
 
 /** Fetch all saved comparisons. */
-export async function getSavedComparisons(token: string): Promise<SavedComparisonsResponse> {
-  return apiFetch<SavedComparisonsResponse>("/compare/saved", token);
+export async function getSavedComparisons(token: string, getToken?: () => Promise<string | null>): Promise<SavedComparisonsResponse> {
+  return apiFetch<SavedComparisonsResponse>("/compare/saved", token, { getToken });
 }

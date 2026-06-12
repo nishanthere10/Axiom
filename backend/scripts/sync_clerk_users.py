@@ -26,9 +26,8 @@ def sync_users():
     
     logger.info("Fetching users from Clerk...")
     try:
-        # Fetch up to 100 users for this simple sync. If you have thousands, 
-        # you would need to implement pagination using offset/limit.
-        response = clerk.users.list(limit=100)
+        # Fetch users for this simple sync.
+        response = clerk.users.list()
         
         # In newer clerk-backend-api versions, response might be a list or have a data attribute
         users = response if isinstance(response, list) else getattr(response, "data", [])

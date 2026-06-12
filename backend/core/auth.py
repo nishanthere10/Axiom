@@ -42,7 +42,9 @@ async def get_current_user(
 
     try:
         jwks_client = _get_jwks_client()
+        logger.debug("Fetching signing key from JWKS for token kid...")
         signing_key = jwks_client.get_signing_key_from_jwt(token)
+        logger.debug("Got signing key, decoding token with issuer=%s", settings.CLERK_JWT_ISSUER)
 
         payload = jwt.decode(
             token,
@@ -60,20 +62,21 @@ async def get_current_user(
         if not user_id:
             raise HTTPException(status_code=401, detail="Token missing 'sub' claim")
 
+        logger.debug("JWT verified successfully for user: %s", user_id)
         return user_id
 
     except jwt.ExpiredSignatureError:
         logger.warning("JWT token expired")
         raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidIssuerError:
-        logger.warning("JWT invalid issuer")
-        raise HTTPException(status_code=401, detail="Invalid token issuer")
+    except jwt.InvalidIssuerError as e:
+        logger.warning("JWT invalid issuer. Expected=%s, Error=%s", settings.CLERK_JWT_ISSUER, e)
+        raise HTTPException(status_code=401, detail=f"Invalid token issuer: {e}")
     except jwt.InvalidTokenError as e:
-        logger.warning("JWT verification failed: %s", e)
-        raise HTTPException(status_code=401, detail="Invalid token")
+        logger.warning("JWT verification failed: %s (type: %s)", e, type(e).__name__)
+        raise HTTPException(status_code=401, detail=f"Invalid token: {type(e).__name__}: {e}")
     except RuntimeError as e:
         logger.error("Auth configuration error: %s", e)
         raise HTTPException(status_code=500, detail="Authentication not configured")
     except Exception as e:
-        logger.error("Unexpected auth error: %s", e, exc_info=True)
-        raise HTTPException(status_code=401, detail="Authentication failed")
+        logger.error("Unexpected auth error: %s (type: %s)", e, type(e).__name__, exc_info=True)
+        raise HTTPException(status_code=401, detail=f"Authentication failed: {type(e).__name__}: {e}")

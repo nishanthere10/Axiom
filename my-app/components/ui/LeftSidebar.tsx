@@ -69,10 +69,10 @@ export default function LeftSidebar({
           return;
         }
         if (isCompareMode) {
-          const data = await getSavedComparisons(token);
+          const data = await getSavedComparisons(token, getToken);
           if (isMounted) { setComparisons(data.comparisons); setHasMore(false); }
         } else {
-          const data = await getSessionHistory(PAGE_SIZE, 0, token);
+          const data = await getSessionHistory(PAGE_SIZE, 0, token, getToken);
           if (isMounted) { setSessions(data.sessions); setHasMore(data.sessions.length === PAGE_SIZE); }
         }
       } catch (err) {
@@ -91,7 +91,7 @@ export default function LeftSidebar({
     if (!token) return;
     setLoadingMore(true);
     try {
-      const data = await getSessionHistory(PAGE_SIZE, sessions.length, token);
+      const data = await getSessionHistory(PAGE_SIZE, sessions.length, token, getToken);
       setSessions(prev => [...prev, ...data.sessions]);
       setHasMore(data.sessions.length === PAGE_SIZE);
     } catch (err) {

@@ -25,3 +25,5 @@ httpx
 pytest
 tenacity
 svix
+slowapi
+python-json-logger

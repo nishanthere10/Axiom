@@ -1,18 +1,33 @@
 import logging
 import sys
+import os
 
 def configure_human_readable_logging():
-    # 1. Establish the clean, human-scannable format string blueprint
-    LOG_FORMAT = "%(asctime)s | %(levelname)-7s | %(name)s -> %(message)s"
-    DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+    # 1. Establish the format
+    log_format = "%(asctime)s %(levelname)s %(name)s %(message)s"
+    date_format = "%Y-%m-%d %H:%M:%S"
     
-    logging.basicConfig(
-        level=logging.DEBUG, # Retain your target application insights
-        format=LOG_FORMAT,
-        datefmt=DATE_FORMAT,
-        force=True, # Ensures override control if initialized earlier by libraries
-        stream=sys.stdout
-    )
+    # User approved JSON logging for production. 
+    # Use python-json-logger if available, otherwise fallback.
+    try:
+        from pythonjsonlogger import jsonlogger
+        formatter = jsonlogger.JsonFormatter(log_format, datefmt=date_format)
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(formatter)
+        logging.basicConfig(
+            level=logging.DEBUG,
+            handlers=[handler],
+            force=True
+        )
+    except ImportError:
+        # Fallback if package isn't installed yet
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s | %(levelname)-7s | %(name)s -> %(message)s",
+            datefmt=date_format,
+            force=True,
+            stream=sys.stdout
+        )
     
     # 2. Drop specific network-level protocol noisy modules down to WARNING
     noisy_protocols = ["hpack", "httpx", "httpcore", "urllib3.connectionpool", "watchfiles"]

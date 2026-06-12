@@ -11,7 +11,7 @@ export default function MemoryPanel() {
 
   const fetchMemories = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/memory`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/memory`);
       if (res.ok) {
         const data = await res.json();
         setMemories(data?.memories || []);

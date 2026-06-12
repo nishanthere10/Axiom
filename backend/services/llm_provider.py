@@ -47,10 +47,21 @@ def generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/
     
     try:
         logger.debug("Requesting LLM completion (Primary: %s)", model)
+        
+        # Track fallback usage
+        def success_callback(kwargs, *args, **kwargs_litellm):
+            if "fallbacks" in kwargs and kwargs.get("model") != model:
+                try:
+                    from services.metrics_service import increment_fallback_count
+                    increment_fallback_count()
+                except Exception:
+                    pass
+
         response = completion(
             model=model,
             messages=messages,
             fallbacks=fallbacks,
+            success_callback=[success_callback],
             **kwargs
         )
         logger.debug("Successfully used model: %s", response.model)

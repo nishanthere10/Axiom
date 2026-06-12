@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Request
 from api.schemas.research import (
     ResearchRequest,
     ResearchResponse,
@@ -12,12 +12,14 @@ from services import research_service
 from services.cache_service import cache
 from workers.tasks import run_research_background_task
 from core.auth import get_current_user
+from middleware.rate_limit import limiter
 
 router = APIRouter()
 
 
 @router.post("", response_model=ResearchResponse, status_code=202)
-def submit_research(body: ResearchRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user)):
+@limiter.limit("5/minute")
+def submit_research(request: Request, body: ResearchRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user)):
     """
     POST /research
     Accepts a technical question, creates a session and job in Supabase,
@@ -137,3 +139,4 @@ def regenerate_visuals(body: RegenerateVisualsRequest, user_id: str = Depends(ge
     cache.delete(f"doc_{body.session_id}")
     
     return RegenerateVisualsResponse(visuals=visuals)
+

@@ -89,25 +89,37 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
         )
 
         # 4. Mark session and job as complete
-        research_service.update_session_status(session_id, "complete")
+        # 4. Mark job completed
+        logger.info(f"Research job {job_id} completed successfully.")
         research_service.update_job_status(job_id, status="completed", progress=100, step="done")
 
-        # 5. Background Memory Creation
-        # This executes safely in the background worker thread *after* the user sees 100% complete
+        # Record metrics
         try:
-            logger.debug("Starting background memory creation for research session.")
-            from agents.nodes.create_memory import create_memory
-            from agents.nodes.store_memory import store_memory
+            from services.metrics_service import increment_research_count
+            increment_research_count()
+        except Exception as e:
+            logger.warning(f"Failed to increment research metric: {e}")
+
+        # 5. Background Memory Creation
+        # We now use a durable Postgres-backed job queue instead of fire-and-forget
+        try:
+            logger.debug("Queueing persistent memory job for research session.")
+            from services import memory_job_service
             
-            final_state["session_id"] = session_id
-            final_state["user_id"] = user_id
-            logger.debug("Calling create_memory...")
-            memory_state = create_memory(final_state)
-            logger.debug("Calling store_memory...")
-            store_memory(memory_state)
-            logger.debug("Background memory creation completed.")
+            # Extract just the necessary state payload (we don't need everything)
+            payload = {
+                "question": final_state.get("question"),
+                "decision": final_state.get("recommendation_context", ""),
+                "evidence": final_state.get("evidence", [])
+            }
+            memory_job_service.create_job(
+                user_id=user_id,
+                session_id=session_id,
+                payload=payload
+            )
+            logger.debug("Memory job queued successfully.")
         except Exception as memory_exc:
-            logger.warning("Memory creation failed (non-fatal): %s", memory_exc)
+            logger.warning("Failed to queue memory job: %s", memory_exc)
 
         return {"session_id": session_id, "job_id": job_id, "status": "completed"}
 
