@@ -7,6 +7,9 @@ def configure_human_readable_logging():
     log_format = "%(asctime)s %(levelname)s %(name)s %(message)s"
     date_format = "%Y-%m-%d %H:%M:%S"
     
+    log_level_str = os.environ.get("LOG_LEVEL", "INFO").upper()
+    log_level = getattr(logging, log_level_str, logging.INFO)
+
     # User approved JSON logging for production. 
     # Use python-json-logger if available, otherwise fallback.
     try:
@@ -15,14 +18,14 @@ def configure_human_readable_logging():
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(formatter)
         logging.basicConfig(
-            level=logging.DEBUG,
+            level=log_level,
             handlers=[handler],
             force=True
         )
     except ImportError:
         # Fallback if package isn't installed yet
         logging.basicConfig(
-            level=logging.DEBUG,
+            level=log_level,
             format="%(asctime)s | %(levelname)-7s | %(name)s -> %(message)s",
             datefmt=date_format,
             force=True,

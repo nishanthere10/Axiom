@@ -33,10 +33,11 @@ def store_memory(state: Dict[str, Any]) -> Dict[str, Any]:
                 memory_id = pg_memory["id"]
                 
                 # Pinecone payload
-                metadata = memory_create.metadata
+                metadata = memory_create.metadata.copy() if memory_create.metadata else {}
                 metadata["memory_type"] = memory_create.memory_type
                 metadata["created_at"] = pg_memory["created_at"]
                 metadata["scope"] = memory_create.scope
+                metadata["user_id"] = memory_create.user_id  # CRITICAL: search_memories filters by this
                 
                 upsert_memory(
                     memory_id=memory_id,

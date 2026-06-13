@@ -6,17 +6,25 @@ logger = logging.getLogger(__name__)
 def _increment_metric(column: str, amount: int = 1):
     """
     Increments a specific column in today's system_metrics_daily row.
-    Supabase's REST API doesn't have a simple 'increment' operator like raw SQL, 
-    so we call an RPC function. Since we might not have the RPC function,
-    we'll read, increment, and upsert. In a real prod setup, you'd use a Postgres function.
+    Attempts to use an atomic RPC function first. If the RPC function does not exist,
+    it falls back to a read-modify-write approach (which is susceptible to race conditions).
     """
     try:
         supabase = get_supabase()
         
-        # We need today's date in YYYY-MM-DD
         from datetime import datetime
         today = datetime.utcnow().strftime('%Y-%m-%d')
         
+        # Attempt atomic RPC call
+        try:
+            # Assumes a Postgres function exists:
+            # create or replace function increment_metric(p_date date, p_column text, p_amount int) ...
+            res = supabase.rpc("increment_metric", {"p_date": today, "p_column": column, "p_amount": amount}).execute()
+            return
+        except Exception:
+            # Fallback to read-modify-write
+            pass
+            
         # Fetch current
         result = supabase.table("system_metrics_daily").select("*").eq("date", today).execute()
         

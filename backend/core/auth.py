@@ -1,5 +1,4 @@
 import logging
-import httpx
 import jwt
 from jwt import PyJWKClient
 from fastapi import Depends, HTTPException, Request
@@ -70,13 +69,13 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidIssuerError as e:
         logger.warning("JWT invalid issuer. Expected=%s, Error=%s", settings.CLERK_JWT_ISSUER, e)
-        raise HTTPException(status_code=401, detail=f"Invalid token issuer: {e}")
+        raise HTTPException(status_code=401, detail="Invalid token issuer")
     except jwt.InvalidTokenError as e:
         logger.warning("JWT verification failed: %s (type: %s)", e, type(e).__name__)
-        raise HTTPException(status_code=401, detail=f"Invalid token: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=401, detail="Invalid token")
     except RuntimeError as e:
         logger.error("Auth configuration error: %s", e)
         raise HTTPException(status_code=500, detail="Authentication not configured")
     except Exception as e:
         logger.error("Unexpected auth error: %s (type: %s)", e, type(e).__name__, exc_info=True)
-        raise HTTPException(status_code=401, detail=f"Authentication failed: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=401, detail="Authentication failed")

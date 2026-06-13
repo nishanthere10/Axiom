@@ -67,6 +67,7 @@ import os
 
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 if prod_origin := os.environ.get("FRONTEND_ORIGIN"):
     ALLOWED_ORIGINS.append(prod_origin)
@@ -89,6 +90,10 @@ app.include_router(admin_router, prefix="/admin", tags=["admin"])
 
 @app.get("/health", tags=["system"])
 async def health_check():
-    health_status = await run_all_checks()
-    return {"status": health_status["status"]}
+    """
+    GET /health
+    Returns detailed health status for all dependencies.
+    Publicly accessible for system status banners and load balancers.
+    """
+    return await run_all_checks()
 

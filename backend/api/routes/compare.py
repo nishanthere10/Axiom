@@ -99,12 +99,12 @@ def get_saved_comparisons(user_id: str = Depends(get_current_user)):
 
 @router.get("/{comparison_id}", response_model=GetComparisonResponse)
 def get_comparison(comparison_id: str, user_id: str = Depends(get_current_user)):
-    cache_key = f"comp_{comparison_id}"
+    cache_key = f"comp_{user_id}_{comparison_id}"
     cached_comp = cache.get(cache_key)
     if cached_comp:
         return GetComparisonResponse(comparison=cached_comp)
 
-    comp = compare_service.get_comparison(comparison_id)
+    comp = compare_service.get_comparison(comparison_id, user_id=user_id)
     if not comp:
         raise HTTPException(status_code=404, detail="Comparison not found.")
         
@@ -113,5 +113,5 @@ def get_comparison(comparison_id: str, user_id: str = Depends(get_current_user))
 
 @router.post("/save", response_model=SaveCompareResponse)
 def save_comparison(body: SaveCompareRequest, user_id: str = Depends(get_current_user)):
-    success = compare_service.save_comparison(body.comparison_id)
+    success = compare_service.save_comparison(body.comparison_id, user_id=user_id)
     return SaveCompareResponse(saved=success)

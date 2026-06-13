@@ -110,3 +110,55 @@
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--surface-hover)) transparent;
 }
+
+/* Print Styles for PDF Export */
+@media print {
+  @page {
+    margin: 2cm;
+    size: auto;
+  }
+  
+  body {
+    background-color: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .no-print, nav, header, footer, button, .sidebar {
+    display: none !important;
+  }
+
+  /* Ensure the main content spans full width */
+  main, .print-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Avoid splitting items across pages if possible */
+  .print-avoid-break {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Add page breaks before new major sections */
+  .print-break-before {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  /* Force light mode styles in print */
+  * {
+    color: black !important;
+    border-color: #ccc !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  /* But keep some background colors for specific highlight blocks if needed */
+  .print-bg {
+    background-color: #f3f4f6 !important;
+  }
+}

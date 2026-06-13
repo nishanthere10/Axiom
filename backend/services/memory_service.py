@@ -60,21 +60,21 @@ def get_active_memories(user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
         logger.error("Error fetching memories: %s", e, exc_info=True)
         return []
 
-def promote_memory(memory_id: str) -> bool:
+def promote_memory(memory_id: str, user_id: str) -> bool:
     """Promotes a memory from temporary to permanent."""
     try:
         response = supabase.table("memory_items").update({
             "scope": "permanent",
             "expires_at": None
-        }).eq("id", memory_id).execute()
+        }).eq("id", memory_id).eq("user_id", user_id).execute()
         return len(response.data) > 0
     except Exception as e:
         logger.error("Error promoting memory: %s", e, exc_info=True)
         return False
 
-def get_memory_by_id(memory_id: str) -> Optional[Dict[str, Any]]:
+def get_memory_by_id(memory_id: str, user_id: str) -> Optional[Dict[str, Any]]:
     try:
-        response = supabase.table("memory_items").select("*").eq("id", memory_id).execute()
+        response = supabase.table("memory_items").select("*").eq("id", memory_id).eq("user_id", user_id).execute()
         if response.data:
             return response.data[0]
     except Exception as e:

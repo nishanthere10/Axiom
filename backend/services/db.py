@@ -12,6 +12,8 @@ def get_supabase() -> Client:
         _client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
     return _client
 
-# Backward-compatible alias — existing code using `from services.db import supabase` still works.
-# This evaluates lazily at first access via the module-level property pattern.
-supabase = get_supabase()
+# Backward-compatible alias — evaluates lazily at first access via PEP 562
+def __getattr__(name):
+    if name == "supabase":
+        return get_supabase()
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")

@@ -16,6 +16,7 @@ import MemoryUsed from "@/components/memory/MemoryUsed";
 
 import VisualRenderer from "@/components/visuals/VisualRenderer";
 import ResizableLayout from "@/components/ui/ResizableLayout";
+import ExportButton from "@/components/export/ExportButton";
 
 function CompareContent() {
   const searchParams = useSearchParams();
@@ -95,12 +96,17 @@ function CompareContent() {
 
       {comparison && (
         <div className="w-full space-y-12 animate-in fade-in duration-300">
-          <div className="border-b border-border pb-4">
-            <h1 className="text-2xl font-bold">Decision Comparison</h1>
-            <p className="text-sm text-muted-foreground font-mono mt-2">
-              A: {comparison.session_a} <br />
-              B: {comparison.session_b}
-            </p>
+          <div className="border-b border-border pb-4 flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl font-bold">Decision Comparison</h1>
+              <p className="text-sm text-muted-foreground font-mono mt-2">
+                A: {comparison.session_a} <br />
+                B: {comparison.session_b}
+              </p>
+            </div>
+            <div className="no-print">
+              <ExportButton />
+            </div>
           </div>
 
           {comparison.impact_summary?.memory_context && (
@@ -124,7 +130,7 @@ function CompareContent() {
             <StructuralDiff diff={comparison.structural_diff} />
           </div>
           
-          <div className="pt-12 border-t border-border flex justify-center">
+          <div className="pt-12 border-t border-border flex justify-center no-print">
              <button 
                 onClick={() => setComparison(null)}
                 className="text-xs text-muted-foreground uppercase tracking-widest hover:text-foreground transition-colors"

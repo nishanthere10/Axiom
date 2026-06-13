@@ -61,20 +61,27 @@ def save_document(session_id: str, question: str, state: dict, user_id: str = "a
     return response.data[0]
 
 
-def get_job(job_id: str) -> dict | None:
-    """Fetch a job row by ID."""
-    response = supabase.table("research_jobs").select("*").eq("id", job_id).execute()
+def get_job(job_id: str, user_id: str) -> dict | None:
+    """Fetch a job row by ID, joined with session to verify ownership."""
+    response = (
+        supabase.table("research_jobs")
+        .select("*, research_sessions!inner(user_id)")
+        .eq("id", job_id)
+        .eq("research_sessions.user_id", user_id)
+        .execute()
+    )
     if response.data:
         return response.data[0]
     return None
 
 
-def get_document_by_session(session_id: str) -> dict | None:
-    """Fetch the decision document for a given session ID."""
+def get_document_by_session(session_id: str, user_id: str) -> dict | None:
+    """Fetch the decision document for a given session ID, scoped to user."""
     response = (
         supabase.table("decision_documents")
         .select("*")
         .eq("session_id", session_id)
+        .eq("user_id", user_id)
         .order("created_at", desc=True)
         .limit(1)
         .execute()

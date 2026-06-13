@@ -52,7 +52,7 @@ def get_job_status(job_id: str, user_id: str = Depends(get_current_user)):
     GET /research/jobs/{job_id}
     Returns the current status, progress (0-100), and step of a background job.
     """
-    job = research_service.get_job(job_id)
+    job = research_service.get_job(job_id, user_id=user_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found.")
 
@@ -73,12 +73,19 @@ def get_session_document(session_id: str, user_id: str = Depends(get_current_use
     cache_key = f"doc_{session_id}"
     cached_doc = cache.get(cache_key)
     if cached_doc:
-        return SessionDocumentResponse(document=cached_doc)
+        # Note: In a true multi-tenant setup, cache keys should include user_id. 
+        # For now, we trust the DB fetch for auth. If cached, we should technically verify ownership.
+        # But fixing the cache key is safer:
+        cache_key = f"doc_{user_id}_{session_id}"
+        cached_doc = cache.get(cache_key)
+        if cached_doc:
+            return SessionDocumentResponse(document=cached_doc)
 
-    document = research_service.get_document_by_session(session_id)
+    document = research_service.get_document_by_session(session_id, user_id=user_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found.")
 
+    cache_key = f"doc_{user_id}_{session_id}"
     cache.set(cache_key, document)
     return SessionDocumentResponse(document=document)
 
@@ -99,7 +106,7 @@ def regenerate_visuals(body: RegenerateVisualsRequest, user_id: str = Depends(ge
     POST /research/regenerate-visuals
     Regenerates only the visuals for an existing session and updates the database.
     """
-    document = research_service.get_document_by_session(body.session_id)
+    document = research_service.get_document_by_session(body.session_id, user_id=user_id)
     if not document:
         raise HTTPException(status_code=404, detail="Session document not found.")
 
@@ -136,7 +143,7 @@ def regenerate_visuals(body: RegenerateVisualsRequest, user_id: str = Depends(ge
     }).eq("session_id", body.session_id).execute()
     
     # Clear cache
-    cache.delete(f"doc_{body.session_id}")
+    cache.delete(f"doc_{user_id}_{body.session_id}")
     
     return RegenerateVisualsResponse(visuals=visuals)
 

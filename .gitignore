@@ -2,6 +2,7 @@
 graphify-out/
 **/.agents/
 
-
-
-
+# env files
+.env
+.env.*
+.env.local

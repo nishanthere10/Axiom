@@ -10,6 +10,7 @@ import { getSessionDocument } from "@/lib/api";
 import ResizableLayout from "@/components/ui/ResizableLayout";
 import type { DecisionDocument as DecisionDocumentType, PollingState, ResearchResponse } from "@/types";
 import DecisionDocument, { AuxiliaryDocumentData } from "@/components/features/DecisionDocument";
+import ExportButton from "@/components/export/ExportButton";
 
 type PageState = "idle" | "polling" | "done" | "failed";
 
@@ -162,8 +163,11 @@ function ResearchPageInner() {
             transition={{ duration: 0.25 }}
             className="w-full space-y-8"
           >
+            <div className="flex justify-end no-print mb-4">
+              <ExportButton />
+            </div>
             <DecisionDocument doc={doc} sessionId={sessionId} setDoc={setDoc} />
-            <div className="text-center pt-8 border-t border-border/50">
+            <div className="text-center pt-8 border-t border-border/50 no-print">
               <button
                 id="new-research-btn"
                 onClick={handleReset}

@@ -4,14 +4,20 @@ import { useEffect, useState } from "react";
 import { MemoryItem, PreferenceInsight } from "@/lib/memory";
 import MemoryCard from "./MemoryCard";
 import PreferenceInsights from "./PreferenceInsights";
+import { useAuth } from "@clerk/nextjs";
 
 export default function MemoryPanel() {
+  const { getToken } = useAuth();
   const [memories, setMemories] = useState<MemoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchMemories = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/memory`);
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/memory`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
       if (res.ok) {
         const data = await res.json();
         setMemories(data?.memories || []);

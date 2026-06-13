@@ -37,6 +37,7 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
         # 2. Stream the graph — get state updates after each node
         current_state = {
             "question": question, 
+            "user_id": user_id,  # ADDED: Required for retrieve_memory to search the correct Pinecone namespace
             "summary": "", 
             "recommendation": "", 
             "tradeoffs": "", 
@@ -109,7 +110,7 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
             # Extract just the necessary state payload (we don't need everything)
             payload = {
                 "question": final_state.get("question"),
-                "decision": final_state.get("recommendation_context", ""),
+                "recommendation": final_state.get("recommendation_context", final_state.get("recommendation", "")),
                 "evidence": final_state.get("evidence", [])
             }
             memory_job_service.create_job(

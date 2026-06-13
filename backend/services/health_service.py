@@ -3,9 +3,6 @@ import logging
 from typing import Dict, Any
 
 from services.db import get_supabase
-from services.pinecone_service import search_memories
-from services.search_provider import search_tavily
-import litellm
 
 logger = logging.getLogger(__name__)
 
@@ -21,36 +18,18 @@ async def check_postgres() -> bool:
 
 async def check_pinecone() -> bool:
     try:
-        # search_memories is synchronous, wrap in to_thread
-        await asyncio.to_thread(search_memories, query="health_check_ping", user_id="system", top_k=1)
+        from services.pinecone_service import index
+        if not index:
+            logger.warning("Pinecone health check failed: index not initialized")
+            return False
+        # Lightweight connectivity probe — no embedding generation, no user filtering
+        await asyncio.to_thread(index.describe_index_stats)
         return True
     except Exception as e:
         logger.warning(f"Pinecone health check failed: {e}")
         return False
 
-async def check_groq() -> bool:
-    try:
-        # We can use litellm.acompletion for async execution
-        await litellm.acompletion(
-            model="groq/llama-3.3-70b-versatile", 
-            messages=[{"role": "user", "content": "ping"}],
-            max_tokens=1
-        )
-        return True
-    except Exception as e:
-        logger.warning(f"Groq health check failed: {e}")
-        return False
-
-async def check_tavily() -> bool:
-    try:
-        # search_tavily is synchronous and expects a list of queries
-        await asyncio.to_thread(search_tavily, queries=["health check ping"])
-        return True
-    except Exception as e:
-        logger.warning(f"Tavily health check failed: {e}")
-        return False
-
-async def _run_with_timeout(coro, timeout: float = 2.0) -> bool:
+async def _run_with_timeout(coro, timeout: float = 5.0) -> bool:
     try:
         return await asyncio.wait_for(coro(), timeout=timeout)
     except asyncio.TimeoutError:
@@ -63,13 +42,13 @@ async def _run_with_timeout(coro, timeout: float = 2.0) -> bool:
 async def run_all_checks() -> Dict[str, Any]:
     """
     Runs all health checks concurrently with strict timeouts.
-    Returns a status dict: {"postgres": True, "pinecone": False, ...}
+    Only checks infrastructure dependencies (Postgres, Pinecone).
+    Groq and Tavily are excluded because health-checking them burns
+    API credits and rate limits on every poll cycle.
     """
     results = await asyncio.gather(
         _run_with_timeout(check_postgres),
         _run_with_timeout(check_pinecone),
-        _run_with_timeout(check_groq),
-        _run_with_timeout(check_tavily),
         return_exceptions=True
     )
     
@@ -79,8 +58,6 @@ async def run_all_checks() -> Dict[str, Any]:
     services = {
         "postgres": safe_results[0],
         "pinecone": safe_results[1],
-        "groq": safe_results[2],
-        "tavily": safe_results[3]
     }
     
     status = "healthy" if all(services.values()) else "degraded"

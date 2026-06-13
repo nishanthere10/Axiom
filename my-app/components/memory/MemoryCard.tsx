@@ -3,20 +3,28 @@
 import { MemoryItem } from "@/lib/memory";
 import { useState } from "react";
 
+import { useAuth } from "@clerk/nextjs";
+
 interface Props {
   memory: MemoryItem;
   onPromoted?: (id: string) => void;
 }
 
 export default function MemoryCard({ memory, onPromoted }: Props) {
+  const { getToken } = useAuth();
   const [promoting, setPromoting] = useState(false);
 
   const handlePromote = async () => {
     setPromoting(true);
     try {
+      const token = await getToken();
+      if (!token) return;
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/memory/promote`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({ memory_id: memory.id }),
       });
       if (res.ok && onPromoted) {

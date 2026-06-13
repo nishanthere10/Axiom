@@ -69,10 +69,9 @@ def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     
     try:
-        # Use Gemini specifically for visual generation — it produces
-        # significantly better JSON architecture structures than the default model.
+        # Use Nvidia Nemotron for visual architecture structures
         response: VisualSpecResponse = client.chat.completions.create(
-            model="gemini/gemini-2.5-pro",
+            model="nvidia/nemotron-3-ultra-550b-a55b",
             response_model=VisualSpecResponse,
             max_retries=3,
             parallel_tool_calls=False,

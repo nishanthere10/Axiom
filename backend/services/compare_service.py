@@ -52,8 +52,8 @@ def create_comparison(
         return created
     return {}
 
-def get_comparison(comparison_id: str) -> Optional[Dict[str, Any]]:
-    res = supabase.table("comparisons").select("*").eq("id", comparison_id).execute()
+def get_comparison(comparison_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+    res = supabase.table("comparisons").select("*").eq("id", comparison_id).eq("user_id", user_id).execute()
     if not res.data:
         return None
     comp = res.data[0]
@@ -64,8 +64,8 @@ def get_comparison(comparison_id: str) -> Optional[Dict[str, Any]]:
         pass
     return comp
 
-def save_comparison(comparison_id: str) -> bool:
-    res = supabase.table("comparisons").update({"saved": True}).eq("id", comparison_id).execute()
+def save_comparison(comparison_id: str, user_id: str) -> bool:
+    res = supabase.table("comparisons").update({"saved": True}).eq("id", comparison_id).eq("user_id", user_id).execute()
     return bool(res.data)
 
 def get_saved_comparisons(user_id: str = "anonymous") -> list[Dict[str, Any]]:

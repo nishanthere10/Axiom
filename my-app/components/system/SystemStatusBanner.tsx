@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useState, useEffect, useRef } from "react";
 import { AlertTriangle, X } from "lucide-react";
 
 interface HealthStatus {
@@ -9,39 +8,30 @@ interface HealthStatus {
   services?: {
     postgres: boolean;
     pinecone: boolean;
-    groq: boolean;
-    tavily: boolean;
   };
 }
 
 export function SystemStatusBanner() {
-  const { getToken, isSignedIn } = useAuth();
   const [status, setStatus] = useState<HealthStatus | null>(null);
   const [dismissed, setDismissed] = useState(false);
+  const prevStatusRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    if (!isSignedIn) return;
-
     let timeoutId: NodeJS.Timeout;
+    let mounted = true;
     
     const checkHealth = async () => {
       try {
-        const token = await getToken();
-        if (!token) return;
-        
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-        const res = await fetch(`${apiUrl}/admin/health`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const res = await fetch(`${apiUrl}/health`);
         
-        if (res.ok) {
+        if (res.ok && mounted) {
           const data = await res.json() as HealthStatus;
           // If status changes from degraded to healthy, reset dismissed state
-          if (status?.status === "degraded" && data.status === "healthy") {
+          if (prevStatusRef.current === "degraded" && data.status === "healthy") {
             setDismissed(false);
           }
+          prevStatusRef.current = data.status;
           setStatus(data);
         }
       } catch (err) {
@@ -49,33 +39,33 @@ export function SystemStatusBanner() {
       }
       
       // Poll every 60 seconds
-      timeoutId = setTimeout(checkHealth, 60000);
+      if (mounted) {
+        timeoutId = setTimeout(checkHealth, 60000);
+      }
     };
 
     checkHealth();
     
-    return () => clearTimeout(timeoutId);
-  }, [isSignedIn, getToken, status?.status]);
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, []); // No dependencies — runs once, self-schedules via setTimeout
 
   if (!status || status.status === "healthy" || dismissed) {
     return null;
   }
 
   // Determine specific messages
-  const failedServices = [];
+  const failedServices: string[] = [];
   if (status.services) {
     if (!status.services.postgres) failedServices.push("Database");
     if (!status.services.pinecone) failedServices.push("Memory System");
-    if (!status.services.groq) failedServices.push("Primary AI Provider");
-    if (!status.services.tavily) failedServices.push("Search Engine");
   }
 
   let message = "System performance is currently degraded. Some features may be unavailable or slow.";
   if (failedServices.length > 0) {
     message = `System degraded: ${failedServices.join(", ")} is currently unavailable.`;
-    if (!status.services?.groq) {
-        message += " Fallback AI providers activated.";
-    }
   }
 
   return (
