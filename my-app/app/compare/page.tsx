@@ -105,7 +105,7 @@ function CompareContent() {
               </p>
             </div>
             <div className="no-print">
-              <ExportButton />
+              <ExportButton sessionId={comparison.id} sessionType="comparison" />
             </div>
           </div>
 

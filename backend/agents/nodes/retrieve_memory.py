@@ -25,6 +25,23 @@ def retrieve_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     # We use a threshold of 0.70 as specified in the optimization plan
     logger.debug("Calling search_memories...")
     user_id = state.get("user_id", "anonymous")
+    
+    import time
+    start_time = time.time()
     memories = search_memories(query=question, user_id=user_id, top_k=5, threshold=0.70)
+    latency_ms = int((time.time() - start_time) * 1000)
+    
+    try:
+        from services.metrics_service import emit_memory_retrieved
+        emit_memory_retrieved(
+            user_id=user_id,
+            retrieved_count=len(memories),
+            used_count=len(memories), # Current implementation uses all retrieved memories
+            latency_ms=latency_ms,
+            hit=len(memories) > 0
+        )
+    except Exception as e:
+        logger.warning(f"Failed to emit memory metrics: {e}")
+        
     logger.debug("search_memories returned %d results", len(memories))
     return {"retrieved_memories": memories}

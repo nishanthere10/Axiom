@@ -31,6 +31,9 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
     4. On failure: mark job failed and re-raise (triggers retry if eligible).
     """
     try:
+        import time
+        start_time = time.time()
+        
         # 1. Mark job as running
         research_service.update_job_status(job_id, status="running", progress=5, step="starting")
 
@@ -96,10 +99,36 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
 
         # Record metrics
         try:
-            from services.metrics_service import increment_research_count
-            increment_research_count()
+            import time
+            import threading
+            from services.metrics_service import emit_research_completed
+            from services.topic_classifier import classify_topic_background
+            
+            latency_ms = int((time.time() - start_time) * 1000)
+            
+            evidence_list = final_state.get("evidence", [])
+            evidence_count = len(evidence_list)
+            sources_used = len(set([e.get("url", "") for e in evidence_list if e.get("url")]))
+            
+            conf_dict = final_state.get("confidence", {})
+            conf_score = 0.0
+            if conf_dict and isinstance(conf_dict, dict):
+                scores = [v for v in conf_dict.values() if isinstance(v, (int, float))]
+                if scores:
+                    conf_score = sum(scores) / len(scores)
+                    
+            emit_research_completed(
+                user_id=user_id,
+                latency_ms=latency_ms,
+                confidence=conf_score,
+                evidence_count=evidence_count,
+                sources_used=sources_used
+            )
+            
+            # Fire and forget topic classification
+            threading.Thread(target=classify_topic_background, args=(question, user_id), daemon=True).start()
         except Exception as e:
-            logger.warning(f"Failed to increment research metric: {e}")
+            logger.warning(f"Failed to emit research metric: {e}")
 
         # 5. Background Memory Creation
         # We now use a durable Postgres-backed job queue instead of fire-and-forget

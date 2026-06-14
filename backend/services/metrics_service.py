@@ -3,54 +3,59 @@ from services.db import get_supabase
 
 logger = logging.getLogger(__name__)
 
-def _increment_metric(column: str, amount: int = 1):
+def emit_event(event_type: str, metadata: dict = None, user_id: str = None):
     """
-    Increments a specific column in today's system_metrics_daily row.
-    Attempts to use an atomic RPC function first. If the RPC function does not exist,
-    it falls back to a read-modify-write approach (which is susceptible to race conditions).
+    Appends a new event to the analytics_events table.
+    This should be fire-and-forget and never crash the main request.
     """
+    if metadata is None:
+        metadata = {}
+        
     try:
         supabase = get_supabase()
-        
-        from datetime import datetime
-        today = datetime.utcnow().strftime('%Y-%m-%d')
-        
-        # Attempt atomic RPC call
-        try:
-            # Assumes a Postgres function exists:
-            # create or replace function increment_metric(p_date date, p_column text, p_amount int) ...
-            res = supabase.rpc("increment_metric", {"p_date": today, "p_column": column, "p_amount": amount}).execute()
-            return
-        except Exception:
-            # Fallback to read-modify-write
-            pass
-            
-        # Fetch current
-        result = supabase.table("system_metrics_daily").select("*").eq("date", today).execute()
-        
-        if result.data:
-            current_val = result.data[0].get(column, 0)
-            supabase.table("system_metrics_daily").update({
-                column: current_val + amount
-            }).eq("date", today).execute()
-        else:
-            # Create row
-            supabase.table("system_metrics_daily").insert({
-                "date": today,
-                column: amount
-            }).execute()
-            
+        supabase.table("analytics_events").insert({
+            "event_type": event_type,
+            "user_id": user_id,
+            "metadata": metadata
+        }).execute()
     except Exception as e:
-        logger.warning(f"Failed to increment metric {column}: {e}")
+        logger.warning(f"Failed to emit analytics event {event_type}: {e}")
 
-def increment_research_count():
-    _increment_metric("research_count")
+def emit_research_completed(user_id: str, latency_ms: int, confidence: float, evidence_count: int, sources_used: int):
+    emit_event("research_completed", {
+        "latency_ms": latency_ms,
+        "confidence": confidence,
+        "evidence_count": evidence_count,
+        "sources_used": sources_used
+    }, user_id=user_id)
 
-def increment_comparison_count():
-    _increment_metric("comparison_count")
+def emit_comparison_completed(user_id: str, latency_ms: int, confidence: float):
+    emit_event("comparison_completed", {
+        "latency_ms": latency_ms,
+        "confidence": confidence
+    }, user_id=user_id)
 
-def increment_fallback_count():
-    _increment_metric("provider_fallback_count")
+def emit_memory_retrieved(user_id: str, retrieved_count: int, used_count: int, latency_ms: int, hit: bool):
+    emit_event("memory_retrieved", {
+        "retrieved_count": retrieved_count,
+        "used_count": used_count,
+        "latency_ms": latency_ms,
+        "hit": hit
+    }, user_id=user_id)
 
-def increment_failed_memory_jobs():
-    _increment_metric("failed_memory_jobs")
+def emit_export_requested(user_id: str, export_type: str, latency_ms: int):
+    emit_event("export_requested", {
+        "export_type": export_type,
+        "latency_ms": latency_ms
+    }, user_id=user_id)
+
+def emit_provider_event(provider: str, event: str, latency_ms: int):
+    # event should be 'success', 'failure', or 'fallback'
+    emit_event("provider_event", {
+        "provider": provider,
+        "event": event,
+        "latency_ms": latency_ms
+    })
+
+def emit_memory_job_failed():
+    emit_event("memory_job_failed", {})

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { AlertTriangle, X } from "lucide-react";
 
 interface HealthStatus {
-  status: "healthy" | "degraded";
+  status: "healthy" | "degraded" | "offline";
   services?: {
     postgres: boolean;
     pinecone: boolean;
@@ -27,8 +27,8 @@ export function SystemStatusBanner() {
         
         if (res.ok && mounted) {
           const data = await res.json() as HealthStatus;
-          // If status changes from degraded to healthy, reset dismissed state
-          if (prevStatusRef.current === "degraded" && data.status === "healthy") {
+          // If status changes from degraded or offline to healthy, reset dismissed state
+          if ((prevStatusRef.current === "degraded" || prevStatusRef.current === "offline") && data.status === "healthy") {
             setDismissed(false);
           }
           prevStatusRef.current = data.status;
@@ -36,6 +36,13 @@ export function SystemStatusBanner() {
         }
       } catch (err) {
         console.error("Health check failed:", err);
+        if (mounted) {
+          if (prevStatusRef.current !== "offline") {
+            setDismissed(false);
+          }
+          prevStatusRef.current = "offline";
+          setStatus({ status: "offline" });
+        }
       }
       
       // Poll every 60 seconds
@@ -64,7 +71,9 @@ export function SystemStatusBanner() {
   }
 
   let message = "System performance is currently degraded. Some features may be unavailable or slow.";
-  if (failedServices.length > 0) {
+  if (status.status === "offline") {
+    message = "Backend server is currently offline or unreachable. Please try again later.";
+  } else if (failedServices.length > 0) {
     message = `System degraded: ${failedServices.join(", ")} is currently unavailable.`;
   }
 

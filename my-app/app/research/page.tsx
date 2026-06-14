@@ -164,7 +164,7 @@ function ResearchPageInner() {
             className="w-full space-y-8"
           >
             <div className="flex justify-end no-print mb-4">
-              <ExportButton />
+              <ExportButton sessionId={sessionId} sessionType="research" />
             </div>
             <DecisionDocument doc={doc} sessionId={sessionId} setDoc={setDoc} />
             <div className="text-center pt-8 border-t border-border/50 no-print">

@@ -27,3 +27,5 @@ tenacity
 svix
 slowapi
 python-json-logger
+weasyprint
+markdown

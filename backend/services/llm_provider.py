@@ -48,26 +48,46 @@ def generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/
     try:
         logger.debug("Requesting LLM completion (Primary: %s)", model)
         
-        # Track fallback usage
-        def success_callback(kwargs, *args, **kwargs_litellm):
-            if "fallbacks" in kwargs and kwargs.get("model") != model:
-                try:
-                    from services.metrics_service import increment_fallback_count
-                    increment_fallback_count()
-                except Exception:
-                    pass
-
+        import time
+        start_time = time.time()
+        
         response = completion(
             model=model,
             messages=messages,
             fallbacks=fallbacks,
-            success_callback=[success_callback],
             **kwargs
         )
-        logger.debug("Successfully used model: %s", response.model)
+        latency_ms = int((time.time() - start_time) * 1000)
+        
+        try:
+            from services.metrics_service import emit_provider_event
+            
+            def get_provider(m: str):
+                return m.split("/")[0] if m and "/" in m else str(m)
+                
+            actual_model = getattr(response, "model", model)
+            actual_provider = get_provider(actual_model)
+            primary_provider = get_provider(model)
+            
+            if actual_model != model:
+                emit_provider_event(primary_provider, "failure", latency_ms)
+                emit_provider_event(actual_provider, "fallback", latency_ms)
+                emit_provider_event(actual_provider, "success", latency_ms)
+            else:
+                emit_provider_event(actual_provider, "success", latency_ms)
+        except Exception as e:
+            logger.warning(f"Failed to emit provider metrics: {e}")
+            
+        logger.debug("Successfully used model: %s", getattr(response, 'model', model))
         return response
     except Exception as e:
         logger.error("LLM generation failed across all providers: %s", e, exc_info=True)
+        try:
+            from services.metrics_service import emit_provider_event
+            primary_provider = model.split("/")[0] if "/" in model else model
+            emit_provider_event(primary_provider, "failure", 0)
+        except Exception:
+            pass
         raise e
 
 _instructor_client = None

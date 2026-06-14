@@ -35,7 +35,13 @@ export async function apiFetch<T>(
     res = await doFetch(token);
   } catch (err: any) {
     console.error(`Network or CORS error fetching ${url}:`, err);
-    throw new Error(`Failed to reach the server. Please ensure the backend is running at ${API_BASE_URL}. Details: ${err.message}`);
+    // Gracefully catch network errors and return a safe fallback state
+    return {
+      status: "offline",
+      sessions: [],
+      comparisons: [],
+      error: "Failed to reach the server. Backend may be offline."
+    } as any as T;
   }
 
   // On 401, silently refresh the Clerk token and retry once

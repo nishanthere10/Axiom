@@ -22,6 +22,9 @@ def submit_comparison(request: Request, body: CompareRequest, background_tasks: 
     if body.session_a == body.session_b:
         raise HTTPException(status_code=400, detail="Cannot compare a session with itself.")
         
+    import time
+    start_time = time.time()
+    
     comparison_id = str(uuid.uuid4())
     
     # Synchronous execution of the graph
@@ -82,10 +85,12 @@ def submit_comparison(request: Request, body: CompareRequest, background_tasks: 
         logger.warning("Failed to queue comparison memory job: %s", memory_exc)
 
     try:
-        from services.metrics_service import increment_comparison_count
-        increment_comparison_count()
+        import time
+        from services.metrics_service import emit_comparison_completed
+        latency_ms = int((time.time() - start_time) * 1000)
+        emit_comparison_completed(user_id=user_id, latency_ms=latency_ms, confidence=0.0)
     except Exception as e:
-        logger.warning(f"Failed to increment comparison metric: {e}")
+        logger.warning(f"Failed to emit comparison metric: {e}")
     
     return CompareResponse(
         comparison_id=comparison_id,
