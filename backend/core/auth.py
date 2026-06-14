@@ -1,81 +1,185 @@
+import os
 import logging
+import json
+import base64
 import jwt
 from jwt import PyJWKClient
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from cachetools import TTLCache
 from core.config import settings
 
 logger = logging.getLogger(__name__)
 
 security = HTTPBearer()
 
-# Cache JWKS keys for 1 hour — they rotate infrequently
-_jwks_cache = TTLCache(maxsize=4, ttl=3600)
-_jwks_client = None
+# ──────────────────────────────────────────────────────────
+# JWKS Client — Lazy singleton with multiple discovery paths
+# ──────────────────────────────────────────────────────────
+_jwks_client: PyJWKClient | None = None
+
+
+def _resolve_jwks_url() -> str:
+    """
+    Tries multiple strategies to find the JWKS URL:
+      1. Explicit CLERK_JWKS_URL env var (highest priority)
+      2. Derived from CLERK_JWT_ISSUER + /.well-known/jwks.json
+      3. Derived from NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY (pk_test_... → domain)
+    """
+    # Strategy 1: Direct JWKS URL (env var or settings)
+    explicit = os.getenv("CLERK_JWKS_URL") or settings.CLERK_JWKS_URL
+    if explicit:
+        logger.info("AUTH: Using explicit CLERK_JWKS_URL = %s", explicit)
+        return explicit
+
+    # Strategy 2: Derive from issuer
+    issuer = settings.CLERK_JWT_ISSUER
+    if issuer:
+        url = f"{issuer.rstrip('/')}/.well-known/jwks.json"
+        logger.info("AUTH: Derived JWKS URL from CLERK_JWT_ISSUER = %s", url)
+        return url
+
+    # Strategy 3: Derive from Clerk publishable key
+    pk = os.getenv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "")
+    if pk.startswith("pk_"):
+        try:
+            # Publishable key format: pk_test_<base64-encoded-domain>
+            encoded_part = pk.split("_", 2)[2]  # everything after pk_test_ or pk_live_
+            # Pad base64 if needed
+            padded = encoded_part + "=" * (-len(encoded_part) % 4)
+            domain = base64.b64decode(padded).decode("utf-8").rstrip("$")
+            url = f"https://{domain}/.well-known/jwks.json"
+            logger.info("AUTH: Derived JWKS URL from publishable key = %s", url)
+            return url
+        except Exception as e:
+            logger.warning("AUTH: Failed to parse publishable key: %s", e)
+
+    raise RuntimeError(
+        "Cannot determine Clerk JWKS URL. "
+        "Set at least one of: CLERK_JWKS_URL, CLERK_JWT_ISSUER, or NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
+    )
 
 
 def _get_jwks_client() -> PyJWKClient:
-    """Lazily initializes the JWKS client for Clerk's public keys."""
+    """Lazily initializes and returns the JWKS client."""
     global _jwks_client
     if _jwks_client is None:
-        issuer = settings.CLERK_JWT_ISSUER
-        if not issuer:
-            raise RuntimeError("CLERK_JWT_ISSUER is not configured")
-        jwks_url = f"{issuer}/.well-known/jwks.json"
+        jwks_url = _resolve_jwks_url()
         _jwks_client = PyJWKClient(jwks_url, cache_keys=True)
-        logger.debug("Initialized JWKS client with URL: %s", jwks_url)
+        logger.info("AUTH: Initialized JWKS client → %s", jwks_url)
     return _jwks_client
 
 
+def _decode_jwt_header_unsafe(token: str) -> dict:
+    """Decodes the JWT header WITHOUT verification — purely for diagnostics."""
+    try:
+        header_b64 = token.split(".")[0]
+        padded = header_b64 + "=" * (-len(header_b64) % 4)
+        return json.loads(base64.urlsafe_b64decode(padded))
+    except Exception:
+        return {}
+
+
+def _decode_jwt_payload_unsafe(token: str) -> dict:
+    """Decodes the JWT payload WITHOUT verification — purely for diagnostics."""
+    try:
+        payload_b64 = token.split(".")[1]
+        padded = payload_b64 + "=" * (-len(payload_b64) % 4)
+        return json.loads(base64.urlsafe_b64decode(padded))
+    except Exception:
+        return {}
+
+
+# ──────────────────────────────────────────────────────────
+# FastAPI dependency
+# ──────────────────────────────────────────────────────────
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> str:
     """
-    FastAPI dependency that verifies a Clerk JWT token.
-    
+    FastAPI dependency that verifies a Clerk JWT token via JWKS.
+
     Returns the Clerk user_id (the 'sub' claim) on success.
     Raises HTTPException(401) on any verification failure.
     """
     token = credentials.credentials
 
+    # ── Diagnostic header dump ──
+    header = _decode_jwt_header_unsafe(token)
+    unverified = _decode_jwt_payload_unsafe(token)
+    logger.debug(
+        "AUTH AUDIT: token_prefix=%s... len=%d alg=%s kid=%s iss=%s sub=%s",
+        token[:15] if token else "EMPTY",
+        len(token) if token else 0,
+        header.get("alg", "?"),
+        header.get("kid", "?"),
+        unverified.get("iss", "?"),
+        unverified.get("sub", "?"),
+    )
+
     try:
         jwks_client = _get_jwks_client()
-        logger.debug("Fetching signing key from JWKS for token kid...")
+
+        # Fetch the public key that matches this token's 'kid'
         signing_key = jwks_client.get_signing_key_from_jwt(token)
-        logger.debug("Got signing key, decoding token with issuer=%s", settings.CLERK_JWT_ISSUER)
+        logger.debug("AUTH: Got signing key kid=%s", signing_key.key_id)
+
+        # Determine expected issuer (if set)
+        expected_issuer = settings.CLERK_JWT_ISSUER or None
 
         payload = jwt.decode(
             token,
             signing_key.key,
             algorithms=["RS256"],
-            issuer=settings.CLERK_JWT_ISSUER,
+            issuer=expected_issuer,
             options={
                 "verify_exp": True,
-                "verify_iss": True,
+                "verify_iss": bool(expected_issuer),
                 "verify_aud": False,  # Clerk doesn't always set audience
             },
+            leeway=60  # Forgive up to 60 seconds of clock skew
         )
 
         user_id = payload.get("sub")
         if not user_id:
+            logger.warning("AUTH: Token verified but missing 'sub' claim. Payload keys: %s", list(payload.keys()))
             raise HTTPException(status_code=401, detail="Token missing 'sub' claim")
 
-        logger.debug("JWT verified successfully for user: %s", user_id)
+        logger.debug("AUTH: ✓ Verified user_id=%s", user_id)
         return user_id
 
     except jwt.ExpiredSignatureError:
-        logger.warning("JWT token expired")
+        logger.warning("AUTH REJECT: Token EXPIRED for sub=%s", unverified.get("sub", "?"))
         raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidIssuerError as e:
-        logger.warning("JWT invalid issuer. Expected=%s, Error=%s", settings.CLERK_JWT_ISSUER, e)
-        raise HTTPException(status_code=401, detail="Invalid token issuer")
+
+    except jwt.InvalidIssuerError:
+        token_iss = unverified.get("iss", "unknown")
+        logger.warning(
+            "AUTH REJECT: Issuer mismatch. Token has iss='%s', backend expects='%s'. "
+            "Fix CLERK_JWT_ISSUER in your backend .env!",
+            token_iss,
+            settings.CLERK_JWT_ISSUER,
+        )
+        raise HTTPException(
+            status_code=401,
+            detail=f"Issuer mismatch: token='{token_iss}' vs expected='{settings.CLERK_JWT_ISSUER}'",
+        )
+
+    except jwt.exceptions.PyJWKClientError as e:
+        logger.error("AUTH REJECT: JWKS fetch/match failed: %s", e)
+        raise HTTPException(status_code=401, detail="Unable to fetch signing keys from Clerk")
+
+    except jwt.DecodeError as e:
+        logger.warning("AUTH REJECT: Decode error (malformed JWT): %s", e)
+        raise HTTPException(status_code=401, detail="Invalid token format")
+
     except jwt.InvalidTokenError as e:
-        logger.warning("JWT verification failed: %s (type: %s)", e, type(e).__name__)
+        logger.warning("AUTH REJECT: Generic verification failure: %s (type=%s)", e, type(e).__name__)
         raise HTTPException(status_code=401, detail="Invalid token")
+
     except RuntimeError as e:
-        logger.error("Auth configuration error: %s", e)
-        raise HTTPException(status_code=500, detail="Authentication not configured")
+        logger.error("AUTH CONFIG ERROR: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
     except Exception as e:
-        logger.error("Unexpected auth error: %s (type: %s)", e, type(e).__name__, exc_info=True)
+        logger.error("AUTH UNEXPECTED: %s (type=%s)", e, type(e).__name__, exc_info=True)
         raise HTTPException(status_code=401, detail="Authentication failed")

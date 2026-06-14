@@ -48,9 +48,11 @@ const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
   return { nodes: layoutedNodes, edges };
 };
 
+// Move nodeTypes outside the component for stable memory reference
+const nodeTypes = { custom: CustomNode };
+
 // 3. Main Renderer Component
 export default function ArchitectureDiagramRenderer({ spec }: { spec: any }) {
-  const nodeTypes = useMemo(() => ({ custom: CustomNode }), []);
 
   // Map backend JSON to React Flow format
   const initialNodes = (spec.nodes || []).map((n: any) => ({

@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     CLERK_SECRET_KEY: str = ""
     CLERK_WEBHOOK_SECRET: str = ""
     CLERK_JWT_ISSUER: str = ""  # e.g. "https://your-app.clerk.accounts.dev"
+    CLERK_JWKS_URL: str = ""    # e.g. "https://your-app.clerk.accounts.dev/.well-known/jwks.json"
 
     # LLM & Vector Store
     GROQ_API_KEY: str = ""

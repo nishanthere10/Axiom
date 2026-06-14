@@ -41,7 +41,7 @@ export default function LeftSidebar({
   isCollapsed?: boolean;
   toggleCollapse?: () => void;
 }) {
-  const { getToken } = useAuth();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -61,13 +61,22 @@ export default function LeftSidebar({
   useEffect(() => {
     let isMounted = true;
     async function fetchInitial() {
+      // Block the request until Clerk is fully initialized and authenticated
+      if (!isLoaded || !isSignedIn) return;
+
       setLoading(true);
       try {
         const token = await getToken();
-        if (!token) {
+
+        // CRITICAL: Block literal string "null" or "undefined" that sometimes leak in Next.js
+        if (!token || token === "null" || token === "undefined") {
+          console.warn("Clerk provided an empty or invalid token string. Aborting fetch.");
           if (isMounted) { setComparisons([]); setSessions([]); setHasMore(false); }
           return;
         }
+
+        // Log a truncated version to prove we have a real JWT (Format: eyJhb...)
+        console.log("Valid JWT generated. Prefix:", token.substring(0, 15));
         if (isCompareMode) {
           const data = await getSavedComparisons(token, getToken);
           if (isMounted) { setComparisons(data.comparisons); setHasMore(false); }
@@ -83,7 +92,7 @@ export default function LeftSidebar({
     }
     fetchInitial();
     return () => { isMounted = false; };
-  }, [isCompareMode, getToken]);
+  }, [isCompareMode, isLoaded, isSignedIn, getToken]);
 
   const loadMore = useCallback(async () => {
     if (isCompareMode || loadingMore || !hasMore) return;
