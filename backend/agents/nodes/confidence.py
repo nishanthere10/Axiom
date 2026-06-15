@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 def build_confidence(state: ResearchState) -> dict:
     """
     Node 3: Scores the confidence of the generated decision across 4 dimensions.
-    The system must never claim certainty — scores reflect evidence quality.
+    The system must never claim certainty n— scores reflect evidence quality.
     """
     recommendation = state["recommendation"]
     tradeoffs = state["tradeoffs"]

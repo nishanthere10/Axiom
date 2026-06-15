@@ -26,7 +26,6 @@ def build_comparison_graph() -> StateGraph:
     workflow.add_node("format_comparison", format_comparison)
     
     workflow.set_entry_point("load_sessions")
-    
     # Phase 1: Fan-out Data loading and independent ops
     workflow.add_edge("load_sessions", "retrieve_memory")
     workflow.add_edge("load_sessions", "normalize_documents")

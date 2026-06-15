@@ -93,9 +93,9 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
         )
 
         # 4. Mark session and job as complete
-        # 4. Mark job completed
         logger.info(f"Research job {job_id} completed successfully.")
         research_service.update_job_status(job_id, status="completed", progress=100, step="done")
+        research_service.update_session_status(session_id, "complete")
 
         # Record metrics
         try:
