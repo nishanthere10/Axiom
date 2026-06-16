@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { RefreshCw, Loader2 } from "lucide-react";
+import { RefreshCw } from "lucide-react";
+import Loader from "@/components/loader";
 import { useAuth } from "@clerk/nextjs";
 import { submitResearch, getJobStatus } from "@/lib/api";
 
-const POLL_INTERVAL_MS = 2000;
-const MAX_POLLS = 30; // 60 seconds max
+const INITIAL_POLL_MS = 1000;
+const MAX_POLL_MS = 8000;
+const MAX_POLLS = 30;
 
 export default function RefreshEvidence({
   question,
@@ -29,12 +31,14 @@ export default function RefreshEvidence({
       const { session_id, job_id } = res;
 
       let polls = 0;
+      let currentDelay = INITIAL_POLL_MS;
       while (polls < MAX_POLLS) {
-        await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+        await new Promise(r => setTimeout(r, currentDelay));
         const job = await getJobStatus(job_id, token);
         if (job.status === "completed") { onRefresh(session_id); return; }
         if (job.status === "failed")    { setError("Evidence refresh failed. Please try again."); return; }
         polls++;
+        currentDelay = Math.min(currentDelay * 1.5, MAX_POLL_MS);
       }
       setError("Refresh timed out. Please try again.");
     } catch (err) {
@@ -53,7 +57,7 @@ export default function RefreshEvidence({
         className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-border/80 bg-surface hover:bg-surface-hover px-3 py-1.5 rounded-md transition-all duration-200 disabled:opacity-50 font-mono"
       >
         {isRefreshing
-          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ? <div className="w-3.5 h-3.5 relative flex items-center justify-center overflow-hidden"><Loader scale={0.25} color="currentColor" /></div>
           : <RefreshCw className="w-3.5 h-3.5" />}
         {isRefreshing ? "Refreshing evidence…" : "Refresh Evidence"}
       </button>

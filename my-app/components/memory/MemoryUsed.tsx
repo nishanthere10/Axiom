@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Brain, ChevronDown, ChevronUp, AlertTriangle, Lightbulb, History, Sparkles } from "lucide-react";
+import { Brain, ChevronDown, ChevronUp, AlertTriangle, Lightbulb, History, Sparkles, Github } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface PreferenceInsight {
@@ -9,11 +9,30 @@ interface PreferenceInsight {
   reason: string;
 }
 
+interface EvaluatedMemory {
+  id: string;
+  metadata: {
+    summary: string;
+    memory_type: string;
+    relevance_score?: number;
+    relevance_reasoning?: string;
+  };
+}
+
+interface GithubContextChunk {
+  id: string;
+  repository: string;
+  content: string;
+  score?: number;
+}
+
 interface MemoryContext {
   preferences: PreferenceInsight[];
   historical_patterns: string[];
   related_decisions: string[];
   consistency_warnings: string[];
+  evaluated_memories?: EvaluatedMemory[];
+  github_context?: GithubContextChunk[];
 }
 
 function Badge({ children, variant = "default" }: { children: React.ReactNode; variant?: "default" | "warning" | "info" | "success" }) {
@@ -160,6 +179,71 @@ export default function MemoryUsed({ context }: { context: MemoryContext }) {
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {/* Raw Evaluated Memories */}
+          {context.evaluated_memories && context.evaluated_memories.length > 0 && (
+            <div className="space-y-3 pt-3 mt-3 border-t border-border/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Brain className="w-3.5 h-3.5" />
+                  <p className="text-xs font-semibold uppercase tracking-widest">Retrieved Memories</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {context.evaluated_memories.map((mem, i) => (
+                  <div key={mem.id || i} className="rounded border border-border/50 bg-surface p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-4">
+                      <p className="text-sm font-medium leading-snug">{mem.metadata?.summary}</p>
+                      {mem.metadata?.relevance_score !== undefined && (
+                        <Badge variant={mem.metadata.relevance_score >= 0.8 ? "success" : mem.metadata.relevance_score >= 0.5 ? "info" : "default"}>
+                          Score: {mem.metadata.relevance_score.toFixed(2)}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="capitalize text-muted-foreground px-1.5 py-0.5 rounded bg-muted">
+                        {mem.metadata?.memory_type || "unknown"}
+                      </span>
+                      {mem.metadata?.relevance_reasoning && (
+                        <span className="text-muted-foreground line-clamp-1 group-hover:line-clamp-none transition-all">
+                          {mem.metadata.relevance_reasoning}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Repository Context Used */}
+          {context.github_context && context.github_context.length > 0 && (
+            <div className="space-y-3 pt-3 mt-3 border-t border-border/30">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Github className="w-3.5 h-3.5" />
+                <p className="text-xs font-semibold uppercase tracking-widest">Repository Context</p>
+              </div>
+              <div className="grid gap-2">
+                {context.github_context.map((chunk, i) => (
+                  <div key={chunk.id || i} className="rounded border border-border/50 bg-surface/50 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded">
+                        {chunk.repository}
+                      </span>
+                      {chunk.score !== undefined && (
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          Score: {chunk.score.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-foreground/80 line-clamp-2 hover:line-clamp-none transition-all">
+                      {chunk.content}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

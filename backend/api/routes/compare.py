@@ -31,6 +31,7 @@ def submit_comparison(request: Request, body: CompareRequest, background_tasks: 
     initial_state = {
         "session_a_id": body.session_a,
         "session_b_id": body.session_b,
+        "user_id": user_id,
         "status": "starting"
     }
     

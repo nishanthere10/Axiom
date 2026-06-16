@@ -7,9 +7,10 @@ def load_sessions(state: ComparisonState) -> dict:
     """
     session_a = state["session_a_id"]
     session_b = state["session_b_id"]
+    user_id = state["user_id"]
     
-    doc_a = research_service.get_document_by_session(session_a)
-    doc_b = research_service.get_document_by_session(session_b)
+    doc_a = research_service.get_document_by_session(session_a, user_id=user_id)
+    doc_b = research_service.get_document_by_session(session_b, user_id=user_id)
     
     if not doc_a or not doc_b:
         raise ValueError("One or both sessions could not be found.")

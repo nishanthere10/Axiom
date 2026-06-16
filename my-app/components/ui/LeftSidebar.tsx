@@ -8,7 +8,6 @@ import {
   MessageSquare,
   Plus,
   Settings,
-  Loader2,
   GitCompare,
 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
@@ -16,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { getSessionHistory, getSavedComparisons } from "@/lib/api";
 import type { SessionHistoryItem, SavedComparisonItem } from "@/types";
 import AnimatedList from "@/components/AnimatedList";
+import Loader from "@/components/loader";
 
 const PAGE_SIZE = 10;
 
@@ -37,9 +37,13 @@ function HistorySkeleton() {
 export default function LeftSidebar({
   isCollapsed = false,
   toggleCollapse,
+  initialSessions,
+  initialComparisons,
 }: {
   isCollapsed?: boolean;
   toggleCollapse?: () => void;
+  initialSessions?: SessionHistoryItem[];
+  initialComparisons?: SavedComparisonItem[];
 }) {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const router = useRouter();
@@ -50,11 +54,11 @@ export default function LeftSidebar({
 
   const isCompareMode = pathname?.startsWith("/compare") ?? false;
 
-  const [sessions, setSessions] = useState<SessionHistoryItem[]>([]);
-  const [comparisons, setComparisons] = useState<SavedComparisonItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [sessions, setSessions] = useState<SessionHistoryItem[]>(initialSessions || []);
+  const [comparisons, setComparisons] = useState<SavedComparisonItem[]>(initialComparisons || []);
+  const [loading, setLoading] = useState(isCompareMode ? !initialComparisons : !initialSessions);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(isCompareMode ? false : (initialSessions ? initialSessions.length === PAGE_SIZE : true));
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Initial fetch
@@ -78,9 +82,17 @@ export default function LeftSidebar({
         // Log a truncated version to prove we have a real JWT (Format: eyJhb...)
         console.log("Valid JWT generated. Prefix:", token.substring(0, 15));
         if (isCompareMode) {
+          if (initialComparisons) {
+            if (isMounted) setLoading(false);
+            return;
+          }
           const data = await getSavedComparisons(token, getToken);
           if (isMounted) { setComparisons(data.comparisons); setHasMore(false); }
         } else {
+          if (initialSessions) {
+            if (isMounted) setLoading(false);
+            return;
+          }
           const data = await getSessionHistory(PAGE_SIZE, 0, token, getToken);
           if (isMounted) { setSessions(data.sessions); setHasMore(data.sessions.length === PAGE_SIZE); }
         }
@@ -170,7 +182,9 @@ export default function LeftSidebar({
         {loading ? (
           !isCollapsed ? <HistorySkeleton /> : (
             <div className="flex justify-center pt-2">
-              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              <div className="w-4 h-4 relative flex items-center justify-center overflow-hidden">
+                <Loader scale={0.3} color="hsl(var(--muted-foreground))" />
+              </div>
             </div>
           )
         ) : isCompareMode ? (
@@ -249,7 +263,9 @@ export default function LeftSidebar({
               />
               {loadingMore && (
                 <div className="flex justify-center py-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  <div className="w-4 h-4 relative flex items-center justify-center overflow-hidden">
+                    <Loader scale={0.3} color="hsl(var(--muted-foreground))" />
+                  </div>
                 </div>
               )}
             </>

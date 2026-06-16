@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@clerk/nextjs";
 import { submitResearch } from "@/lib/api";
 import { ResearchResponse } from "@/types";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Lightbulb } from "lucide-react";
+import Loader from "@/components/loader";
+
+const SUGGESTED_PROMPTS = [
+  "Design a high-write event logging system using Kafka and ClickHouse.",
+  "Compare PostgreSQL vs MongoDB for a geospatial analytics dashboard.",
+  "Architecture for a scalable, rate-limited API gateway using Redis."
+];
 
 const schema = z.object({
   question: z
@@ -30,11 +37,29 @@ export default function QuestionInput({ onSubmitted }: Props) {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
     watch,
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   const questionValue = watch("question", "");
+
+  useEffect(() => {
+    const draft = localStorage.getItem("research_draft_question");
+    // Only restore if current input is empty, prevents overriding active typing
+    if (draft && !questionValue) {
+      setValue("question", draft, { shouldValidate: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setValue]);
+
+  useEffect(() => {
+    if (questionValue && questionValue.length > 0) {
+      localStorage.setItem("research_draft_question", questionValue);
+    } else {
+      localStorage.removeItem("research_draft_question");
+    }
+  }, [questionValue]);
 
   async function onSubmit(data: FormValues) {
     setIsSubmitting(true);
@@ -42,6 +67,8 @@ export default function QuestionInput({ onSubmitted }: Props) {
     try {
       const token = (await getToken()) ?? "";
       const response = await submitResearch(data.question, false, token);
+      localStorage.removeItem("research_draft_question");
+      setValue("question", "");
       onSubmitted(response);
     } catch (err) {
       setApiError(
@@ -119,7 +146,9 @@ export default function QuestionInput({ onSubmitted }: Props) {
         >
           {isSubmitting ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <div className="w-4 h-4 relative flex items-center justify-center overflow-hidden">
+                <Loader scale={0.3} color="currentColor" />
+              </div>
               Submitting…
             </>
           ) : (
@@ -130,6 +159,33 @@ export default function QuestionInput({ onSubmitted }: Props) {
           )}
         </button>
       </form>
+
+      {/* Zero State Prompts */}
+      {!isSubmitting && questionValue?.length === 0 && (
+        <div className="mt-12 space-y-3">
+          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest px-1">
+            <Lightbulb className="w-3.5 h-3.5" />
+            <span>Try these templates</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {SUGGESTED_PROMPTS.map((prompt, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  setValue("question", prompt, { shouldValidate: true });
+                  handleSubmit(onSubmit)();
+                }}
+                className="text-left p-4 rounded-xl bg-surface border border-border/50 hover:border-primary/40 hover:bg-surface-hover hover:shadow-[0_0_15px_rgba(59,130,246,0.1)] transition-all duration-300 group"
+              >
+                <p className="text-xs text-muted-foreground group-hover:text-foreground font-medium leading-relaxed transition-colors">
+                  "{prompt}"
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

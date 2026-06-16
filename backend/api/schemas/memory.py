@@ -37,3 +37,8 @@ class MemoryContextSchema(BaseModel):
     historical_patterns: List[str] = Field(description="Recurring patterns across past decisions")
     related_decisions: List[str] = Field(description="Directly related historical decisions that inform the current query")
     consistency_warnings: List[str] = Field(description="Warnings if the current proposed query contradicts a strongly held historical decision")
+
+class MemoryRelevanceResult(BaseModel):
+    memory_id: str = Field(description="The ID of the memory evaluated")
+    relevance_score: float = Field(description="Relevance score from 0.0 to 1.0")
+    reasoning: str = Field(description="Reasoning for the relevance score")

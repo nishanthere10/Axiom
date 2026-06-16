@@ -78,10 +78,11 @@ def search_memories(query: str, user_id: str, top_k: int = 5, threshold: float =
         # Filter by threshold
         valid_matches = []
         for match in results.get("matches", []):
-            score = match.get("score", 0.0)
-            logger.debug("Pinecone match found: id=%s score=%.3f", match.get('id'), score)
+            match_dict = match.to_dict() if hasattr(match, "to_dict") else dict(match)
+            score = match_dict.get("score", 0.0)
+            logger.debug("Pinecone match found: id=%s score=%.3f", match_dict.get('id'), score)
             if score >= threshold:
-                valid_matches.append(match)
+                valid_matches.append(match_dict)
                 
         logger.debug("Found %d matches above threshold %.2f", len(valid_matches), threshold)
         return valid_matches
