@@ -44,8 +44,15 @@ def analyze_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     formatted_github = []
     for chunk in github_context:
         repo = chunk.get("repository", "unknown")
+        file_path = chunk.get("file_path", "unknown")
         content = chunk.get("content", "")
-        formatted_github.append(f"Repo: {repo}\nContext: {content}")
+        raw_snippet = chunk.get("raw_snippet", "")
+        score = chunk.get("score", 0.0)
+        
+        # Use raw_snippet if score is very high (high confidence match)
+        effective_content = raw_snippet if score >= 0.75 and raw_snippet else content
+        
+        formatted_github.append(f"[Source: {file_path} | {repo} | similarity: {score:.2f}]\n{effective_content}")
         
     github_text = "\n\n".join(formatted_github) if formatted_github else "None"
         

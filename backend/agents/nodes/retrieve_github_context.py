@@ -16,13 +16,17 @@ def retrieve_github_context(state: ResearchState) -> Dict[str, Any]:
     user_id = state.get("user_id", "anonymous")
     
     import asyncio
+    import concurrent.futures
     try:
-        # Use a new event loop or the existing one depending on how LangGraph invokes it
-        try:
-            loop = asyncio.get_running_loop()
-            chunks = loop.run_until_complete(github_provider.retrieve(question, user_id))
-        except RuntimeError:
-            chunks = asyncio.run(github_provider.retrieve(question, user_id))
+        # FastAPI/LangGraph runs in an existing event loop. 
+        # asyncio.run() or loop.run_until_complete() will crash if called from within a running loop.
+        # We safely execute the async retrieve method by running it in a new thread.
+        def _run_async_retrieve():
+            return asyncio.run(github_provider.retrieve(question, user_id))
+            
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(_run_async_retrieve)
+            chunks = future.result(timeout=15)
             
         logger.debug(f"Retrieved {len(chunks)} GitHub context chunks.")
         return {"github_context": chunks}

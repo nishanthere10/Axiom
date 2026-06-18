@@ -38,7 +38,7 @@ def evaluate_memory_relevance(question: str, memory: Dict[str, Any]) -> MemoryRe
     try:
         logger.debug("Evaluating relevance for memory %s...", memory_id)
         response: MemoryRelevanceResult = client.chat.completions.create(
-            model="groq/llama-3.1-8b-instant",
+            model="nvidia/nemotron-3-ultra-550b-a55b",
             response_model=MemoryRelevanceResult,
             max_retries=2,
             messages=[

@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   SignInButton,
-  SignOutButton,
+  UserButton,
   useAuth,
 } from "@clerk/nextjs";
+import { Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
@@ -62,13 +63,24 @@ export default function Navbar() {
         </div>
 
         {/* Right: Auth */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           {isSignedIn ? (
-            <SignOutButton>
-              <button className="inline-flex items-center justify-center rounded-md text-xs font-medium transition-colors h-8 px-3 border border-border bg-transparent text-muted-foreground hover:text-foreground hover:bg-surface-hover">
-                Sign Out
-              </button>
-            </SignOutButton>
+            <>
+              <Link
+                href="/settings/integrations/github"
+                className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-md hover:bg-surface-hover"
+                title="Settings"
+              >
+                <Settings className="w-4 h-4" />
+              </Link>
+              <UserButton 
+                appearance={{
+                  elements: {
+                    userButtonAvatarBox: "w-8 h-8 rounded-md border border-border"
+                  }
+                }}
+              />
+            </>
           ) : (
             <SignInButton>
               <button className="inline-flex items-center justify-center rounded-md text-xs font-semibold transition-colors h-8 px-3 bg-primary text-primary-foreground hover:bg-primary/90">

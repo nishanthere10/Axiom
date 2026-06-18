@@ -55,6 +55,7 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
             "visuals": [],
             "retrieved_memories": [],
             "memory_context": {},
+            "github_context": [],
             "warnings": [],
             "status": "starting"
         }

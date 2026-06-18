@@ -46,6 +46,25 @@ CREATE TABLE IF NOT EXISTS github_sync_jobs (
 CREATE INDEX IF NOT EXISTS idx_github_sync_jobs_user_id ON github_sync_jobs(user_id);
 CREATE INDEX IF NOT EXISTS idx_github_sync_jobs_repository_id ON github_sync_jobs(repository_id);
 
+-- Repository Profiles Table (F-009 Profile Summarization)
+CREATE TABLE IF NOT EXISTS github_repository_profiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT NOT NULL,
+    repository_id TEXT NOT NULL REFERENCES github_repositories(repository_id) ON DELETE CASCADE,
+    language TEXT,
+    framework TEXT,
+    database TEXT,
+    vector_database TEXT,
+    deployment_platform TEXT,
+    architecture_style TEXT,
+    summary TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(user_id, repository_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_github_profiles_repo ON github_repository_profiles(repository_id);
+
 -- RLS Policies (assuming standard Atlas setup where user_id manages their own data)
 ALTER TABLE github_connections ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage their own github connections" ON github_connections FOR ALL USING (user_id = current_setting('request.jwt.claims', true)::json->>'sub');
@@ -55,3 +74,6 @@ CREATE POLICY "Users can manage their own github repositories" ON github_reposit
 
 ALTER TABLE github_sync_jobs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage their own sync jobs" ON github_sync_jobs FOR ALL USING (user_id = current_setting('request.jwt.claims', true)::json->>'sub');
+
+ALTER TABLE github_repository_profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their own repository profiles" ON github_repository_profiles FOR ALL USING (user_id = current_setting('request.jwt.claims', true)::json->>'sub');
