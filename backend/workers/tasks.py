@@ -55,6 +55,7 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
             "visuals": [],
             "retrieved_memories": [],
             "memory_context": {},
+            "github_context": [],
             "warnings": [],
             "status": "starting"
         }
@@ -131,25 +132,8 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
             logger.warning(f"Failed to emit research metric: {e}")
 
         # 5. Background Memory Creation
-        # We now use a durable Postgres-backed job queue instead of fire-and-forget
-        try:
-            logger.debug("Queueing persistent memory job for research session.")
-            from services import memory_job_service
-            
-            # Extract just the necessary state payload (we don't need everything)
-            payload = {
-                "question": final_state.get("question"),
-                "recommendation": final_state.get("recommendation_context", final_state.get("recommendation", "")),
-                "evidence": final_state.get("evidence", [])
-            }
-            memory_job_service.create_job(
-                user_id=user_id,
-                session_id=session_id,
-                payload=payload
-            )
-            logger.debug("Memory job queued successfully.")
-        except Exception as memory_exc:
-            logger.warning("Failed to queue memory job: %s", memory_exc)
+        # Memory generation is now deferred until a Decision Record is APPROVED.
+        logger.debug("Research completed. Decision record memory deferral applied.")
 
         return {"session_id": session_id, "job_id": job_id, "status": "completed"}
 

@@ -58,5 +58,15 @@ The `scrag` project operates a robust decision intelligence pipeline:
 
 ### Medium/Long Term
 1. **Authentication & Rate Limiting**: Implement a dependency in FastAPI to validate Supabase JWT tokens. Add rate-limiting middleware (e.g., `slowapi`) to protect expensive LangGraph routes.
-2. **Abstracting the God Nodes**: Refactor the heavily connected `generate_chat_completion` node by injecting smaller, domain-specific prompt handlers to reduce the monolithic dependency graph.
 3. **Automated Testing Suite**: Introduce `pytest` for the backend, specifically mocking `instructor` to test the state transitions of the `decision_graph` and `comparison_graph` deterministically.
+
+---
+
+## 6. Recent Fixes (2026-06-18)
+
+We recently resolved significant issues in the **GitHub Context Provider Pipeline**:
+* **LLM Grounding Restored**: Fixed a critical logic gap where retrieved GitHub context was stored in state but never injected into the `generate_decision` node. The LLM now properly grounds its recommendations using the repository context.
+* **Model Configurations Updated**: Corrected the LiteLLM model prefixes (e.g. updating `nvidia_nim/...` to `nvidia/...`) to prevent sync background tasks from crashing with `InternalServerError`.
+* **Concurrency Fixes**: Implemented `asyncio.Lock()` and atomic counters to eliminate database race conditions in the `progress_callback` during parallel vector upserts.
+* **Context Truncation**: Enforced strict character truncation for metadata values sent to Pinecone to prevent silent failures exceeding the 40KB vector metadata limit.
+* **UX Traceability Improvements**: Updated `MemoryUsed.tsx` to render the precise `file_path` for each retrieved codebase snippet, improving citation visibility for end-users.

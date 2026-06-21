@@ -13,6 +13,9 @@ from api.routes.memory import router as memory_router
 from api.routes.webhooks import router as webhooks_router
 from api.routes.admin import router as admin_router
 from api.routes.export import router as export_router
+from api.routes.github import router as github_router
+from api.routes.workspaces import router as workspaces_router
+from api.routes.decisions import router as decisions_router
 
 from middleware.rate_limit import limiter
 from slowapi.errors import RateLimitExceeded
@@ -87,7 +90,10 @@ app.include_router(compare_router, prefix="/compare", tags=["compare"])
 app.include_router(memory_router, prefix="/memory", tags=["memory"])
 app.include_router(webhooks_router, prefix="/webhooks", tags=["webhooks"])
 app.include_router(admin_router, prefix="/admin", tags=["admin"])
+app.include_router(workspaces_router, prefix="/workspaces", tags=["workspaces"])
+app.include_router(decisions_router, prefix="/decisions", tags=["decisions"])
 app.include_router(export_router)
+app.include_router(github_router)
 
 
 @app.get("/health", tags=["system"])

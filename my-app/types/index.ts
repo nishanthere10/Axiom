@@ -69,3 +69,22 @@ export interface SavedComparisonItem {
 export interface SavedComparisonsResponse {
   comparisons: SavedComparisonItem[];
 }
+
+export interface DecisionRecord {
+  id: string;
+  workspace_id?: string;
+  research_session_id: string;
+  title: string;
+  status: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  question?: string;
+  recommendation_context?: string;
+  executive_summary?: string;
+  alternatives?: string;
+}
+
+export interface DecisionListResponse {
+  decisions: DecisionRecord[];
+}

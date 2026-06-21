@@ -14,6 +14,8 @@ class MemoryItemCreate(BaseModel):
     scope: MemoryScope = "temporary"
     expires_at: Optional[datetime] = None
     user_id: str = "anonymous"
+    workspace_id: Optional[str] = None
+    visibility: Literal["GLOBAL", "WORKSPACE"] = "WORKSPACE"
 
 class MemoryItemResponse(BaseModel):
     id: str
@@ -26,6 +28,8 @@ class MemoryItemResponse(BaseModel):
     is_active: bool
     created_at: datetime
     expires_at: Optional[datetime]
+    workspace_id: Optional[str] = None
+    visibility: Literal["GLOBAL", "WORKSPACE"]
 
 class PreferenceInsight(BaseModel):
     type: Literal["preference_candidate"] = "preference_candidate"
@@ -37,3 +41,8 @@ class MemoryContextSchema(BaseModel):
     historical_patterns: List[str] = Field(description="Recurring patterns across past decisions")
     related_decisions: List[str] = Field(description="Directly related historical decisions that inform the current query")
     consistency_warnings: List[str] = Field(description="Warnings if the current proposed query contradicts a strongly held historical decision")
+
+class MemoryRelevanceResult(BaseModel):
+    memory_id: str = Field(description="The ID of the memory evaluated")
+    relevance_score: float = Field(description="Relevance score from 0.0 to 1.0")
+    reasoning: str = Field(description="Reasoning for the relevance score")

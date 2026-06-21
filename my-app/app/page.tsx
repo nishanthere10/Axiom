@@ -1,21 +1,21 @@
 import Link from "next/link";
 import { ArrowRight, Box, ShieldCheck, Zap, Layers, RefreshCcw } from "lucide-react";
 import Footer from "@/components/ui/Footer";
-import DarkVeil from "@/components/DarkVeil";
+import Aurora from "@/components/Aurora";
 import HeroCards from "@/components/HeroCards";
+import DashboardMockup from "@/components/DashboardMockup";
+import FaqSection from "@/components/FaqSection";
 
 export default function Home() {
   return (
     <div className="h-full w-full overflow-y-auto bg-background selection:bg-primary/30 relative font-sans">
       {/* Interactive WebGL Background */}
-      <div className="absolute inset-0 z-0 pointer-events-none opacity-50 mix-blend-screen h-[120vh]">
-        <DarkVeil 
-          hueShift={215} 
-          noiseIntensity={0.05}
-          scanlineIntensity={0.15}
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-60 h-[120vh]">
+        <Aurora 
+          colorStops={["#020617", "#1e40af", "#3b82f6"]} 
+          amplitude={1.5}
+          blend={0.6}
           speed={0.4}
-          scanlineFrequency={800}
-          warpAmount={0.02}
         />
       </div>
       
@@ -27,7 +27,7 @@ export default function Home() {
         {/* =========================================
             HERO SECTION
            ========================================= */}
-        <section className="w-full min-h-[90vh] px-8 sm:px-12 md:px-20 lg:px-32 max-w-[120rem] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center py-24 lg:py-32 relative">
+        <section className="w-full min-h-[90vh] px-10 sm:px-16 md:px-24 lg:px-48 max-w-[140rem] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center py-32 lg:py-48 relative">
           
           {/* Left Column: Text Content - Forced symmetrical height */}
           <div className="flex flex-col justify-center items-start text-left space-y-8 max-w-2xl h-[500px] w-full">
@@ -77,7 +77,7 @@ export default function Home() {
         {/* =========================================
             HOW IT WORKS SECTION 
            ========================================= */}
-        <section className="w-full bg-surface/30 border-y border-white/5 py-32 px-8 sm:px-12 md:px-20 lg:px-32">
+        <section className="w-full bg-surface/30 border-y border-white/5 py-40 px-10 sm:px-16 md:px-24 lg:px-48">
           <div className="max-w-[100rem] mx-auto space-y-16">
             <div className="text-center space-y-4">
               <h2 className="text-3xl md:text-5xl font-display font-bold tracking-tight">How Atlas Works</h2>
@@ -121,13 +121,23 @@ export default function Home() {
                 </p>
               </div>
             </div>
+
+            {/* DASHBOARD MOCKUP */}
+            <div className="pt-16 pb-8">
+              <div className="text-center space-y-4 mb-12">
+                <h2 className="text-2xl md:text-3xl font-display font-bold tracking-tight">Don't just take our word for it.</h2>
+                <p className="text-muted-foreground">See the interface in action.</p>
+              </div>
+              <DashboardMockup />
+            </div>
+
           </div>
         </section>
 
         {/* =========================================
             FEATURE ARSENAL (BENTO GRID)
            ========================================= */}
-        <section className="w-full py-32 px-8 sm:px-12 md:px-20 lg:px-32">
+        <section className="w-full py-40 px-10 sm:px-16 md:px-24 lg:px-48">
           <div className="max-w-[100rem] mx-auto space-y-16">
             <div className="text-left space-y-4">
               <h2 className="text-3xl md:text-5xl font-display font-bold tracking-tight">Feature Arsenal</h2>
@@ -163,6 +173,38 @@ export default function Home() {
                 </div>
               </div>
 
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================
+            FAQ SECTION
+           ========================================= */}
+        <FaqSection />
+
+        {/* =========================================
+            FINAL PUSH CTA
+           ========================================= */}
+        <section className="w-full py-40 px-10 sm:px-16 md:px-24 lg:px-48 border-t border-white/5 bg-background relative overflow-hidden">
+          <div className="absolute inset-0 bg-primary/5 pointer-events-none" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-primary/20 blur-[120px] rounded-full pointer-events-none" />
+          
+          <div className="max-w-4xl mx-auto relative z-10 bg-surface/50 backdrop-blur-2xl border border-white/10 rounded-3xl p-12 md:p-20 text-center space-y-8 shadow-2xl">
+            <h2 className="text-4xl md:text-6xl font-display font-bold tracking-tight leading-[1.1]">
+              Stop arguing over architecture. <br />
+              <span className="text-primary italic font-light">Start building.</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Initialize your workspace today and experience the smartest way to research engineering decisions.
+            </p>
+            <div className="pt-4">
+              <Link 
+                href="/research"
+                className="group relative inline-flex items-center justify-center gap-3 rounded-md bg-primary px-10 py-4 text-base font-semibold text-primary-foreground shadow-[0_0_40px_-10px_rgba(59,130,246,0.6)] hover:shadow-[0_0_80px_-10px_rgba(59,130,246,0.8)] hover:scale-[1.02] transition-all duration-500"
+              >
+                Initialize Workspace
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+              </Link>
             </div>
           </div>
         </section>

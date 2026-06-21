@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
+import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta-sans",
   subsets: ["latin"],
 });
 
@@ -25,6 +25,9 @@ export const metadata: Metadata = {
 
 import Navbar from "@/components/ui/Navbar";
 import { SystemStatusBanner } from "@/components/system/SystemStatusBanner";
+import CommandPalette from "@/components/ui/CommandPalette";
+import { ToastProvider } from "@/components/ui/ToastProvider";
+import { WorkspaceProvider } from "@/components/WorkspaceContext";
 
 export default function RootLayout({
   children,
@@ -33,16 +36,21 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html
+      <WorkspaceProvider>
+        <ToastProvider>
+          <html
         lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} h-full antialiased dark`}
+        className={`${geistSans.variable} ${geistMono.variable} ${plusJakartaSans.variable} h-full antialiased dark`}
       >
         <body className="h-screen w-screen overflow-hidden flex flex-col" suppressHydrationWarning>
+          <CommandPalette />
           <Navbar />
           <SystemStatusBanner />
           <main className="flex-1 overflow-hidden flex">{children}</main>
         </body>
-      </html>
+          </html>
+        </ToastProvider>
+      </WorkspaceProvider>
     </ClerkProvider>
   );
 }

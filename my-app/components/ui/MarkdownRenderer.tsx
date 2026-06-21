@@ -1,6 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useState } from "react";
+import { Check, Copy } from "lucide-react";
+import { useToast } from "./ToastProvider";
 
 const ReactMarkdown = dynamic(() => import("react-markdown"), {
   ssr: false,
@@ -12,6 +15,28 @@ const ReactMarkdown = dynamic(() => import("react-markdown"), {
     </div>
   ),
 });
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast("Copied to clipboard!", "success");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="absolute top-2 right-2 p-1.5 rounded-md bg-surface border border-white/5 text-muted-foreground hover:text-foreground hover:bg-surface-hover hover:border-white/20 transition-all z-10"
+      aria-label="Copy code"
+    >
+      {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+    </button>
+  );
+}
 
 export default function MarkdownRenderer({ content }: { content: string }) {
   return (
@@ -49,7 +74,32 @@ export default function MarkdownRenderer({ content }: { content: string }) {
         prose-hr:border-border/50
       "
     >
-      <ReactMarkdown>{content}</ReactMarkdown>
+      <ReactMarkdown
+          components={{
+            pre({ node, children, ...props }: any) {
+              // Extract the raw text from the abstract syntax tree (AST) to perfectly preserve newlines and formatting.
+              const extractText = (astNode: any): string => {
+                if (astNode.type === "text") return astNode.value || "";
+                if (astNode.children) return astNode.children.map(extractText).join("");
+                return "";
+              };
+              const text = node ? extractText(node) : "";
+
+              return (
+                <div className="relative group">
+                  <pre {...props} className={`${props.className || ""} pr-12`}>
+                    {children}
+                  </pre>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <CopyButton text={text.replace(/\n$/, "")} />
+                  </div>
+                </div>
+              );
+            }
+          }}
+        >
+          {content}
+        </ReactMarkdown>
     </div>
   );
 }

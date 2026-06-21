@@ -1,6 +1,6 @@
 import logging
 import uuid
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Request
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Request, Header
 from api.schemas.compare import (
     CompareRequest, CompareResponse, GetComparisonResponse,
     SaveCompareRequest, SaveCompareResponse, SuggestionsResponse,
@@ -18,7 +18,7 @@ router = APIRouter()
 
 @router.post("", response_model=CompareResponse)
 @limiter.limit("3/minute")
-def submit_comparison(request: Request, body: CompareRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user)):
+def submit_comparison(request: Request, body: CompareRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user), x_workspace_id: str | None = Header(default=None, alias="x-workspace-id")):
     if body.session_a == body.session_b:
         raise HTTPException(status_code=400, detail="Cannot compare a session with itself.")
         
@@ -31,6 +31,7 @@ def submit_comparison(request: Request, body: CompareRequest, background_tasks: 
     initial_state = {
         "session_a_id": body.session_a,
         "session_b_id": body.session_b,
+        "user_id": user_id,
         "status": "starting"
     }
     
@@ -63,26 +64,12 @@ def submit_comparison(request: Request, body: CompareRequest, background_tasks: 
         impact_summary=imp,
         visuals=visuals,
         user_id=user_id,
+        workspace_id=x_workspace_id,
     )
     
     # Queue persistent memory job
-    try:
-        from services import memory_job_service
-        payload = {
-            "session_a_id": body.session_a,
-            "session_b_id": body.session_b,
-            "comparison_id": comparison_id,
-            "structural_diff": diff,
-            "decision_evolution": evo,
-            "impact_summary": imp
-        }
-        memory_job_service.create_job(
-            user_id=user_id,
-            session_id=comparison_id,
-            payload=payload
-        )
-    except Exception as memory_exc:
-        logger.warning("Failed to queue comparison memory job: %s", memory_exc)
+    # Memory generation for comparisons is now deferred until explicitly approved.
+    logger.debug("Comparison completed. Decision record memory deferral applied.")
 
     try:
         import time
@@ -98,12 +85,12 @@ def submit_comparison(request: Request, body: CompareRequest, background_tasks: 
     )
 
 @router.get("/saved", response_model=SavedComparisonsResponse)
-def get_saved_comparisons(user_id: str = Depends(get_current_user)):
-    comps = compare_service.get_saved_comparisons(user_id=user_id)
+def get_saved_comparisons(user_id: str = Depends(get_current_user), x_workspace_id: str | None = Header(default=None, alias="x-workspace-id")):
+    comps = compare_service.get_saved_comparisons(user_id=user_id, workspace_id=x_workspace_id)
     return SavedComparisonsResponse(comparisons=comps)
 
 @router.get("/{comparison_id}", response_model=GetComparisonResponse)
-def get_comparison(comparison_id: str, user_id: str = Depends(get_current_user)):
+def get_comparison(comparison_id: str, user_id: str = Depends(get_current_user), x_workspace_id: str | None = Header(default=None, alias="x-workspace-id")):
     cache_key = f"comp_{user_id}_{comparison_id}"
     cached_comp = cache.get(cache_key)
     if cached_comp:

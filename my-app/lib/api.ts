@@ -21,11 +21,20 @@ export async function apiFetch<T>(
   const { getToken, ...fetchOptions } = options ?? {};
 
   async function doFetch(bearerToken: string): Promise<Response> {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${bearerToken}`,
+    };
+    
+    if (typeof window !== "undefined") {
+      const workspaceId = localStorage.getItem("activeWorkspaceId");
+      if (workspaceId) {
+        headers["x-workspace-id"] = workspaceId;
+      }
+    }
+
     return fetch(url, {
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${bearerToken}`,
-      },
+      headers: headers,
       ...fetchOptions,
     });
   }

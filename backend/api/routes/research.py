@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Request
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Request, Header
 from api.schemas.research import (
     ResearchRequest,
     ResearchResponse,
@@ -19,14 +19,14 @@ router = APIRouter()
 
 @router.post("", response_model=ResearchResponse, status_code=202)
 @limiter.limit("5/minute")
-def submit_research(request: Request, body: ResearchRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user)):
+def submit_research(request: Request, body: ResearchRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user), x_workspace_id: str | None = Header(default=None, alias="x-workspace-id")):
     """
     POST /research
     Accepts a technical question, creates a session and job in Supabase,
     enqueues the FastAPI background task, and returns immediately.
     """
     # Create session and job records in Supabase
-    session = research_service.create_session(body.question, user_id=user_id)
+    session = research_service.create_session(body.question, user_id=user_id, workspace_id=x_workspace_id)
     job = research_service.create_job(session["id"])
 
     # Enqueue background task (Runs natively inside the FastAPI process)
@@ -92,12 +92,12 @@ def get_session_document(session_id: str, user_id: str = Depends(get_current_use
 
 
 @router.get("/history", response_model=SessionHistoryResponse)
-def get_session_history(limit: int = 10, offset: int = 0, user_id: str = Depends(get_current_user)):
+def get_session_history(limit: int = 10, offset: int = 0, user_id: str = Depends(get_current_user), x_workspace_id: str | None = Header(default=None, alias="x-workspace-id")):
     """
     GET /research/history?limit=10&offset=0
     Returns a paginated list of recent completed sessions for the current user.
     """
-    sessions = research_service.get_recent_sessions(limit=limit, offset=offset, user_id=user_id)
+    sessions = research_service.get_recent_sessions(limit=limit, offset=offset, user_id=user_id, workspace_id=x_workspace_id)
     return SessionHistoryResponse(sessions=sessions)
 
 @router.post("/regenerate-visuals", response_model=RegenerateVisualsResponse)
@@ -137,7 +137,7 @@ def regenerate_visuals(body: RegenerateVisualsRequest, user_id: str = Depends(ge
     from services.db import supabase
     from datetime import datetime
     
-    supabase.table("decision_documents").update({
+    supabase.table("research_reports").update({
         "visuals": visuals,
         "visuals_updated_at": datetime.utcnow().isoformat()
     }).eq("session_id", body.session_id).execute()

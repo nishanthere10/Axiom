@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, Header
 from typing import List, Dict, Any
 from pydantic import BaseModel
 from services import memory_service
@@ -22,12 +22,12 @@ class PromoteMemoryResponse(BaseModel):
 
 @router.get("", response_model=MemoryListResponse)
 @limiter.limit("20/minute")
-def get_all_memories(request: Request, user_id: str = Depends(get_current_user)):
+def get_all_memories(request: Request, user_id: str = Depends(get_current_user), x_workspace_id: str | None = Header(default=None, alias="x-workspace-id")):
     """
     GET /memory
     Returns all active memories (permanent and unexpired temporary) for the current user.
     """
-    memories = memory_service.get_active_memories(user_id=user_id, limit=100)
+    memories = memory_service.get_active_memories(user_id=user_id, workspace_id=x_workspace_id, limit=100)
     return MemoryListResponse(memories=memories)
 
 @router.get("/{memory_id}", response_model=MemoryDetailResponse)

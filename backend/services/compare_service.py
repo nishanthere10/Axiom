@@ -13,10 +13,11 @@ def create_comparison(
     impact_summary: Dict[str, Any],
     visuals: Optional[list[Any]] = None,
     user_id: str = "anonymous",
+    workspace_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    # Fetch internal decision_documents IDs to satisfy the foreign key constraint
-    doc_a = supabase.table("decision_documents").select("id").eq("session_id", session_a).execute()
-    doc_b = supabase.table("decision_documents").select("id").eq("session_id", session_b).execute()
+    # Fetch internal research_reports IDs to satisfy the foreign key constraint
+    doc_a = supabase.table("research_reports").select("id").eq("session_id", session_a).execute()
+    doc_b = supabase.table("research_reports").select("id").eq("session_id", session_b).execute()
     
     if not doc_a.data or not doc_b.data:
         raise HTTPException(status_code=404, detail="One or both decision documents not found.")
@@ -36,6 +37,7 @@ def create_comparison(
         "visuals": visuals or [],
         "saved": False,
         "user_id": user_id,
+        "workspace_id": workspace_id,
     }).execute()
     
     # Return the data, but swap the internal IDs back to the public session IDs
@@ -68,14 +70,17 @@ def save_comparison(comparison_id: str, user_id: str) -> bool:
     res = supabase.table("comparisons").update({"saved": True}).eq("id", comparison_id).eq("user_id", user_id).execute()
     return bool(res.data)
 
-def get_saved_comparisons(user_id: str = "anonymous") -> list[Dict[str, Any]]:
-    # We query the comparisons table where saved is True and join with decision_documents to get original session IDs
-    res = supabase.table("comparisons") \
-        .select("id, summary, created_at, doc_a:decision_documents!session_a(session_id), doc_b:decision_documents!session_b(session_id)") \
+def get_saved_comparisons(user_id: str = "anonymous", workspace_id: Optional[str] = None) -> list[Dict[str, Any]]:
+    # We query the comparisons table where saved is True and join with research_reports to get original session IDs
+    query = (supabase.table("comparisons")
+        .select("id, summary, created_at, doc_a:research_reports!session_a(session_id), doc_b:research_reports!session_b(session_id)") \
         .eq("saved", True) \
-        .eq("user_id", user_id) \
-        .order("created_at", desc=True) \
-        .execute()
+        .eq("user_id", user_id))
+        
+    if workspace_id:
+        query = query.eq("workspace_id", workspace_id)
+        
+    res = query.order("created_at", desc=True).execute()
     
     if not res.data:
         return []

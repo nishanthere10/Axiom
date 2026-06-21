@@ -15,6 +15,8 @@ def generate_decision(state: ResearchState) -> dict:
     question = state["question"]
     summary = state["summary"]
     evidence = state.get("evidence", [])
+    memory_context = state.get("memory_context", {})
+    github_context = memory_context.get("github_context", [])
     
     # Format evidence for the prompt
     evidence_text = "\n\n".join(
@@ -22,16 +24,25 @@ def generate_decision(state: ResearchState) -> dict:
         for i, e in enumerate(evidence)
     )
 
-    prompt = f"""You are a distinguished Principal Software Engineer. Based on the technical question, analysis, and the provided EVIDENCE, generate a highly scannable, expert-level decision document. 
+    # Format repository context
+    github_text = "\n\n".join(
+        f"[Source: {chunk.get('file_path', 'unknown')} | {chunk.get('repository', 'unknown')}]\n{chunk.get('raw_snippet') or chunk.get('content', '')}"
+        for chunk in github_context
+    )
+
+    prompt = f"""You are a distinguished Principal Software Engineer. Based on the technical question, analysis, and the provided EVIDENCE and REPOSITORY CONTEXT, generate a highly scannable, expert-level decision document. 
 Do not use huge text blocks. Use bullet points and bold text to make it readable at a glance. Prioritize context-rich quality over quantity.
-CRITICAL: You MUST base your decision on the Evidence provided. You must cite your sources (e.g. "[Source 1]") when making claims.
+CRITICAL: You MUST base your decision on the Evidence and Repository Context provided. You must cite your sources (e.g. "[Source 1]" or "[Source: file_path]") when making claims.
 
 Question: {question}
 
 Analysis: {summary}
 
 Evidence:
-{evidence_text if evidence else "No external evidence provided. Rely on general knowledge."}
+{evidence_text if evidence else "No external evidence provided."}
+
+Repository Context:
+{github_text if github_context else "No repository context provided."}
 
 Return a JSON object with exactly these keys. The value for each key MUST be a single Markdown string, NOT nested JSON objects or arrays:
 - "recommendation_context": A Markdown string containing a highly scannable recommendation. Use bullet points to highlight EXACTLY why this approach is best. Keep sentences very short and punchy. Include a brief code/config snippet if it helps clarity.

@@ -15,7 +15,7 @@ if settings.GEMINI_API_KEY:
 if settings.MISTRAL_API_KEY:
     os.environ["MISTRAL_API_KEY"] = settings.MISTRAL_API_KEY
 if settings.NVIDIA_API_KEY:
-    os.environ["NVIDIA_API_KEY"] = settings.NVIDIA_API_KEY
+    os.environ["NVIDIA_NIM_API_KEY"] = settings.NVIDIA_API_KEY
 
 def _build_fallbacks() -> List[Dict[str, str]]:
     """Builds a dynamic list of fallback models based on available API keys."""

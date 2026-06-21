@@ -9,8 +9,10 @@ from agents.nodes.confidence import build_confidence
 from agents.nodes.generate_visual_spec import generate_visual_spec
 from agents.nodes.validate_visual_spec import validate_visual_spec
 from agents.nodes.retrieve_memory import retrieve_memory
+from agents.nodes.memory_relevance_evaluator import memory_relevance_evaluator
 from agents.nodes.analyze_memory import analyze_memory
 from agents.nodes.format import format_document
+from agents.nodes.retrieve_github_context import retrieve_github_context
 
 def build_decision_graph():
     """
@@ -21,6 +23,8 @@ def build_decision_graph():
     # Register nodes
     graph.add_node("decompose_question", decompose_question)
     graph.add_node("retrieve_memory", retrieve_memory)
+    graph.add_node("memory_relevance_evaluator", memory_relevance_evaluator)
+    graph.add_node("retrieve_github_context", retrieve_github_context)
     graph.add_node("analyze_memory", analyze_memory)
     graph.add_node("canonicalize_topic", canonicalize_topic)
     graph.add_node("generate_queries", generate_queries)
@@ -35,10 +39,12 @@ def build_decision_graph():
     # Phase 1: Parallel initial data gathering
     graph.add_edge(START, "decompose_question")
     graph.add_edge(START, "retrieve_memory")
+    graph.add_edge(START, "retrieve_github_context")
     graph.add_edge(START, "canonicalize_topic")
 
     # Phase 2: Analyze memory and generate queries
-    graph.add_edge("retrieve_memory", "analyze_memory")
+    graph.add_edge("retrieve_memory", "memory_relevance_evaluator")
+    graph.add_edge(["memory_relevance_evaluator", "retrieve_github_context"], "analyze_memory")
     graph.add_edge("decompose_question", "generate_queries")
 
     # Phase 3: Wait for both queries and memory to collect evidence

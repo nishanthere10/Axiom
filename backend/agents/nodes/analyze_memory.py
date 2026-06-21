@@ -12,10 +12,11 @@ def analyze_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     logger.debug("Node -> analyze_memory starting...")
     memories = state.get("retrieved_memories", [])
+    github_context = state.get("github_context", [])
     
-    if not memories:
-        # Short-circuit logic to save LLM calls if no highly relevant memories were found
-        logger.debug("No highly relevant memories retrieved. Short-circuiting LLM analysis.")
+    if not memories and not github_context:
+        # Short-circuit logic to save LLM calls if no context was found
+        logger.debug("No memories or github context retrieved. Short-circuiting LLM analysis.")
         return {
             "memory_context": {
                 "preferences": [],
@@ -37,12 +38,28 @@ def analyze_memory(state: Dict[str, Any]) -> Dict[str, Any]:
         mem_type = metadata.get("memory_type", "unknown")
         formatted_memories.append(f"Memory {idx+1} ({mem_type}): {summary}")
         
-    memories_text = "\n".join(formatted_memories)
+    memories_text = "\n".join(formatted_memories) if formatted_memories else "None"
+    
+    # Format github context
+    formatted_github = []
+    for chunk in github_context:
+        repo = chunk.get("repository", "unknown")
+        file_path = chunk.get("file_path", "unknown")
+        content = chunk.get("content", "")
+        raw_snippet = chunk.get("raw_snippet", "")
+        score = chunk.get("score", 0.0)
+        
+        # Use raw_snippet if score is very high (high confidence match)
+        effective_content = raw_snippet if score >= 0.75 and raw_snippet else content
+        
+        formatted_github.append(f"[Source: {file_path} | {repo} | similarity: {score:.2f}]\n{effective_content}")
+        
+    github_text = "\n\n".join(formatted_github) if formatted_github else "None"
         
     client = get_instructor_client()
     
     prompt = f"""
-    You are analyzing the user's historical architectural memories to inform a new decision.
+    You are analyzing the user's historical architectural memories AND their current GitHub repository infrastructure context to inform a new decision.
     
     CURRENT QUESTION:
     {question}
@@ -50,11 +67,14 @@ def analyze_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     RETRIEVED MEMORIES:
     {memories_text}
     
-    Your task is to analyze these memories and extract:
+    GITHUB REPOSITORY CONTEXT:
+    {github_text}
+    
+    Your task is to analyze these contexts and extract:
     1. Any detected technical preferences (e.g. they prefer serverless, they like Postgres).
     2. Historical patterns (e.g. they usually choose open source).
-    3. Directly related decisions that inform the current question.
-    4. Consistency warnings (e.g. if the user is asking about NoSQL but their history heavily favors relational DBs, flag this).
+    3. Directly related decisions or architectural rules that inform the current question.
+    4. Consistency warnings (e.g. if the user is asking about NoSQL but their repo context heavily favors relational DBs, flag this).
     
     Be concise and objective.
     """
@@ -71,7 +91,10 @@ def analyze_memory(state: Dict[str, Any]) -> Dict[str, Any]:
             ]
         )
         logger.debug("Successfully parsed LLM memory context. Exiting node.")
-        return {"memory_context": response.model_dump()}
+        context = response.model_dump()
+        context["evaluated_memories"] = memories
+        context["github_context"] = github_context
+        return {"memory_context": context}
     except Exception as e:
         logger.warning("Memory Analysis Error (non-fatal): %s", e)
         # Fallback to empty context on error to not crash pipeline
@@ -80,6 +103,8 @@ def analyze_memory(state: Dict[str, Any]) -> Dict[str, Any]:
                 "preferences": [],
                 "historical_patterns": [],
                 "related_decisions": [],
-                "consistency_warnings": []
+                "consistency_warnings": [],
+                "evaluated_memories": memories,
+                "github_context": github_context
             }
         }

@@ -7,6 +7,7 @@ def override_status(left: str | None, right: str | None) -> str | None:
 class ResearchState(TypedDict):
     """Represents the state of the LangGraph research pipeline."""
     question: str
+    user_id: str
     summary: str
     recommendation: str
     tradeoffs: str
@@ -22,6 +23,7 @@ class ResearchState(TypedDict):
     
     retrieved_memories: list[dict]
     memory_context: dict
+    github_context: list[dict]
     warnings: list[str]
     
     status: Annotated[str | None, override_status]

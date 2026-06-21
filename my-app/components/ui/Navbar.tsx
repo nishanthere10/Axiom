@@ -4,10 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   SignInButton,
-  SignOutButton,
+  UserButton,
   useAuth,
 } from "@clerk/nextjs";
+import { Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import WorkspaceSelector from "@/components/WorkspaceSelector";
 
 const NAV_LINKS = [
   { href: "/research",           label: "Research",          exact: false },
@@ -21,7 +23,7 @@ export default function Navbar() {
   const pathname = usePathname();
 
   return (
-    <nav className="shrink-0 border-b border-border bg-surface/80 backdrop-blur-md supports-[backdrop-filter]:bg-surface/60">
+    <nav className="relative z-50 shrink-0 border-b border-border bg-surface/80 backdrop-blur-md supports-[backdrop-filter]:bg-surface/60">
       <div className="flex h-12 items-center justify-between px-4 md:px-6">
 
         {/* Left: Brand + Nav Links */}
@@ -34,6 +36,12 @@ export default function Navbar() {
             <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
             Atlas Research
           </Link>
+
+          {isSignedIn && (
+            <div className="hidden md:block ml-4">
+              <WorkspaceSelector />
+            </div>
+          )}
 
           <div className="hidden md:flex items-center gap-1">
             {NAV_LINKS.map(({ href, label, exact }) => {
@@ -62,13 +70,24 @@ export default function Navbar() {
         </div>
 
         {/* Right: Auth */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           {isSignedIn ? (
-            <SignOutButton>
-              <button className="inline-flex items-center justify-center rounded-md text-xs font-medium transition-colors h-8 px-3 border border-border bg-transparent text-muted-foreground hover:text-foreground hover:bg-surface-hover">
-                Sign Out
-              </button>
-            </SignOutButton>
+            <>
+              <Link
+                href="/settings/integrations/github"
+                className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-md hover:bg-surface-hover"
+                title="Settings"
+              >
+                <Settings className="w-4 h-4" />
+              </Link>
+              <UserButton 
+                appearance={{
+                  elements: {
+                    userButtonAvatarBox: "w-8 h-8 rounded-md border border-border"
+                  }
+                }}
+              />
+            </>
           ) : (
             <SignInButton>
               <button className="inline-flex items-center justify-center rounded-md text-xs font-semibold transition-colors h-8 px-3 bg-primary text-primary-foreground hover:bg-primary/90">

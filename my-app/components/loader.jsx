@@ -1,12 +1,20 @@
 "use client";
 import React from 'react';
 
-const Loader = () => {
+const Loader = ({ scale = 1, color = "white", className = "" }) => {
   return (
-    <div className="loader-container">
+    <div className={`loader-container ${className}`} style={{ transform: `scale(${scale})` }}>
       <style>{`
         .loader-container {
           position: relative;
+          width: 50px;
+          height: 50px;
+        }
+        .loader {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
           width: 50px;
           height: 50px;
         }
@@ -15,7 +23,7 @@ const Loader = () => {
           to { opacity: 1; }
         }
         .square {
-          background: hsl(var(--primary));
+          background: ${color};
           width: 10px;
           height: 10px;
           position: absolute;

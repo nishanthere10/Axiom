@@ -1,11 +1,14 @@
 from services.db import supabase
 
 
-def create_session(question: str, user_id: str = "anonymous") -> dict:
+def create_session(question: str, user_id: str = "anonymous", workspace_id: str | None = None) -> dict:
     """Create a research session row. Returns the created row."""
+    payload = {"question": question, "status": "draft", "version": 1, "user_id": user_id}
+    if workspace_id:
+        payload["workspace_id"] = workspace_id
     response = (
         supabase.table("research_sessions")
-        .insert({"question": question, "status": "draft", "version": 1, "user_id": user_id})
+        .insert(payload)
         .execute()
     )
     return response.data[0]
@@ -54,10 +57,16 @@ def save_document(session_id: str, question: str, state: dict, user_id: str = "a
         "memory_context": state.get("memory_context", {}),
         "warnings": warnings or [],
         "evidence_generated_at": datetime.utcnow().isoformat() if evidence else None,
+        "evidence_generated_at": datetime.utcnow().isoformat() if evidence else None,
         "version": 1,
         "user_id": user_id,
     }
-    response = supabase.table("decision_documents").insert(payload).execute()
+    # Retrieve the workspace_id from the session and add to document
+    session = supabase.table("research_sessions").select("workspace_id").eq("id", session_id).execute()
+    if session.data and session.data[0].get("workspace_id"):
+        payload["workspace_id"] = session.data[0]["workspace_id"]
+        
+    response = supabase.table("research_reports").insert(payload).execute()
     return response.data[0]
 
 
@@ -78,7 +87,7 @@ def get_job(job_id: str, user_id: str) -> dict | None:
 def get_document_by_session(session_id: str, user_id: str) -> dict | None:
     """Fetch the decision document for a given session ID, scoped to user."""
     response = (
-        supabase.table("decision_documents")
+        supabase.table("research_reports")
         .select("*")
         .eq("session_id", session_id)
         .eq("user_id", user_id)
@@ -91,14 +100,19 @@ def get_document_by_session(session_id: str, user_id: str) -> dict | None:
     return None
 
 
-def get_recent_sessions(limit: int = 10, offset: int = 0, user_id: str = "anonymous") -> list[dict]:
-    """Fetch recent completed research sessions for a specific user with pagination."""
-    response = (
+def get_recent_sessions(limit: int = 10, offset: int = 0, user_id: str = "anonymous", workspace_id: str | None = None) -> list[dict]:
+    """Fetch recent completed research sessions for a specific user and workspace with pagination."""
+    query = (
         supabase.table("research_sessions")
         .select("id, question, created_at")
         .eq("status", "complete")
         .eq("user_id", user_id)
-        .order("created_at", desc=True)
+    )
+    if workspace_id:
+        query = query.eq("workspace_id", workspace_id)
+        
+    response = (
+        query.order("created_at", desc=True)
         .range(offset, offset + limit - 1)
         .execute()
     )
