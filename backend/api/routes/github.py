@@ -137,10 +137,16 @@ async def sync_repo_background(user_id: str, repository_id: str, owner: str, rep
     supabase.table("github_sync_jobs").update({"status": "running"}).eq("id", job_id).execute()
     
     # Define a progress callback that updates Supabase
+    counter = 0
+    lock = asyncio.Lock()
+    
     async def progress_callback(file_path: str):
+        nonlocal counter
+        async with lock:
+            counter += 1
+            current = counter
+            
         def update_db():
-            job_res = supabase.table("github_sync_jobs").select("progress_current").eq("id", job_id).execute()
-            current = job_res.data[0].get("progress_current", 0) + 1
             supabase.table("github_sync_jobs").update({
                 "progress_current": current,
                 "last_file": file_path

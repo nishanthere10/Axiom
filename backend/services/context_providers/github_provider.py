@@ -109,23 +109,22 @@ class GitHubProvider(ContextProvider):
                         and f["path"].lower().endswith(".md")
                         and not any(skip in f["path"] for skip in ["node_modules", "vendor", ".github/workflows"])
                     ]
-
-                    # Step 2: Filter by selected folders
-                    if selected_folders and len(selected_folders) > 0:
-                        filtered_paths = []
-                        for path in md_paths:
-                            folder = path.split("/")[0] if "/" in path else "root"
-                            if folder in selected_folders:
-                                filtered_paths.append(path)
-                        md_paths = filtered_paths
-
-                    if len(md_paths) > MAX_MD_FILES:
-                        logger.warning(f"[GITHUB SYNC] Capping to {MAX_MD_FILES} files (found {len(md_paths)})")
-                        md_paths = md_paths[:MAX_MD_FILES]
-
                 except Exception as e:
                     logger.error(f"[GITHUB SYNC] Error fetching file tree: {e}")
                     return []
+
+            # Step 2: Filter by selected folders
+            if selected_folders and len(selected_folders) > 0:
+                filtered_paths = []
+                for path in md_paths:
+                    folder = path.split("/")[0] if "/" in path else "root"
+                    if folder in selected_folders:
+                        filtered_paths.append(path)
+                md_paths = filtered_paths
+
+            if len(md_paths) > MAX_MD_FILES:
+                logger.warning(f"[GITHUB SYNC] Capping to {MAX_MD_FILES} files (found {len(md_paths)})")
+                md_paths = md_paths[:MAX_MD_FILES]
 
             # Step 3: Fetch each .md file (Sequential to avoid GitHub secondary rate limits)
             for path in md_paths:
@@ -194,7 +193,7 @@ class GitHubProvider(ContextProvider):
             response = await asyncio.to_thread(
                 generate_chat_completion, 
                 messages, 
-                model="nvidia_nim/nvidia/nemotron-4-340b-instruct"
+                model="nvidia/nemotron-3-ultra-550b-a55b"
             )
             return response.choices[0].message.content.strip()
         except Exception as e:
@@ -257,8 +256,8 @@ class GitHubProvider(ContextProvider):
                     "repository": resource_id,
                     "file_path": file_path,
                     "document_type": "markdown",
-                    "content": summary,
-                    "raw_snippet": file_content[:1200]
+                    "content": summary[:8000],
+                    "raw_snippet": file_content[:1000]
                 }
                 return {"id": vector_id, "values": embedding, "metadata": metadata}
 

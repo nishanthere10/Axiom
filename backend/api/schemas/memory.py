@@ -14,6 +14,8 @@ class MemoryItemCreate(BaseModel):
     scope: MemoryScope = "temporary"
     expires_at: Optional[datetime] = None
     user_id: str = "anonymous"
+    workspace_id: Optional[str] = None
+    visibility: Literal["GLOBAL", "WORKSPACE"] = "WORKSPACE"
 
 class MemoryItemResponse(BaseModel):
     id: str
@@ -26,6 +28,8 @@ class MemoryItemResponse(BaseModel):
     is_active: bool
     created_at: datetime
     expires_at: Optional[datetime]
+    workspace_id: Optional[str] = None
+    visibility: Literal["GLOBAL", "WORKSPACE"]
 
 class PreferenceInsight(BaseModel):
     type: Literal["preference_candidate"] = "preference_candidate"

@@ -258,6 +258,11 @@ export default function MemoryUsed({ context }: { context: MemoryContext }) {
                         </span>
                       )}
                     </div>
+                    {chunk.file_path && (
+                      <div className="text-[10px] text-muted-foreground font-mono mb-1 pb-1 border-b border-border/30">
+                        {chunk.file_path}
+                      </div>
+                    )}
                     <p className="text-xs text-foreground/80 line-clamp-2 hover:line-clamp-none transition-all">
                       {chunk.content}
                     </p>

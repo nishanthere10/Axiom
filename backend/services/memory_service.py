@@ -23,7 +23,9 @@ def create_memory_item(data: MemoryItemCreate) -> Optional[Dict[str, Any]]:
         "scope": data.scope,
         "is_active": True,
         "expires_at": expires_at.isoformat() if expires_at else None,
-        "user_id": data.user_id
+        "user_id": data.user_id,
+        "workspace_id": data.workspace_id,
+        "visibility": data.visibility
     }
     
     try:
@@ -34,12 +36,19 @@ def create_memory_item(data: MemoryItemCreate) -> Optional[Dict[str, Any]]:
         logger.error("Error creating memory item in Supabase: %s", e, exc_info=True)
     return None
 
-def get_active_memories(user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
-    """Retrieves all active memories for the user."""
+def get_active_memories(user_id: str, workspace_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    """Retrieves all active memories for the user, including GLOBAL and matching WORKSPACE."""
     now = datetime.utcnow().isoformat()
     try:
-        # Get permanent memories, or temporary ones that haven't expired
-        response = supabase.table("memory_items").select("*").eq("is_active", True).eq("user_id", user_id).order("created_at", desc=True).limit(limit).execute()
+        query = supabase.table("memory_items").select("*").eq("is_active", True).eq("user_id", user_id)
+        if workspace_id:
+            # We want GLOBAL memories OR WORKSPACE memories matching workspace_id
+            query = query.or_(f"visibility.eq.GLOBAL,workspace_id.eq.{workspace_id}")
+        else:
+            # Only GLOBAL memories if no workspace is active
+            query = query.eq("visibility", "GLOBAL")
+            
+        response = query.order("created_at", desc=True).limit(limit).execute()
         
         valid_memories = []
         for row in response.data:

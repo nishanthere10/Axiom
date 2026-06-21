@@ -27,6 +27,7 @@ import Navbar from "@/components/ui/Navbar";
 import { SystemStatusBanner } from "@/components/system/SystemStatusBanner";
 import CommandPalette from "@/components/ui/CommandPalette";
 import { ToastProvider } from "@/components/ui/ToastProvider";
+import { WorkspaceProvider } from "@/components/WorkspaceContext";
 
 export default function RootLayout({
   children,
@@ -35,8 +36,9 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <ToastProvider>
-        <html
+      <WorkspaceProvider>
+        <ToastProvider>
+          <html
         lang="en"
         className={`${geistSans.variable} ${geistMono.variable} ${plusJakartaSans.variable} h-full antialiased dark`}
       >
@@ -46,8 +48,9 @@ export default function RootLayout({
           <SystemStatusBanner />
           <main className="flex-1 overflow-hidden flex">{children}</main>
         </body>
-      </html>
-      </ToastProvider>
+          </html>
+        </ToastProvider>
+      </WorkspaceProvider>
     </ClerkProvider>
   );
 }

@@ -9,6 +9,7 @@ import {
 } from "@clerk/nextjs";
 import { Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import WorkspaceSelector from "@/components/WorkspaceSelector";
 
 const NAV_LINKS = [
   { href: "/research",           label: "Research",          exact: false },
@@ -22,7 +23,7 @@ export default function Navbar() {
   const pathname = usePathname();
 
   return (
-    <nav className="shrink-0 border-b border-border bg-surface/80 backdrop-blur-md supports-[backdrop-filter]:bg-surface/60">
+    <nav className="relative z-50 shrink-0 border-b border-border bg-surface/80 backdrop-blur-md supports-[backdrop-filter]:bg-surface/60">
       <div className="flex h-12 items-center justify-between px-4 md:px-6">
 
         {/* Left: Brand + Nav Links */}
@@ -35,6 +36,12 @@ export default function Navbar() {
             <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
             Atlas Research
           </Link>
+
+          {isSignedIn && (
+            <div className="hidden md:block ml-4">
+              <WorkspaceSelector />
+            </div>
+          )}
 
           <div className="hidden md:flex items-center gap-1">
             {NAV_LINKS.map(({ href, label, exact }) => {

@@ -138,7 +138,7 @@ export default function LeftSidebar({
       {/* Header */}
       <div className="flex items-center justify-between px-3 border-b border-border/50 h-12 shrink-0">
         {!isCollapsed && (
-          <span className="text-xs font-semibold text-muted-foreground tracking-widest uppercase select-none">
+          <span className="text-xs font-semibold text-muted-foreground tracking-widest uppercase select-none truncate min-w-0 pr-2">
             {isCompareMode ? "Compare History" : "History"}
           </span>
         )}
@@ -146,7 +146,7 @@ export default function LeftSidebar({
           <button
             onClick={toggleCollapse}
             className={cn(
-              "p-1.5 rounded-md hover:bg-surface-hover text-muted-foreground hover:text-foreground transition-colors",
+              "p-1.5 rounded-md hover:bg-surface-hover text-muted-foreground hover:text-foreground transition-colors shrink-0",
               isCollapsed && "mx-auto"
             )}
             aria-label="Toggle Sidebar"
@@ -174,7 +174,7 @@ export default function LeftSidebar({
         >
           <Plus className="w-4 h-4 shrink-0" />
           {!isCollapsed && (
-            <span>{isCompareMode ? "New Comparison" : "New Research"}</span>
+            <span className="truncate min-w-0">{isCompareMode ? "New Comparison" : "New Research"}</span>
           )}
         </button>
 
@@ -197,7 +197,7 @@ export default function LeftSidebar({
           ) : (
             <AnimatedList
               className="!w-full !p-0 !max-w-none"
-              innerClassName="overflow-visible p-0"
+              innerClassName="overflow-visible p-0 flex flex-col gap-0.5"
               displayScrollbar={false}
               showGradients={false}
               items={comparisons.map(comp => ({
@@ -238,7 +238,7 @@ export default function LeftSidebar({
             <>
               <AnimatedList
                 className="!w-full !p-0 !max-w-none"
-                innerClassName="overflow-visible p-0 space-y-0.5"
+                innerClassName="overflow-visible p-0 flex flex-col gap-0.5"
                 displayScrollbar={false}
                 showGradients={false}
                 items={sessions.map(session => ({
