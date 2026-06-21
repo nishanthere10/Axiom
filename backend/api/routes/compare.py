@@ -68,23 +68,8 @@ def submit_comparison(request: Request, body: CompareRequest, background_tasks: 
     )
     
     # Queue persistent memory job
-    try:
-        from services import memory_job_service
-        payload = {
-            "session_a_id": body.session_a,
-            "session_b_id": body.session_b,
-            "comparison_id": comparison_id,
-            "structural_diff": diff,
-            "decision_evolution": evo,
-            "impact_summary": imp
-        }
-        memory_job_service.create_job(
-            user_id=user_id,
-            session_id=comparison_id,
-            payload=payload
-        )
-    except Exception as memory_exc:
-        logger.warning("Failed to queue comparison memory job: %s", memory_exc)
+    # Memory generation for comparisons is now deferred until explicitly approved.
+    logger.debug("Comparison completed. Decision record memory deferral applied.")
 
     try:
         import time

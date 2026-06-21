@@ -66,7 +66,7 @@ def save_document(session_id: str, question: str, state: dict, user_id: str = "a
     if session.data and session.data[0].get("workspace_id"):
         payload["workspace_id"] = session.data[0]["workspace_id"]
         
-    response = supabase.table("decision_documents").insert(payload).execute()
+    response = supabase.table("research_reports").insert(payload).execute()
     return response.data[0]
 
 
@@ -87,7 +87,7 @@ def get_job(job_id: str, user_id: str) -> dict | None:
 def get_document_by_session(session_id: str, user_id: str) -> dict | None:
     """Fetch the decision document for a given session ID, scoped to user."""
     response = (
-        supabase.table("decision_documents")
+        supabase.table("research_reports")
         .select("*")
         .eq("session_id", session_id)
         .eq("user_id", user_id)

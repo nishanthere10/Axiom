@@ -137,7 +137,7 @@ def regenerate_visuals(body: RegenerateVisualsRequest, user_id: str = Depends(ge
     from services.db import supabase
     from datetime import datetime
     
-    supabase.table("decision_documents").update({
+    supabase.table("research_reports").update({
         "visuals": visuals,
         "visuals_updated_at": datetime.utcnow().isoformat()
     }).eq("session_id", body.session_id).execute()

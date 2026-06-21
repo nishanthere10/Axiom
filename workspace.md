@@ -239,7 +239,7 @@ Open Source
 
 Every user receives:
 
-My Workspace
+[First Name]'s Workspace
 
 automatically.
 
@@ -249,7 +249,7 @@ Existing users:
 
 Migration creates:
 
-My Workspace
+[First Name]'s Workspace (or "My Workspace" if name is missing)
 
 automatically.
 
@@ -339,7 +339,7 @@ Global Memory
 
 *
 
-Workspace Memory
+Workspace Memory (Strict Precedence: Workspace overrides Global on conflict)
 
 ↓
 
@@ -509,25 +509,15 @@ user_id
 
 Future:
 
-Namespace
+Single Namespace
 
-workspace_id
-
----
-
-Examples:
-
-workspace_atlas
-
-workspace_startup
-
-workspace_college
+Metadata Filtering: {"workspace_id": "...", "scope": "..."}
 
 ---
 
 Reason:
 
-Workspace isolation.
+Scalability (Pinecone namespace limits) and ability to query across scopes efficiently.
 
 ---
 
@@ -539,7 +529,7 @@ user namespace
 
 ↓
 
-workspace namespace
+Single namespace with {"workspace_id": "..."} metadata
 
 ---
 
@@ -547,7 +537,7 @@ Migration required.
 
 ---
 
-All future embeddings stored under workspace namespace.
+All future embeddings stored using workspace metadata.
 
 ---
 
@@ -751,11 +741,11 @@ Comparison Removal
 
 Export Removal
 
-Vector Cleanup
+Vector Cleanup (via background task)
 
 ---
 
-Hard delete.
+Soft delete (deleted_at timestamp). Background worker permanently purges after 30 days.
 
 ---
 
