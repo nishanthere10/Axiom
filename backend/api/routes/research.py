@@ -11,7 +11,7 @@ from api.schemas.research import (
 from services import research_service
 from services.cache_service import cache
 from workers.tasks import run_research_background_task
-from core.auth import get_current_user
+from core.auth import get_current_user, verify_workspace_access
 from middleware.rate_limit import limiter
 
 router = APIRouter()
@@ -19,14 +19,14 @@ router = APIRouter()
 
 @router.post("", response_model=ResearchResponse, status_code=202)
 @limiter.limit("5/minute")
-def submit_research(request: Request, body: ResearchRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user), x_workspace_id: str | None = Header(default=None, alias="x-workspace-id")):
+def submit_research(request: Request, body: ResearchRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user), workspace_id: str | None = Depends(verify_workspace_access)):
     """
     POST /research
     Accepts a technical question, creates a session and job in Supabase,
     enqueues the FastAPI background task, and returns immediately.
     """
     # Create session and job records in Supabase
-    session = research_service.create_session(body.question, user_id=user_id, workspace_id=x_workspace_id)
+    session = research_service.create_session(body.question, user_id=user_id, workspace_id=workspace_id)
     job = research_service.create_job(session["id"])
 
     # Enqueue background task (Runs natively inside the FastAPI process)
@@ -92,12 +92,12 @@ def get_session_document(session_id: str, user_id: str = Depends(get_current_use
 
 
 @router.get("/history", response_model=SessionHistoryResponse)
-def get_session_history(limit: int = 10, offset: int = 0, user_id: str = Depends(get_current_user), x_workspace_id: str | None = Header(default=None, alias="x-workspace-id")):
+def get_session_history(limit: int = 10, offset: int = 0, user_id: str = Depends(get_current_user), workspace_id: str | None = Depends(verify_workspace_access)):
     """
     GET /research/history?limit=10&offset=0
     Returns a paginated list of recent completed sessions for the current user.
     """
-    sessions = research_service.get_recent_sessions(limit=limit, offset=offset, user_id=user_id, workspace_id=x_workspace_id)
+    sessions = research_service.get_recent_sessions(limit=limit, offset=offset, user_id=user_id, workspace_id=workspace_id)
     return SessionHistoryResponse(sessions=sessions)
 
 @router.post("/regenerate-visuals", response_model=RegenerateVisualsResponse)

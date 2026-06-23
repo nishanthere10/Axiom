@@ -3,6 +3,7 @@ import logging
 import litellm
 import instructor
 from litellm import completion
+from tenacity import retry, stop_after_attempt, wait_exponential
 from core.config import settings
 from typing import Any, Dict, List, Optional
 
@@ -36,6 +37,7 @@ def _build_fallbacks() -> List[Dict[str, str]]:
         
     return fallbacks
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/llama-3.3-70b-versatile", **kwargs) -> Any:
     """
     Unified LLM chat completion with automatic fallback routing.

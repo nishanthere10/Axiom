@@ -168,8 +168,8 @@ export default function LeftSidebar({
         <button
           onClick={handleNewAction}
           className={cn(
-            "w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-surface-hover transition-colors text-muted-foreground hover:text-foreground text-xs font-medium mb-2",
-            isCollapsed && "justify-center"
+            "w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-surface-hover transition-colors text-muted-foreground hover:text-foreground text-sm font-medium mb-3",
+            isCollapsed && "justify-center px-2 py-2"
           )}
         >
           <Plus className="w-4 h-4 shrink-0" />
@@ -205,11 +205,11 @@ export default function LeftSidebar({
                 render: () => (
                   <div
                     className={cn(
-                      "w-full flex items-center gap-2.5 px-2 py-2 rounded-md transition-colors text-xs text-left",
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-sm text-left",
                       activeComparisonId === comp.id
                         ? "bg-surface-hover text-foreground"
                         : "text-muted-foreground hover:bg-surface-hover/60 hover:text-foreground",
-                      isCollapsed && "justify-center"
+                      isCollapsed && "justify-center px-2 py-2"
                     )}
                     title={isCollapsed ? comp.summary : undefined}
                   >
@@ -246,11 +246,11 @@ export default function LeftSidebar({
                   render: () => (
                     <div
                       className={cn(
-                        "w-full flex items-center gap-2.5 px-2 py-2 rounded-md transition-colors text-xs text-left",
+                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-sm text-left",
                         activeSessionId === session.id
                           ? "bg-surface-hover text-foreground"
                           : "text-muted-foreground hover:bg-surface-hover/60 hover:text-foreground",
-                        isCollapsed && "justify-center"
+                        isCollapsed && "justify-center px-2 py-2"
                       )}
                       title={isCollapsed ? session.question : undefined}
                     >
@@ -273,11 +273,11 @@ export default function LeftSidebar({
         )}
       </div>
 
-      {/* Footer: Settings */}
       <div className="px-2 py-2 border-t border-border/50 shrink-0">
         <button
+          onClick={() => router.push("/settings")}
           className={cn(
-            "w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-surface-hover transition-colors text-muted-foreground hover:text-foreground text-xs",
+            "w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-surface-hover transition-colors text-muted-foreground hover:text-foreground text-xs font-medium",
             isCollapsed && "justify-center"
           )}
         >

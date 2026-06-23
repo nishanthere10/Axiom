@@ -228,51 +228,56 @@ export default function GitHubIntegrationPage() {
 
 
 
-  if (loading) return <div className="p-10 text-center text-muted-foreground">Loading...</div>;
+  if (loading) return <div className="p-10 text-center text-muted-foreground flex flex-col items-center gap-2 mt-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /> Loading GitHub Context...</div>;
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">GitHub Context Provider</h1>
-        <p className="text-muted-foreground mt-2">
+    <div className="relative w-full min-h-[calc(100vh-8rem)] flex flex-col pt-8 max-w-4xl mx-auto px-6 space-y-8">
+      <div className="absolute inset-0 -z-10 flex items-center justify-center pointer-events-none">
+        <div className="absolute w-[600px] h-[600px] bg-primary/5 rounded-full blur-[100px]" />
+        <div className="absolute w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[80px] translate-x-1/4 -translate-y-1/4" />
+      </div>
+
+      <div className="text-center md:text-left">
+        <h1 className="text-3xl font-medium tracking-tight text-foreground">GitHub Context Provider</h1>
+        <p className="text-sm text-muted-foreground mt-2">
           Connect your GitHub account to allow Atlas to understand your repository architecture, stack, and context.
         </p>
       </div>
 
       {!isConnected ? (
-        <div className="border border-border/50 rounded-xl p-8 bg-surface text-center space-y-4">
-          <GithubIcon className="w-12 h-12 mx-auto text-muted-foreground" />
-          <h2 className="text-xl font-semibold">Not Connected</h2>
-          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+        <div className="relative group rounded-2xl border border-border/60 bg-surface/40 backdrop-blur-sm shadow-sm p-10 text-center space-y-5 transition-all duration-300">
+          <GithubIcon className="w-14 h-14 mx-auto text-muted-foreground group-hover:text-foreground transition-colors" />
+          <h2 className="text-2xl font-medium tracking-tight">Not Connected</h2>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
             Atlas needs read-only access to your repositories to generate architectural summaries. We do not index source code.
           </p>
-          <button onClick={connectClerk} className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition">
+          <button onClick={connectClerk} className="mt-4 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 transition-all duration-200 shadow-sm inline-flex items-center gap-2">
             Verify GitHub Connection
           </button>
         </div>
       ) : syncStep === 0 ? (
         <div className="space-y-8">
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Active Repositories</h2>
+            <h2 className="text-xl font-medium tracking-tight">Active Repositories</h2>
             {activeRepos.length === 0 ? (
-              <div className="text-sm text-muted-foreground p-4 border border-dashed border-border rounded-lg text-center">
+              <div className="text-sm text-muted-foreground p-6 border border-dashed border-border/60 rounded-2xl bg-surface/20 text-center">
                 No repositories selected. Select one below.
               </div>
             ) : (
               <div className="grid gap-4">
                 {activeRepos.map(repo => (
-                  <div key={repo.repository_id} className="flex items-center justify-between p-4 border border-border/50 rounded-lg bg-surface">
+                  <div key={repo.repository_id} className="flex items-center justify-between p-5 border border-border/60 rounded-2xl bg-surface/40 backdrop-blur-sm hover:border-border/80 hover:bg-surface/80 transition-all duration-300 shadow-sm group">
                     <div>
-                      <h3 className="font-medium">{repo.repository_owner} / {repo.repository_name}</h3>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <h3 className="font-medium text-foreground">{repo.repository_owner} / {repo.repository_name}</h3>
+                      <p className="text-xs text-muted-foreground/80 mt-1">
                         {repo.last_synced_at ? `Last synced: ${new Date(repo.last_synced_at).toLocaleString()}` : "Never synced"}
                       </p>
                     </div>
                     <button
                       onClick={() => startConfiguringSync(repo)}
-                      className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/80"
+                      className="flex items-center gap-2 px-4 py-2 bg-surface/60 border border-border/40 text-foreground rounded-xl text-sm font-medium hover:bg-surface hover:border-border/80 transition-all duration-200"
                     >
-                      Configure Sync <ChevronRight className="w-4 h-4" />
+                      Configure Sync <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                     </button>
                   </div>
                 ))}
@@ -281,22 +286,22 @@ export default function GitHubIntegrationPage() {
           </div>
 
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Available Repositories</h2>
-            <div className="grid gap-4 max-h-96 overflow-y-auto pr-2">
+            <h2 className="text-xl font-medium tracking-tight">Available Repositories</h2>
+            <div className="grid gap-3 max-h-96 overflow-y-auto pr-2 pb-8">
               {availableRepos.map(repo => (
-                <div key={repo.id} className="flex items-center justify-between p-4 border border-border/50 rounded-lg bg-surface/50">
+                <div key={repo.id} className="flex items-center justify-between p-4 border border-border/40 rounded-xl bg-surface/20 backdrop-blur-sm hover:bg-surface/50 hover:border-border/60 transition-all duration-200">
                   <div>
-                    <h3 className="font-medium">{repo.full_name}</h3>
-                    <span className="text-xs uppercase tracking-widest text-muted-foreground">
+                    <h3 className="font-medium text-sm text-foreground">{repo.full_name}</h3>
+                    <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
                       {repo.private ? "Private" : "Public"}
                     </span>
                   </div>
                   {repo.selected ? (
-                    <span className="flex items-center gap-1 text-sm text-success">
-                      <CheckCircle2 className="w-4 h-4" /> Added
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-success">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Added
                     </span>
                   ) : (
-                    <button onClick={() => selectAvailableRepo(repo)} className="px-4 py-1.5 border border-border text-foreground rounded text-sm hover:bg-surface-hover transition">
+                    <button onClick={() => selectAvailableRepo(repo)} className="px-4 py-1.5 bg-surface/50 border border-border/50 text-foreground rounded-lg text-xs font-medium hover:bg-surface hover:border-border/80 transition-all duration-200">
                       Add
                     </button>
                   )}
@@ -306,10 +311,10 @@ export default function GitHubIntegrationPage() {
           </div>
         </div>
       ) : (
-        <div className="border border-border/50 bg-surface rounded-xl p-8 overflow-hidden relative">
-          <div className="flex items-center gap-4 mb-8">
-            <button onClick={() => setSyncStep(0)} className="text-muted-foreground hover:text-foreground text-sm font-medium">← Back</button>
-            <h2 className="text-xl font-semibold">Sync: {syncRepo?.repository_owner}/{syncRepo?.repository_name}</h2>
+        <div className="relative group rounded-2xl border border-border/60 bg-surface/40 backdrop-blur-sm shadow-sm p-8 overflow-hidden transition-all duration-300">
+          <div className="flex items-center gap-4 mb-8 border-b border-border/40 pb-4">
+            <button onClick={() => setSyncStep(0)} className="text-muted-foreground hover:text-foreground text-sm font-medium px-2 py-1 rounded-md hover:bg-surface-hover transition-colors">← Back</button>
+            <h2 className="text-lg font-medium tracking-tight">Sync: <span className="text-muted-foreground font-normal">{syncRepo?.repository_owner}/</span>{syncRepo?.repository_name}</h2>
           </div>
 
           <AnimatePresence mode="wait">
@@ -321,31 +326,31 @@ export default function GitHubIntegrationPage() {
                 </div>
 
                 {!repoTree ? (
-                  <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Fetching file tree...</div>
+                  <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin text-primary" /> Fetching file tree...</div>
                 ) : (
                   <div className="grid gap-3 max-h-[400px] overflow-y-auto pr-2">
                     <div className="flex justify-end gap-3 mb-2">
-                      <button onClick={() => setSelectedFolders(new Set(repoTree.folders.map(f => f.name)))} className="text-sm text-primary hover:underline">Select All</button>
-                      <button onClick={() => setSelectedFolders(new Set())} className="text-sm text-muted-foreground hover:underline">Deselect All</button>
+                      <button onClick={() => setSelectedFolders(new Set(repoTree.folders.map(f => f.name)))} className="text-xs font-medium text-primary hover:text-primary/80 transition-colors">Select All</button>
+                      <button onClick={() => setSelectedFolders(new Set())} className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">Deselect All</button>
                     </div>
                     {repoTree.folders.map(f => (
-                      <label key={f.name} className={`flex items-center gap-4 p-4 border rounded-lg cursor-pointer transition ${selectedFolders.has(f.name) ? "border-primary bg-primary/5" : "border-border/50 bg-surface hover:border-border"}`}>
-                        <input type="checkbox" className="w-5 h-5 rounded border-border" checked={selectedFolders.has(f.name)} onChange={() => toggleFolder(f.name)} />
-                        <Folder className={`w-6 h-6 ${selectedFolders.has(f.name) ? "text-primary" : "text-muted-foreground"}`} />
+                      <label key={f.name} className={`flex items-center gap-4 p-4 border rounded-xl cursor-pointer transition-all duration-200 ${selectedFolders.has(f.name) ? "border-primary/40 bg-primary/5 shadow-[0_4px_12px_rgba(59,130,246,0.05)]" : "border-border/40 bg-surface/30 hover:border-border/80 hover:bg-surface/60"}`}>
+                        <input type="checkbox" className="w-4 h-4 rounded border-border text-primary focus:ring-primary/50" checked={selectedFolders.has(f.name)} onChange={() => toggleFolder(f.name)} />
+                        <Folder className={`w-5 h-5 ${selectedFolders.has(f.name) ? "text-primary/80" : "text-muted-foreground/60"}`} />
                         <div className="flex-1">
-                          <p className="font-medium">{f.name === "root" ? "/" : f.name}</p>
-                          <p className="text-xs text-muted-foreground">{f.count} Markdown files</p>
+                          <p className="font-medium text-sm text-foreground">{f.name === "root" ? "/" : f.name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{f.count} Markdown files</p>
                         </div>
                       </label>
                     ))}
                   </div>
                 )}
 
-                <div className="pt-4 border-t border-border/50 flex items-center justify-between">
-                  <div className="text-sm">
-                    Will sync <strong className="text-foreground">{getTotalSelectedFiles()}</strong> files across <strong className="text-foreground">{selectedFolders.size}</strong> folders
+                <div className="pt-6 border-t border-border/40 flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Will sync <strong className="text-foreground font-medium">{getTotalSelectedFiles()}</strong> files across <strong className="text-foreground font-medium">{selectedFolders.size}</strong> folders
                   </div>
-                  <button onClick={startSync} disabled={selectedFolders.size === 0} className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-medium disabled:opacity-50">
+                  <button onClick={startSync} disabled={selectedFolders.size === 0} className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium disabled:opacity-50 hover:bg-primary/90 transition-colors shadow-sm">
                     Start Parallel Sync
                   </button>
                 </div>
@@ -376,15 +381,15 @@ export default function GitHubIntegrationPage() {
 
             {syncStep === 3 && (
               <motion.div key="step3" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6 py-8 text-center">
-                <div className="w-16 h-16 bg-success/20 text-success rounded-full flex items-center justify-center mx-auto mb-6">
+                <div className="w-16 h-16 bg-success/10 border border-success/20 text-success rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_20px_rgba(34,197,94,0.15)]">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
-                <h3 className="text-2xl font-bold">Sync Complete!</h3>
-                <p className="text-muted-foreground max-w-sm mx-auto">
+                <h3 className="text-2xl font-medium tracking-tight">Sync Complete!</h3>
+                <p className="text-muted-foreground max-w-sm mx-auto mt-2">
                   Successfully embedded {progress?.current} markdown files. They are now available as context during your research sessions.
                 </p>
                 <div className="pt-8">
-                  <button onClick={() => setSyncStep(0)} className="px-6 py-2 border border-border rounded-lg font-medium hover:bg-surface-hover">
+                  <button onClick={() => setSyncStep(0)} className="px-6 py-2.5 border border-border/60 bg-surface/50 rounded-xl text-sm font-medium hover:bg-surface hover:border-border/80 transition-all duration-200">
                     Return to Repositories
                   </button>
                 </div>

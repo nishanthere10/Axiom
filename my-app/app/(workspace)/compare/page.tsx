@@ -32,10 +32,14 @@ function CompareContent() {
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    setRightPanel("Impact & Actions");
+    if (comparing || comparison) {
+      setRightPanel("Impact & Actions");
+    } else {
+      hideRightPanel();
+    }
     setPortalNode(document.getElementById("right-panel-root"));
     return () => hideRightPanel();
-  }, [setRightPanel, hideRightPanel]);
+  }, [setRightPanel, hideRightPanel, comparing, comparison]);
 
   useEffect(() => {
     if (idParam) {
@@ -92,7 +96,12 @@ function CompareContent() {
     <>
       {portalNode && createPortal(rightPanelContent, portalNode)}
       {!comparing && !comparison && (
-        <div className="min-h-[50vh] flex flex-col justify-center">
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-16rem)] relative w-full pt-12 md:pt-20">
+          <div className="absolute inset-0 -z-10 flex items-center justify-center pointer-events-none">
+            <div className="absolute w-[600px] h-[600px] bg-primary/5 rounded-full blur-[100px]" />
+            <div className="absolute w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[80px] translate-x-1/4 -translate-y-1/4" />
+          </div>
+          
           <SessionSelector onCompare={handleCompare} disabled={comparing} />
           {error && <p className="text-destructive text-sm text-center mt-4">{error}</p>}
         </div>

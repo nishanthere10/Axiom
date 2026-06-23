@@ -25,7 +25,7 @@ export function WorkspaceCommandCenter({ dashboardData, workspaceId }: { dashboa
   }
 
   return (
-    <div className="flex flex-col gap-6 p-6 max-w-7xl mx-auto w-full text-foreground">
+    <div className="flex flex-col gap-6 p-6 max-w-7xl mx-auto w-full h-full overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] text-foreground">
       <WorkspaceHeader workspace={dashboardData.workspace} stats={dashboardData} />
       
       {/* Dense IDE-like Bento Box Layout */}

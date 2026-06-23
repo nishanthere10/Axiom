@@ -24,13 +24,13 @@ export default function Navbar() {
 
   return (
     <nav className="relative z-50 shrink-0 border-b border-border bg-surface/80 backdrop-blur-md supports-[backdrop-filter]:bg-surface/60">
-      <div className="flex h-12 items-center justify-between px-4 md:px-6">
+      <div className="flex h-16 items-center justify-between px-4 md:px-8">
 
         {/* Left: Brand + Nav Links */}
         <div className="flex items-center gap-6">
           <Link
             href="/"
-            className="flex items-center gap-2 text-sm font-semibold text-foreground tracking-tight hover:text-foreground/80 transition-colors"
+            className="flex items-center gap-2.5 text-base font-semibold text-foreground tracking-tight hover:text-foreground/80 transition-colors"
           >
             {/* Subtle accent dot */}
             <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
@@ -53,7 +53,7 @@ export default function Navbar() {
                   key={href}
                   href={href}
                   className={cn(
-                    "relative px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200",
+                    "relative px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
                     isActive
                       ? "text-foreground bg-surface-hover"
                       : "text-muted-foreground hover:text-foreground hover:bg-surface-hover/60"
@@ -73,13 +73,6 @@ export default function Navbar() {
         <div className="flex items-center gap-4">
           {isSignedIn ? (
             <>
-              <Link
-                href="/settings/integrations/github"
-                className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-md hover:bg-surface-hover"
-                title="Settings"
-              >
-                <Settings className="w-4 h-4" />
-              </Link>
               <UserButton 
                 appearance={{
                   elements: {

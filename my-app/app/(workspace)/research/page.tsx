@@ -33,10 +33,14 @@ function ResearchPageInner() {
   const [showSaveModal, setShowSaveModal] = useState(false);
 
   useEffect(() => {
-    setRightPanel("Evidence & Confidence");
+    if (pageState !== "idle") {
+      setRightPanel("Evidence & Confidence");
+    } else {
+      hideRightPanel();
+    }
     setPortalNode(document.getElementById("right-panel-root"));
     return () => hideRightPanel();
-  }, [setRightPanel, hideRightPanel]);
+  }, [setRightPanel, hideRightPanel, pageState]);
 
   useEffect(() => {
     const urlSessionId = searchParams.get("session_id");
@@ -139,8 +143,13 @@ function ResearchPageInner() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25 }}
-            className="flex flex-col items-center justify-center min-h-[60vh]"
+            className="flex flex-col items-center justify-center min-h-[calc(100vh-16rem)] relative w-full pt-12 md:pt-20"
           >
+            <div className="absolute inset-0 -z-10 flex items-center justify-center pointer-events-none">
+              <div className="absolute w-[600px] h-[600px] bg-primary/5 rounded-full blur-[100px]" />
+              <div className="absolute w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[80px] translate-x-1/4 -translate-y-1/4" />
+            </div>
+            
             <QuestionInput onSubmitted={handleSubmitted} />
           </motion.div>
         )}
