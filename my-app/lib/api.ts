@@ -4,6 +4,8 @@ import {
   SessionDocumentResponse,
   SessionHistoryResponse,
   SavedComparisonsResponse,
+  DecisionRecord,
+  DecisionListResponse,
 } from "@/types";
 
 const RAW_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://127.0.0.1:8000";
@@ -106,4 +108,22 @@ export async function getSessionHistory(limit: number = 10, offset: number = 0, 
 /** Fetch all saved comparisons. */
 export async function getSavedComparisons(token: string, getToken?: () => Promise<string | null>): Promise<SavedComparisonsResponse> {
   return apiFetch<SavedComparisonsResponse>("/compare/saved", token, { getToken });
+}
+
+/** Create a new Decision Record. */
+export async function createDecision(
+  payload: { research_session_id: string; title: string; status: string },
+  token: string,
+  getToken?: () => Promise<string | null>
+): Promise<DecisionRecord> {
+  return apiFetch<DecisionRecord>("/decisions", token, {
+    method: "POST",
+    body: JSON.stringify(payload),
+    getToken,
+  });
+}
+
+/** List Decision Records. */
+export async function listDecisions(token: string, getToken?: () => Promise<string | null>): Promise<DecisionListResponse> {
+  return apiFetch<DecisionListResponse>("/decisions", token, { getToken });
 }

@@ -11,13 +11,19 @@ interface ResearchSessionItem {
   created_at: string;
 }
 
-import ResizableLayout from "@/components/ui/ResizableLayout";
+import { useWorkspace } from "../layout";
 
 export default function SavedResearchPage() {
   const { getToken } = useAuth();
   const [sessions, setSessions] = useState<ResearchSessionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { hideRightPanel } = useWorkspace();
+
+  useEffect(() => {
+    hideRightPanel();
+  }, [hideRightPanel]);
 
   useEffect(() => {
     async function loadSessions() {
@@ -36,7 +42,7 @@ export default function SavedResearchPage() {
   }, []);
 
   return (
-    <ResizableLayout hideRightPanel>
+    <>
       <div className="w-full space-y-8 animate-in fade-in duration-300">
         <div className="border-b border-border pb-4">
           <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/75 bg-clip-text">
@@ -118,6 +124,6 @@ export default function SavedResearchPage() {
           </div>
         )}
       </div>
-    </ResizableLayout>
+    </>
   );
 }

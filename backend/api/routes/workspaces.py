@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from core.auth import get_current_user
-from api.schemas.workspaces import WorkspaceCreate, WorkspaceUpdate, WorkspaceResponse, WorkspaceListResponse
+from api.schemas.workspaces import WorkspaceCreate, WorkspaceUpdate, WorkspaceResponse, WorkspaceListResponse, WorkspaceDashboardResponse
 from services import workspace_service
 
 router = APIRouter()
@@ -38,6 +38,17 @@ def get_workspace(workspace_id: str, user_id: str = Depends(get_current_user)):
     if not workspace:
         raise HTTPException(status_code=404, detail="Workspace not found")
     return WorkspaceResponse(**workspace)
+
+@router.get("/{workspace_id}/dashboard", response_model=WorkspaceDashboardResponse)
+async def get_workspace_dashboard(workspace_id: str, user_id: str = Depends(get_current_user)):
+    """
+    GET /workspaces/{id}/dashboard
+    Get the aggregated dashboard data for a workspace.
+    """
+    dashboard_data = await workspace_service.get_workspace_dashboard(workspace_id, user_id)
+    if not dashboard_data:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    return dashboard_data
 
 @router.patch("/{workspace_id}", response_model=WorkspaceResponse)
 def update_workspace(workspace_id: str, body: WorkspaceUpdate, user_id: str = Depends(get_current_user)):

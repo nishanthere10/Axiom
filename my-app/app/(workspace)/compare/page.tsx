@@ -15,7 +15,8 @@ import StructuralDiff from "@/components/compare/StructuralDiff";
 import MemoryUsed from "@/components/memory/MemoryUsed";
 
 import VisualRenderer from "@/components/visuals/VisualRenderer";
-import ResizableLayout from "@/components/ui/ResizableLayout";
+import { createPortal } from "react-dom";
+import { useWorkspace } from "../layout";
 import ExportButton from "@/components/export/ExportButton";
 
 function CompareContent() {
@@ -26,6 +27,15 @@ function CompareContent() {
   const [comparing, setComparing] = useState(false);
   const [comparison, setComparison] = useState<Comparison | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const { setRightPanel, hideRightPanel } = useWorkspace();
+  const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setRightPanel("Impact & Actions");
+    setPortalNode(document.getElementById("right-panel-root"));
+    return () => hideRightPanel();
+  }, [setRightPanel, hideRightPanel]);
 
   useEffect(() => {
     if (idParam) {
@@ -56,31 +66,31 @@ function CompareContent() {
     }
   };
 
+  const rightPanelContent = (
+    <>
+      {comparison && (
+        <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+          <ImpactSummary impact={comparison.impact_summary} />
+          
+          <div className="pt-4 border-t border-border">
+            <SaveComparison comparisonId={comparison.id} initialSaved={!!idParam} />
+          </div>
+        </div>
+      )}
+      {!comparison && (
+        <div className="flex flex-col items-center justify-center h-[50vh] text-center space-y-2 opacity-50">
+          <p className="text-sm text-muted-foreground font-medium">Awaiting Comparison</p>
+          <p className="text-xs text-muted-foreground max-w-[200px]">
+            Impact summaries will appear here.
+          </p>
+        </div>
+      )}
+    </>
+  );
+
   return (
-    <ResizableLayout
-      rightPanelTitle="Impact & Actions"
-      rightPanelContent={
-        <>
-          {comparison && (
-            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
-              <ImpactSummary impact={comparison.impact_summary} />
-              
-              <div className="pt-4 border-t border-border">
-                <SaveComparison comparisonId={comparison.id} initialSaved={!!idParam} />
-              </div>
-            </div>
-          )}
-          {!comparison && (
-            <div className="flex flex-col items-center justify-center h-[50vh] text-center space-y-2 opacity-50">
-              <p className="text-sm text-muted-foreground font-medium">Awaiting Comparison</p>
-              <p className="text-xs text-muted-foreground max-w-[200px]">
-                Impact summaries will appear here.
-              </p>
-            </div>
-          )}
-        </>
-      }
-    >
+    <>
+      {portalNode && createPortal(rightPanelContent, portalNode)}
       {!comparing && !comparison && (
         <div className="min-h-[50vh] flex flex-col justify-center">
           <SessionSelector onCompare={handleCompare} disabled={comparing} />
@@ -140,7 +150,7 @@ function CompareContent() {
           </div>
         </div>
       )}
-    </ResizableLayout>
+    </>
   );
 }
 

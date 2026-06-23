@@ -7,10 +7,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import QuestionInput from "@/components/features/QuestionInput";
 import ResearchProgress from "@/components/features/ResearchProgress";
 import { getSessionDocument } from "@/lib/api";
-import ResizableLayout from "@/components/ui/ResizableLayout";
 import type { DecisionDocument as DecisionDocumentType, PollingState, ResearchResponse } from "@/types";
 import DecisionDocument, { AuxiliaryDocumentData } from "@/components/features/DecisionDocument";
 import ExportButton from "@/components/export/ExportButton";
+import SaveDecisionModal from "@/components/features/SaveDecisionModal";
+import { createPortal } from "react-dom";
+import { useWorkspace } from "../layout";
 
 type PageState = "idle" | "polling" | "done" | "failed";
 
@@ -19,12 +21,22 @@ function ResearchPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const { setRightPanel, hideRightPanel } = useWorkspace();
+  const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
+
   const [pageState, setPageState] = useState<PageState>("idle");
   const [pollingState, setPollingState] = useState<PollingState>("idle");
   const [jobId, setJobId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [doc, setDoc] = useState<DecisionDocumentType | null>(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+
+  useEffect(() => {
+    setRightPanel("Evidence & Confidence");
+    setPortalNode(document.getElementById("right-panel-root"));
+    return () => hideRightPanel();
+  }, [setRightPanel, hideRightPanel]);
 
   useEffect(() => {
     const urlSessionId = searchParams.get("session_id");
@@ -86,39 +98,39 @@ function ResearchPageInner() {
     fetchDoc(newSessionId);
   };
 
+  const rightPanelContent = (
+    <AnimatePresence mode="wait">
+      {pageState === "done" && sessionId && doc ? (
+        <motion.div
+          key="aux"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <AuxiliaryDocumentData doc={doc} sessionId={sessionId} onRefresh={handleRefreshEvidence} />
+        </motion.div>
+      ) : (
+        <motion.div
+          key="empty"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="flex flex-col items-center justify-center h-[50vh] text-center space-y-2 opacity-50"
+        >
+          <p className="text-sm text-muted-foreground font-medium">Awaiting Research</p>
+          <p className="text-xs text-muted-foreground max-w-[200px]">
+            Evidence and confidence scores will appear here.
+          </p>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   return (
-    <ResizableLayout
-      rightPanelTitle="Evidence & Confidence"
-      rightPanelContent={
-        <AnimatePresence mode="wait">
-          {pageState === "done" && sessionId && doc ? (
-            <motion.div
-              key="aux"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <AuxiliaryDocumentData doc={doc} sessionId={sessionId} onRefresh={handleRefreshEvidence} />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="empty"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-col items-center justify-center h-[50vh] text-center space-y-2 opacity-50"
-            >
-              <p className="text-sm text-muted-foreground font-medium">Awaiting Research</p>
-              <p className="text-xs text-muted-foreground max-w-[200px]">
-                Evidence and confidence scores will appear here.
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      }
-    >
+    <>
+      {portalNode && createPortal(rightPanelContent, portalNode)}
       <AnimatePresence mode="wait">
         {pageState === "idle" && (
           <motion.div
@@ -163,7 +175,13 @@ function ResearchPageInner() {
             transition={{ duration: 0.25 }}
             className="w-full space-y-8"
           >
-            <div className="flex justify-end no-print mb-4">
+            <div className="flex justify-end gap-2 no-print mb-4">
+              <button
+                onClick={() => setShowSaveModal(true)}
+                className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                Save as Decision
+              </button>
               <ExportButton sessionId={sessionId} sessionType="research" />
             </div>
             <DecisionDocument doc={doc} sessionId={sessionId} setDoc={setDoc} />
@@ -176,6 +194,17 @@ function ResearchPageInner() {
                 Start new research
               </button>
             </div>
+            {showSaveModal && (
+              <SaveDecisionModal
+                sessionId={sessionId}
+                defaultTitle={doc?.question || "New Decision"}
+                onClose={() => setShowSaveModal(false)}
+                onSuccess={(id) => {
+                  setShowSaveModal(false);
+                  router.push(`/workspaces/${searchParams.get("workspace_id") || "current"}/decisions`);
+                }}
+              />
+            )}
           </motion.div>
         )}
 
@@ -213,7 +242,7 @@ function ResearchPageInner() {
           </motion.div>
         )}
       </AnimatePresence>
-    </ResizableLayout>
+    </>
   );
 }
 

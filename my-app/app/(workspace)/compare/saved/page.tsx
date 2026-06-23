@@ -5,13 +5,19 @@ import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import { getSavedComparisons, SavedComparisonItem } from "@/lib/compare";
 
-import ResizableLayout from "@/components/ui/ResizableLayout";
+import { useWorkspace } from "../../layout";
 
 export default function SavedComparisonsPage() {
   const { getToken } = useAuth();
   const [comparisons, setComparisons] = useState<SavedComparisonItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { hideRightPanel } = useWorkspace();
+
+  useEffect(() => {
+    hideRightPanel();
+  }, [hideRightPanel]);
 
   useEffect(() => {
     async function loadComparisons() {
@@ -34,7 +40,7 @@ export default function SavedComparisonsPage() {
   }, []);
 
   return (
-    <ResizableLayout hideRightPanel>
+    <>
       <div className="w-full space-y-8 animate-in fade-in duration-300">
         <div className="border-b border-border pb-4">
           <h1 className="text-2xl font-bold">Saved Comparisons</h1>
@@ -80,6 +86,6 @@ export default function SavedComparisonsPage() {
           </div>
         )}
       </div>
-    </ResizableLayout>
+    </>
   );
 }

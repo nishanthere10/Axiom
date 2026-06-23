@@ -22,7 +22,7 @@ def search_tavily(queries: list[str]) -> list[dict]:
     @retry(stop=stop_after_attempt(2), wait=wait_fixed(2))
     def fetch_query(q):
         try:
-            return client.search(q, max_results=3, include_raw_content=True)
+            return client.search(q, max_results=5, include_raw_content=True)
         except Exception as e:
             logger.error("Error executing Tavily search for query '%s': %s", q, e)
             raise e
@@ -30,10 +30,10 @@ def search_tavily(queries: list[str]) -> list[dict]:
     all_results = []
     seen_urls = set()
 
-    # Limit to top 3 queries to avoid rate limits and save time
-    top_queries = queries[:3]
+    # Limit to top 5 queries to avoid extreme rate limits but get broad coverage
+    top_queries = queries[:5]
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         futures = [executor.submit(fetch_query, q) for q in top_queries]
         
         for future in concurrent.futures.as_completed(futures):
@@ -53,7 +53,7 @@ def search_tavily(queries: list[str]) -> list[dict]:
                         "content": result.get("raw_content") or result.get("content", "")
                     })
                     
-                    if len(all_results) >= 5:
+                    if len(all_results) >= 10:
                         return all_results
                         
-    return all_results[:5]
+    return all_results[:10]

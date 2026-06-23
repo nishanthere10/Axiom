@@ -114,13 +114,21 @@ export default function WorkspacesPage() {
                     onClick={() => setActiveWorkspaceId(ws.id)}
                     className="text-xs font-medium px-3 py-1.5 rounded-md bg-surface border border-surface/50 hover:bg-white/5 transition-colors"
                   >
-                    Select
+                    Set Active
                   </button>
                 ) : (
                   <div className="text-xs font-medium px-3 py-1.5 text-text-secondary">
-                    Currently Selected
+                    Active
                   </div>
                 )}
+                
+                <Link 
+                  href={`/workspaces/${ws.id}`}
+                  className="text-xs font-medium px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                >
+                  Open
+                </Link>
+
                 <div className="flex-1" />
                 <button 
                   onClick={() => handleDelete(ws.id)}
