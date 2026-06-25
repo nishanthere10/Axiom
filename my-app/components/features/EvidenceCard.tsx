@@ -22,7 +22,7 @@ export default function EvidenceCard({ evidence }: { evidence: Evidence[] }) {
 
           return (
             <div
-              key={item.url}
+              key={`${item.url}-${index}`}
               className="p-3 rounded-lg border border-border bg-surface hover:border-primary/40 hover:bg-surface-hover transition-all duration-200 flex flex-col justify-between gap-2"
             >
               <div>

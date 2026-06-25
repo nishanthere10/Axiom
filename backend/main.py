@@ -73,6 +73,8 @@ import os
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://atlas-cm90ourgm-nishant-s-projects-f9ed29a6.vercel.app",
+    "https://atlas-1sr4.onrender.com"
 ]
 if prod_origin := os.environ.get("FRONTEND_ORIGIN"):
     ALLOWED_ORIGINS.append(prod_origin)

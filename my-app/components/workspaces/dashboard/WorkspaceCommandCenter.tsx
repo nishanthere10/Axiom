@@ -103,7 +103,7 @@ function WorkspaceHeader({ workspace, stats }: { workspace: any, stats: any }) {
           </div>
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>{Object.values(stats.decision_summary).reduce((a: any, b: any) => a + b, 0)} Decisions</span>
+            <span>{Number(Object.values(stats.decision_summary || {}).reduce((a: any, b: any) => Number(a) + Number(b), 0))} Decisions</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Activity className="w-3.5 h-3.5" />

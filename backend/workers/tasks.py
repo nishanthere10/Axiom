@@ -20,7 +20,9 @@ _NODE_PROGRESS = {
 }
 
 
-def run_research_background_task(session_id: str, job_id: str, question: str, force_refresh: bool = False, user_id: str = "anonymous") -> dict:
+import anyio
+
+async def run_research_background_task(session_id: str, job_id: str, question: str, force_refresh: bool = False, user_id: str = "anonymous") -> dict:
     """
     Background task that runs the LangGraph decision pipeline natively via FastAPI.
 
@@ -35,7 +37,7 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
         start_time = time.time()
         
         # 1. Mark job as running
-        research_service.update_job_status(job_id, status="running", progress=5, step="starting")
+        await anyio.to_thread.run_sync(research_service.update_job_status, job_id, "running", 5, "starting")
 
         # 2. Stream the graph — get state updates after each node
         current_state = {
@@ -61,7 +63,7 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
         }
         
         max_progress = 5
-        for chunk in decision_graph.stream(current_state):
+        async for chunk in decision_graph.astream(current_state):
             for node_name, node_state in chunk.items():
                 # LangGraph stream yields only the updates from the current node.
                 # We must accumulate them to have the full state for saving.
@@ -71,11 +73,12 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
                 if progress > max_progress:
                     max_progress = progress
                     
-                research_service.update_job_status(
+                await anyio.to_thread.run_sync(
+                    research_service.update_job_status,
                     job_id,
-                    status="running",
-                    progress=max_progress,
-                    step=node_name,
+                    "running",
+                    max_progress,
+                    node_name
                 )
                 
         final_state = current_state
@@ -85,18 +88,19 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
 
         # 3. Save the decision document
         pipeline_warnings = final_state.get("warnings", [])
-        research_service.save_document(
-            session_id=session_id,
-            question=question,
-            state=final_state,
-            user_id=user_id,
-            warnings=pipeline_warnings,
+        await anyio.to_thread.run_sync(
+            research_service.save_document,
+            session_id,
+            question,
+            final_state,
+            user_id,
+            pipeline_warnings
         )
 
         # 4. Mark session and job as complete
         logger.info(f"Research job {job_id} completed successfully.")
-        research_service.update_job_status(job_id, status="completed", progress=100, step="done")
-        research_service.update_session_status(session_id, "complete")
+        await anyio.to_thread.run_sync(research_service.update_job_status, job_id, "completed", 100, "done")
+        await anyio.to_thread.run_sync(research_service.update_session_status, session_id, "complete")
 
         # Record metrics
         try:
@@ -118,12 +122,13 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
                 if scores:
                     conf_score = sum(scores) / len(scores)
                     
-            emit_research_completed(
-                user_id=user_id,
-                latency_ms=latency_ms,
-                confidence=conf_score,
-                evidence_count=evidence_count,
-                sources_used=sources_used
+            await anyio.to_thread.run_sync(
+                emit_research_completed,
+                user_id,
+                latency_ms,
+                conf_score,
+                evidence_count,
+                sources_used
             )
             
             # Fire and forget topic classification
@@ -139,6 +144,6 @@ def run_research_background_task(session_id: str, job_id: str, question: str, fo
 
     except Exception as exc:
         logger.error("Research background task failed: %s", exc, exc_info=True)
-        research_service.update_job_status(job_id, status="failed", progress=0, step="error")
-        research_service.update_session_status(session_id, "failed")
+        await anyio.to_thread.run_sync(research_service.update_job_status, job_id, "failed", 0, "error")
+        await anyio.to_thread.run_sync(research_service.update_session_status, session_id, "failed")
         raise

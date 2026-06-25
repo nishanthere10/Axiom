@@ -2,7 +2,7 @@ import os
 import logging
 import litellm
 import instructor
-from litellm import completion
+from litellm import completion, acompletion
 from tenacity import retry, stop_after_attempt, wait_exponential
 from core.config import settings
 from typing import Any, Dict, List, Optional
@@ -20,7 +20,9 @@ if settings.NVIDIA_API_KEY:
 
 def _build_fallbacks() -> List[Dict[str, str]]:
     """Builds a dynamic list of fallback models based on available API keys."""
-    fallbacks = []
+    fallbacks = [
+        {"model": "groq/llama-3.3-70b-versatile"}
+    ]
     
     # Priority 1: Gemini
     if settings.GEMINI_API_KEY:
@@ -93,6 +95,7 @@ def generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/
         raise e
 
 _instructor_client = None
+_async_instructor_client = None
 
 def get_instructor_client():
     """
@@ -122,3 +125,32 @@ def get_instructor_client():
     client.chat.completions.create = create_with_fallbacks
     _instructor_client = client
     return _instructor_client
+
+def get_async_instructor_client():
+    """
+    Returns a cached async instructor client patched with litellm acompletion.
+    Uses a module-level singleton to avoid re-creating and monkey-patching on every call.
+    """
+    global _async_instructor_client
+    if _async_instructor_client is not None:
+        return _async_instructor_client
+        
+    client = instructor.from_litellm(acompletion)
+    
+    # Wrap the create method to inject fallbacks automatically
+    original_create = client.chat.completions.create
+    
+    async def create_with_fallbacks(*args, **kwargs):
+        # Inject fallbacks into the litellm kwargs if not already provided
+        if "fallbacks" not in kwargs:
+            kwargs["fallbacks"] = _build_fallbacks()
+        # Default model to groq if not provided
+        if "model" not in kwargs:
+            kwargs["model"] = "groq/llama-3.3-70b-versatile"
+            
+        logger.debug("Requesting Async Structured LLM completion (Primary: %s)", kwargs['model'])
+        return await original_create(*args, **kwargs)
+        
+    client.chat.completions.create = create_with_fallbacks
+    _async_instructor_client = client
+    return _async_instructor_client

@@ -100,13 +100,17 @@ def get_session_history(limit: int = 10, offset: int = 0, user_id: str = Depends
     sessions = research_service.get_recent_sessions(limit=limit, offset=offset, user_id=user_id, workspace_id=workspace_id)
     return SessionHistoryResponse(sessions=sessions)
 
+import anyio
+
 @router.post("/regenerate-visuals", response_model=RegenerateVisualsResponse)
-def regenerate_visuals(body: RegenerateVisualsRequest, user_id: str = Depends(get_current_user)):
+async def regenerate_visuals(body: RegenerateVisualsRequest, user_id: str = Depends(get_current_user)):
     """
     POST /research/regenerate-visuals
     Regenerates only the visuals for an existing session and updates the database.
     """
-    document = research_service.get_document_by_session(body.session_id, user_id=user_id)
+    document = await anyio.to_thread.run_sync(
+        research_service.get_document_by_session, body.session_id, user_id
+    )
     if not document:
         raise HTTPException(status_code=404, detail="Session document not found.")
 
@@ -126,10 +130,11 @@ def regenerate_visuals(body: RegenerateVisualsRequest, user_id: str = Depends(ge
     from agents.nodes.generate_visual_spec import generate_visual_spec
     from agents.nodes.validate_visual_spec import validate_visual_spec
 
-    state_after_gen = generate_visual_spec(initial_state)
+    state_after_gen = await generate_visual_spec(initial_state)
     initial_state.update(state_after_gen)
     
-    state_after_val = validate_visual_spec(initial_state)
+    # validate_visual_spec is synchronous
+    state_after_val = await anyio.to_thread.run_sync(validate_visual_spec, initial_state)
     
     visuals = state_after_val.get("visuals", [])
     
@@ -137,10 +142,13 @@ def regenerate_visuals(body: RegenerateVisualsRequest, user_id: str = Depends(ge
     from services.db import supabase
     from datetime import datetime
     
-    supabase.table("research_reports").update({
-        "visuals": visuals,
-        "visuals_updated_at": datetime.utcnow().isoformat()
-    }).eq("session_id", body.session_id).execute()
+    def _update_db():
+        return supabase.table("research_reports").update({
+            "visuals": visuals,
+            "visuals_updated_at": datetime.utcnow().isoformat()
+        }).eq("session_id", body.session_id).execute()
+        
+    await anyio.to_thread.run_sync(_update_db)
     
     # Clear cache
     cache.delete(f"doc_{user_id}_{body.session_id}")

@@ -34,7 +34,7 @@ export default function SettingsPage() {
             <GithubIcon className="w-6 h-6 text-foreground group-hover:text-primary transition-colors" />
           </div>
           <h2 className="text-xl font-semibold tracking-tight text-foreground mb-2">GitHub Integration</h2>
-          <p classNameas="text-sm text-muted-foreground leading-relaxed">
+          <p className="text-sm text-muted-foreground leading-relaxed">
             Connect your repositories so Atlas can understand your architecture, stack, and context without indexing source code.
           </p>
         </Link>

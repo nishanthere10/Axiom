@@ -221,7 +221,7 @@ export default function LeftSidebar({
                   </div>
                 ),
               }))}
-              onItemSelect={(item) => handleCompareClick(item.id)}
+              onItemSelect={(item: any) => handleCompareClick(item.id)}
             />
           )
         ) : (
@@ -262,7 +262,7 @@ export default function LeftSidebar({
                     </div>
                   ),
                 }))}
-                onItemSelect={(item) => handleSessionClick(item.id)}
+                onItemSelect={(item: any) => handleSessionClick(item.id)}
               />
               {loadingMore && (
                 <div className="flex justify-center py-2">

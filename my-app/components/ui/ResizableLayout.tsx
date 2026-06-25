@@ -7,11 +7,15 @@ import LeftSidebar from "./LeftSidebar";
 import RightPanel from "./RightPanel";
 import CenterCanvas from "./CenterCanvas";
 
+import type { SessionHistoryItem, SavedComparisonItem } from "@/types";
+
 interface ResizableLayoutProps {
   children: React.ReactNode;
   rightPanelContent?: React.ReactNode;
   rightPanelTitle?: string;
   hideRightPanel?: boolean;
+  initialSessions?: SessionHistoryItem[];
+  initialComparisons?: SavedComparisonItem[];
 }
 
 const SIDEBAR_OPEN_WIDTH  = 260;

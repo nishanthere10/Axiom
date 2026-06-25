@@ -13,11 +13,8 @@ index = None
 if settings.PINECONE_API_KEY:
     try:
         pc = Pinecone(api_key=settings.PINECONE_API_KEY)
-        index_names = [i.name for i in pc.list_indexes()]
-        if settings.PINECONE_INDEX in index_names:
-            index = pc.Index(settings.PINECONE_INDEX)
-        else:
-            logger.warning("Pinecone index '%s' not found. Available indexes: %s", settings.PINECONE_INDEX, index_names)
+        # Create the index object locally (doesn't make a blocking network call on import)
+        index = pc.Index(settings.PINECONE_INDEX)
     except Exception as e:
         logger.error("Error initializing Pinecone: %s", e, exc_info=True)
         pc = None

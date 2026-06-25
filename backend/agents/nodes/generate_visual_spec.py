@@ -2,12 +2,14 @@ import logging
 from typing import Any, Dict
 from pydantic import BaseModel
 import instructor
-from services.llm_provider import get_instructor_client
+from services.llm_provider import get_async_instructor_client
 from api.schemas.visuals import VisualSpecResponse
 
 logger = logging.getLogger(__name__)
 
-def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
+import asyncio
+
+async def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     Evaluates relevance and conditionally generates visual specifications (up to 3).
     Returns an empty array if visuals are unnecessary.
@@ -21,7 +23,7 @@ def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
     confidence = state.get("confidence", {})
     
     # We will use the structured output format with Instructor and Groq
-    client = get_instructor_client()
+    client = get_async_instructor_client()
     
     # Build a rich evidence summary for the prompt
     evidence_text = "\n".join(
@@ -70,11 +72,12 @@ def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
     
     try:
         # Use Nvidia Nemotron for visual architecture structures
-        response: VisualSpecResponse = client.chat.completions.create(
-            model="nvidia/nemotron-3-ultra-550b-a55b",
+        response: VisualSpecResponse = await client.chat.completions.create(
+            model="nvidia_nim/nemotron-3-ultra-550b-a55b",
             response_model=VisualSpecResponse,
             max_retries=3,
             parallel_tool_calls=False,
+            mode=instructor.Mode.TOOLS_STRICT,
             messages=[
                 {"role": "system", "content": prompt}
             ]
