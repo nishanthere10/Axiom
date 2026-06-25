@@ -232,8 +232,7 @@ class GitHubProvider(ContextProvider):
             try:
                 def delete_old():
                     pinecone_index.delete(
-                        filter={"user_id": {"$eq": user_id}, "repository": {"$eq": resource_id}},
-                        namespace=user_id
+                        filter={"user_id": {"$eq": user_id}, "repository": {"$eq": resource_id}}
                     )
                 await asyncio.to_thread(delete_old)
             except Exception:
@@ -285,7 +284,7 @@ class GitHubProvider(ContextProvider):
                 def do_upsert():
                     for i in range(0, len(vectors), 100):
                         batch = vectors[i:i+100]
-                        pinecone_index.upsert(vectors=batch, namespace=user_id)
+                        pinecone_index.upsert(vectors=batch)
                 await asyncio.to_thread(do_upsert)
                     
             return len(vectors) > 0
@@ -313,7 +312,6 @@ class GitHubProvider(ContextProvider):
             def do_query():
                 return pinecone_index.query(
                     vector=query_embedding,
-                    namespace=user_id,
                     top_k=8,
                     include_metadata=True,
                     filter=filter_dict

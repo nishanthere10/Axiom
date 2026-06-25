@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import { getSavedComparisons, SavedComparisonItem } from "@/lib/compare";
 
-import { useWorkspace } from "../../layout";
+import { useRightPanel } from "@/app/workspaces/[id]/layout";
+import { useWorkspace as useGlobalWorkspace } from "@/components/WorkspaceContext";
 
 export default function SavedComparisonsPage() {
   const { getToken } = useAuth();
@@ -13,7 +14,8 @@ export default function SavedComparisonsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { hideRightPanel } = useWorkspace();
+  const { hideRightPanel } = useRightPanel();
+  const { activeWorkspaceId } = useGlobalWorkspace();
 
   useEffect(() => {
     hideRightPanel();
@@ -66,7 +68,7 @@ export default function SavedComparisonsPage() {
             {comparisons.map((comp) => (
               <Link 
                 key={comp.id} 
-                href={`/compare?id=${comp.id}`}
+                href={activeWorkspaceId ? `/workspaces/${activeWorkspaceId}/compare?id=${comp.id}` : `/compare?id=${comp.id}`}
                 className="block p-6 border border-border bg-card rounded-md hover:border-primary/50 transition-colors group"
               >
                 <div className="flex flex-col h-full">

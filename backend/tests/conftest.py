@@ -139,5 +139,11 @@ def mock_auth():
 def test_client(mock_supabase, mock_llm, mock_pinecone, mock_embedding, mock_tavily, mock_auth):
     """FastAPI TestClient with all external dependencies mocked."""
     from main import app
+    from core.auth import get_current_user
+    
+    app.dependency_overrides[get_current_user] = lambda: "test_user_123"
+    
     with TestClient(app) as client:
         yield client
+        
+    app.dependency_overrides = {}

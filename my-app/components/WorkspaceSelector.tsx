@@ -45,9 +45,7 @@ export default function WorkspaceSelector() {
                 onClick={() => {
                   setActiveWorkspaceId(ws.id);
                   setIsOpen(false);
-                  if (pathname?.includes("/settings/integrations/github")) {
-                    router.push(`/workspaces/${ws.id}`);
-                  }
+                  router.push(`/workspaces/${ws.id}`);
                 }}
                 className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between hover:bg-surface-hover transition-colors ${
                   activeWorkspaceId === ws.id ? "bg-primary/10 text-primary font-medium" : "text-foreground"

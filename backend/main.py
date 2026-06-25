@@ -108,3 +108,6 @@ async def health_check():
     """
     return await run_all_checks()
 
+@app.get("/")
+async def root_health_check():
+    return {"status": "healthy", "engine": "Atlas Architectural Core"}

@@ -1,34 +1,44 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, use } from "react";
 import ResizableLayout from "@/components/ui/ResizableLayout";
+import { useWorkspace as useGlobalWorkspace } from "@/components/WorkspaceContext";
 
-type WorkspaceContextType = {
+type RightPanelContextType = {
   setRightPanel: (title: string) => void;
   hideRightPanel: () => void;
 };
 
-const WorkspaceContext = createContext<WorkspaceContextType>({
+const RightPanelContext = createContext<RightPanelContextType>({
   setRightPanel: () => {},
   hideRightPanel: () => {},
 });
 
-export function useWorkspace() {
-  return useContext(WorkspaceContext);
+export function useRightPanel() {
+  return useContext(RightPanelContext);
 }
 
 export default function WorkspaceLayout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: Promise<{ id: string }>;
 }) {
+  const unwrappedParams = use(params);
+  const workspaceId = unwrappedParams.id;
+
   const [rightPanelTitle, setRightPanelTitle] = useState("Panel");
   const [isHidden, setIsHidden] = useState(true);
-  const [mounted, setMounted] = useState(false);
+  
+  const { setActiveWorkspaceId } = useGlobalWorkspace();
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    // Sync the URL param with the global workspace context
+    if (workspaceId) {
+      setActiveWorkspaceId(workspaceId);
+    }
+  }, [workspaceId, setActiveWorkspaceId]);
 
   const setRightPanel = (title: string) => {
     setRightPanelTitle(title);
@@ -40,7 +50,7 @@ export default function WorkspaceLayout({
   };
 
   return (
-    <WorkspaceContext.Provider value={{ setRightPanel, hideRightPanel }}>
+    <RightPanelContext.Provider value={{ setRightPanel, hideRightPanel }}>
       <ResizableLayout
         rightPanelTitle={rightPanelTitle}
         hideRightPanel={isHidden}
@@ -48,6 +58,6 @@ export default function WorkspaceLayout({
       >
         {children}
       </ResizableLayout>
-    </WorkspaceContext.Provider>
+    </RightPanelContext.Provider>
   );
 }

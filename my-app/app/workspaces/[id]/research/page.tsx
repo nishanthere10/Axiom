@@ -11,8 +11,9 @@ import type { DecisionDocument as DecisionDocumentType, PollingState, ResearchRe
 import DecisionDocument, { AuxiliaryDocumentData } from "@/components/features/DecisionDocument";
 import ExportButton from "@/components/export/ExportButton";
 import SaveDecisionModal from "@/components/features/SaveDecisionModal";
+import { useWorkspace as useGlobalWorkspace } from "@/components/WorkspaceContext";
+import { useRightPanel } from "@/app/workspaces/[id]/layout";
 import { createPortal } from "react-dom";
-import { useWorkspace } from "../layout";
 
 type PageState = "idle" | "polling" | "done" | "failed";
 
@@ -21,7 +22,7 @@ function ResearchPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const { setRightPanel, hideRightPanel } = useWorkspace();
+  const { setRightPanel, hideRightPanel } = useRightPanel();
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
 
   const [pageState, setPageState] = useState<PageState>("idle");

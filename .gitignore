@@ -6,4 +6,7 @@ graphify-out/
 .env
 .env.*
 .env.local
- 
+
+# Markdown files in root except CLAUDE.md
+/*.md
+!/CLAUDE.md

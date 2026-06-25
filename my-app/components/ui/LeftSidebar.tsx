@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
+import { useWorkspace } from "@/components/WorkspaceContext";
 import { getSessionHistory, getSavedComparisons } from "@/lib/api";
 import type { SessionHistoryItem, SavedComparisonItem } from "@/types";
 import AnimatedList from "@/components/AnimatedList";
@@ -49,6 +50,7 @@ export default function LeftSidebar({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { activeWorkspaceId } = useWorkspace();
   const activeSessionId = searchParams.get("session_id");
   const activeComparisonId = searchParams.get("comparison_id");
 
@@ -128,9 +130,10 @@ export default function LeftSidebar({
     if (el.scrollTop + el.clientHeight >= el.scrollHeight - 50) loadMore();
   }, [loadMore, hasMore, loadingMore, isCompareMode]);
 
-  const handleNewAction = () => router.push(isCompareMode ? "/compare" : "/research");
-  const handleSessionClick = (sessionId: string) => router.push(`/research?session_id=${sessionId}`);
-  const handleCompareClick = (compId: string) => router.push(`/compare/saved?comparison_id=${compId}`);
+  const getWorkspacePrefix = () => activeWorkspaceId ? `/workspaces/${activeWorkspaceId}` : "";
+  const handleNewAction = () => router.push(isCompareMode ? `${getWorkspacePrefix()}/compare` : `${getWorkspacePrefix()}/research`);
+  const handleSessionClick = (sessionId: string) => router.push(`${getWorkspacePrefix()}/research?session_id=${sessionId}`);
+  const handleCompareClick = (compId: string) => router.push(`${getWorkspacePrefix()}/compare/saved?comparison_id=${compId}`);
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
@@ -275,7 +278,7 @@ export default function LeftSidebar({
 
       <div className="px-2 py-2 border-t border-border/50 shrink-0">
         <button
-          onClick={() => router.push("/settings")}
+          onClick={() => router.push(activeWorkspaceId ? `/workspaces/${activeWorkspaceId}/settings` : "/settings")}
           className={cn(
             "w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-surface-hover transition-colors text-muted-foreground hover:text-foreground text-xs font-medium",
             isCollapsed && "justify-center"

@@ -5,34 +5,36 @@ from core.auth import get_current_user, verify_workspace_access
 
 @pytest.mark.asyncio
 async def test_get_current_user_no_token():
-    mock_request = MagicMock()
-    mock_request.headers.get.return_value = None
+    mock_credentials = MagicMock()
+    mock_credentials.credentials = "InvalidFormatToken"
     with pytest.raises(HTTPException) as exc:
-        await get_current_user(mock_request)
+        await get_current_user(mock_credentials)
     assert exc.value.status_code == 401
-    assert "Authorization header missing" in exc.value.detail
+    assert "Invalid token format" in exc.value.detail
 
 @pytest.mark.asyncio
 async def test_get_current_user_invalid_format():
-    mock_request = MagicMock()
-    mock_request.headers.get.return_value = "BearerTokenWithoutSpace"
-    with pytest.raises(HTTPException) as exc:
-        await get_current_user(mock_request)
+    mock_credentials = MagicMock()
+    mock_credentials.credentials = "Another.Bad.Format"
+    with patch("core.auth._decode_jwt_header_unsafe", side_effect=Exception("Decode error")):
+        with pytest.raises(HTTPException) as exc:
+            await get_current_user(mock_credentials)
     assert exc.value.status_code == 401
 
 @pytest.mark.asyncio
 @patch("core.auth.jwt")
-@patch("core.auth.jwks_client")
-async def test_get_current_user_valid(mock_jwks, mock_jwt):
-    mock_request = MagicMock()
-    mock_request.headers.get.return_value = "Bearer valid_token"
+async def test_get_current_user_valid(mock_jwt):
+    mock_credentials = MagicMock()
+    mock_credentials.credentials = "valid_token"
     
-    mock_jwt.get_unverified_header.return_value = {"kid": "123"}
-    mock_jwks.get_signing_key_from_jwt.return_value.key = "public_key"
     mock_jwt.decode.return_value = {"sub": "user_abc123"}
     
-    user_id = await get_current_user(mock_request)
-    assert user_id == "user_abc123"
+    # We must patch _get_jwks_client so it doesn't try to fetch real keys
+    with patch("core.auth._get_jwks_client") as mock_jwks:
+        mock_jwks.return_value.get_signing_key_from_jwt.return_value.key = "public_key"
+        user_id = await get_current_user(mock_credentials)
+        assert user_id == "user_abc123"
+    
 
 @pytest.mark.asyncio
 @patch("core.auth.get_supabase")

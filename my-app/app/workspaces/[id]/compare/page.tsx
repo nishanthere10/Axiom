@@ -16,7 +16,7 @@ import MemoryUsed from "@/components/memory/MemoryUsed";
 
 import VisualRenderer from "@/components/visuals/VisualRenderer";
 import { createPortal } from "react-dom";
-import { useWorkspace } from "../layout";
+import { useRightPanel } from "@/app/workspaces/[id]/layout";
 import ExportButton from "@/components/export/ExportButton";
 
 function CompareContent() {
@@ -28,7 +28,7 @@ function CompareContent() {
   const [comparison, setComparison] = useState<Comparison | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const { setRightPanel, hideRightPanel } = useWorkspace();
+  const { setRightPanel, hideRightPanel } = useRightPanel();
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
