@@ -74,10 +74,13 @@ ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://atlas-cm90ourgm-nishant-s-projects-f9ed29a6.vercel.app",
+    "https://atlas-orcin-kappa.vercel.app",
     "https://atlas-1sr4.onrender.com"
 ]
 if prod_origin := os.environ.get("FRONTEND_ORIGIN"):
     ALLOWED_ORIGINS.append(prod_origin)
+
+app.add_middleware(StructlogMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -86,8 +89,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.add_middleware(StructlogMiddleware)
 
 # Register routers
 app.include_router(research_router, prefix="/research", tags=["research"])
