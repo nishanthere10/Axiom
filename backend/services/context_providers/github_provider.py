@@ -8,6 +8,7 @@ from services.clerk_service import get_github_oauth_token
 from services.embedding_provider import generate_embedding
 from services.pinecone_service import index as pinecone_index
 from services.llm_provider import generate_chat_completion
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ class GitHubProvider(ContextProvider):
             "X-GitHub-Api-Version": "2022-11-28"
         }
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     async def get_file_tree(self, token: str, owner: str, repo: str) -> Dict[str, Any]:
         """Returns .md files grouped by top-level folder."""
         headers = self._build_headers(token)
@@ -76,6 +78,7 @@ class GitHubProvider(ContextProvider):
             logger.error(f"[GITHUB TREE] Error: {e}")
             return {"folders": [], "total_count": 0}
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     async def fetch_markdown_files(
         self, token: str, owner: str, repo: str, 
         selected_folders: Optional[List[str]] = None,
@@ -149,6 +152,7 @@ class GitHubProvider(ContextProvider):
 
         return md_files
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     async def fetch_repo_metadata(self, token: str, owner: str, repo: str) -> str:
         headers = self._build_headers(token)
         try:
@@ -228,8 +232,7 @@ class GitHubProvider(ContextProvider):
             try:
                 def delete_old():
                     pinecone_index.delete(
-                        filter={"user_id": {"$eq": user_id}, "repository": {"$eq": resource_id}},
-                        namespace=user_id
+                        filter={"user_id": {"$eq": user_id}, "repository": {"$eq": resource_id}}
                     )
                 await asyncio.to_thread(delete_old)
             except Exception:
@@ -281,7 +284,7 @@ class GitHubProvider(ContextProvider):
                 def do_upsert():
                     for i in range(0, len(vectors), 100):
                         batch = vectors[i:i+100]
-                        pinecone_index.upsert(vectors=batch, namespace=user_id)
+                        pinecone_index.upsert(vectors=batch)
                 await asyncio.to_thread(do_upsert)
                     
             return len(vectors) > 0
@@ -309,7 +312,6 @@ class GitHubProvider(ContextProvider):
             def do_query():
                 return pinecone_index.query(
                     vector=query_embedding,
-                    namespace=user_id,
                     top_k=8,
                     include_metadata=True,
                     filter=filter_dict

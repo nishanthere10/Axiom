@@ -18,6 +18,7 @@ from api.routes.workspaces import router as workspaces_router
 from api.routes.decisions import router as decisions_router
 
 from middleware.rate_limit import limiter
+from middleware.logging_middleware import StructlogMiddleware
 from slowapi.errors import RateLimitExceeded
 from core.errors import AtlasError
 from services.health_service import run_all_checks
@@ -84,6 +85,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(StructlogMiddleware)
+
 # Register routers
 app.include_router(research_router, prefix="/research", tags=["research"])
 app.include_router(compare_router, prefix="/compare", tags=["compare"])
@@ -105,3 +108,6 @@ async def health_check():
     """
     return await run_all_checks()
 
+@app.get("/")
+async def root_health_check():
+    return {"status": "healthy", "engine": "Atlas Architectural Core"}

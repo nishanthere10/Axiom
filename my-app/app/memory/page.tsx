@@ -1,14 +1,21 @@
-import MemoryPanel from "@/components/memory/MemoryPanel";
-import ResizableLayout from "@/components/ui/ResizableLayout";
+"use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useWorkspace } from "@/components/WorkspaceContext";
 
-export default function MemoryPage() {
-  return (
-    <ResizableLayout>
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 relative">
-        {/* Simple background effect similar to research page */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-background via-background to-secondary/10 -z-10" />
-        <MemoryPanel />
-      </div>
-    </ResizableLayout>
-  );
+export default function MemoryRedirect() {
+  const router = useRouter();
+  const { activeWorkspaceId, isLoading } = useWorkspace();
+
+  useEffect(() => {
+    if (!isLoading) {
+      if (activeWorkspaceId) {
+        router.replace(`/workspaces/${activeWorkspaceId}/memory`);
+      } else {
+        router.replace("/workspaces");
+      }
+    }
+  }, [activeWorkspaceId, isLoading, router]);
+
+  return <div className="flex h-screen items-center justify-center text-muted-foreground text-sm">Redirecting to workspace...</div>;
 }

@@ -11,13 +11,21 @@ interface ResearchSessionItem {
   created_at: string;
 }
 
-import ResizableLayout from "@/components/ui/ResizableLayout";
+import { useRightPanel } from "@/app/workspaces/[id]/layout";
+import { useWorkspace as useGlobalWorkspace } from "@/components/WorkspaceContext";
 
 export default function SavedResearchPage() {
   const { getToken } = useAuth();
   const [sessions, setSessions] = useState<ResearchSessionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { hideRightPanel } = useRightPanel();
+  const { activeWorkspaceId } = useGlobalWorkspace();
+
+  useEffect(() => {
+    hideRightPanel();
+  }, [hideRightPanel]);
 
   useEffect(() => {
     async function loadSessions() {
@@ -36,7 +44,7 @@ export default function SavedResearchPage() {
   }, []);
 
   return (
-    <ResizableLayout hideRightPanel>
+    <>
       <div className="w-full space-y-8 animate-in fade-in duration-300">
         <div className="border-b border-border pb-4">
           <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/75 bg-clip-text">
@@ -89,7 +97,7 @@ export default function SavedResearchPage() {
             {sessions.map((session) => (
               <Link
                 key={session.id}
-                href={`/research?session_id=${session.id}`}
+                href={activeWorkspaceId ? `/workspaces/${activeWorkspaceId}/research?session_id=${session.id}` : `/research?session_id=${session.id}`}
                 className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-border bg-card p-6 shadow-sm transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <div className="space-y-4">
@@ -118,6 +126,6 @@ export default function SavedResearchPage() {
           </div>
         )}
       </div>
-    </ResizableLayout>
+    </>
   );
 }

@@ -4,9 +4,10 @@ import json
 import base64
 import jwt
 from jwt import PyJWKClient
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from core.config import settings
+from services.db import get_supabase
 
 logger = logging.getLogger(__name__)
 
@@ -183,3 +184,30 @@ async def get_current_user(
     except Exception as e:
         logger.error("AUTH UNEXPECTED: %s (type=%s)", e, type(e).__name__, exc_info=True)
         raise HTTPException(status_code=401, detail="Authentication failed")
+
+async def verify_workspace_access(
+    workspace_id: str | None = Header(default=None, alias="x-workspace-id"),
+    user_id: str = Depends(get_current_user)
+) -> str | None:
+    """
+    Verifies that the current user has access to the specified workspace.
+    Returns the workspace_id on success, or None if backward-compatibility fallback is used.
+    Raises 403 Forbidden if access is explicitly denied.
+    """
+    if not workspace_id:
+        # Fallback for two-phase rollout: allow requests without workspace_id
+        return None
+        
+    try:
+        supabase = get_supabase()
+        response = supabase.table("workspaces").select("id").eq("id", workspace_id).eq("user_id", user_id).limit(1).execute()
+        if not response.data:
+            logger.warning("AUTH REJECT: user_id=%s attempted to access workspace_id=%s without permission", user_id, workspace_id)
+            raise HTTPException(status_code=403, detail="Forbidden: You do not have access to this workspace")
+        return workspace_id
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Workspace verification error: %s", e)
+        raise HTTPException(status_code=500, detail="Error verifying workspace access")
+

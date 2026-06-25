@@ -9,7 +9,7 @@ from api.schemas.compare import (
 from services.cache_service import cache
 from services import compare_service
 from agents.graph.comparison_graph import comparison_graph
-from core.auth import get_current_user
+from core.auth import get_current_user, verify_workspace_access
 from middleware.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.post("", response_model=CompareResponse)
-@limiter.limit("3/minute")
-def submit_comparison(request: Request, body: CompareRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user), x_workspace_id: str | None = Header(default=None, alias="x-workspace-id")):
+@limiter.limit("5/minute")
+def submit_comparison(request: Request, body: CompareRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user), workspace_id: str | None = Depends(verify_workspace_access)):
     if body.session_a == body.session_b:
         raise HTTPException(status_code=400, detail="Cannot compare a session with itself.")
         
@@ -64,7 +64,7 @@ def submit_comparison(request: Request, body: CompareRequest, background_tasks: 
         impact_summary=imp,
         visuals=visuals,
         user_id=user_id,
-        workspace_id=x_workspace_id,
+        workspace_id=workspace_id,
     )
     
     # Queue persistent memory job
@@ -85,12 +85,17 @@ def submit_comparison(request: Request, body: CompareRequest, background_tasks: 
     )
 
 @router.get("/saved", response_model=SavedComparisonsResponse)
-def get_saved_comparisons(user_id: str = Depends(get_current_user), x_workspace_id: str | None = Header(default=None, alias="x-workspace-id")):
-    comps = compare_service.get_saved_comparisons(user_id=user_id, workspace_id=x_workspace_id)
+def get_saved_comparisons(user_id: str = Depends(get_current_user), workspace_id: str | None = Depends(verify_workspace_access)):
+    comps = compare_service.get_saved_comparisons(user_id=user_id, workspace_id=workspace_id)
     return SavedComparisonsResponse(comparisons=comps)
 
+@router.get("/history", response_model=SavedComparisonsResponse)
+def get_comparison_history(limit: int = 10, offset: int = 0, user_id: str = Depends(get_current_user), workspace_id: str | None = Depends(verify_workspace_access)):
+    comparisons = compare_service.get_recent_comparisons(limit=limit, offset=offset, user_id=user_id, workspace_id=workspace_id)
+    return SavedComparisonsResponse(comparisons=comparisons)
+
 @router.get("/{comparison_id}", response_model=GetComparisonResponse)
-def get_comparison(comparison_id: str, user_id: str = Depends(get_current_user), x_workspace_id: str | None = Header(default=None, alias="x-workspace-id")):
+def get_comparison(comparison_id: str, user_id: str = Depends(get_current_user), workspace_id: str | None = Depends(verify_workspace_access)):
     cache_key = f"comp_{user_id}_{comparison_id}"
     cached_comp = cache.get(cache_key)
     if cached_comp:

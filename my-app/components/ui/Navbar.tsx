@@ -10,6 +10,7 @@ import {
 import { Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import WorkspaceSelector from "@/components/WorkspaceSelector";
+import { useWorkspace } from "@/components/WorkspaceContext";
 
 const NAV_LINKS = [
   { href: "/research",           label: "Research",          exact: false },
@@ -21,16 +22,17 @@ const NAV_LINKS = [
 export default function Navbar() {
   const { isSignedIn } = useAuth();
   const pathname = usePathname();
+  const { activeWorkspaceId } = useWorkspace();
 
   return (
     <nav className="relative z-50 shrink-0 border-b border-border bg-surface/80 backdrop-blur-md supports-[backdrop-filter]:bg-surface/60">
-      <div className="flex h-12 items-center justify-between px-4 md:px-6">
+      <div className="flex h-16 items-center justify-between px-4 md:px-8">
 
         {/* Left: Brand + Nav Links */}
         <div className="flex items-center gap-6">
           <Link
             href="/"
-            className="flex items-center gap-2 text-sm font-semibold text-foreground tracking-tight hover:text-foreground/80 transition-colors"
+            className="flex items-center gap-2.5 text-base font-semibold text-foreground tracking-tight hover:text-foreground/80 transition-colors"
           >
             {/* Subtle accent dot */}
             <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
@@ -45,18 +47,21 @@ export default function Navbar() {
 
           <div className="hidden md:flex items-center gap-1">
             {NAV_LINKS.map(({ href, label, exact }) => {
+              const fullHref = activeWorkspaceId ? `/workspaces/${activeWorkspaceId}${href}` : "/workspaces";
+              // We check if the current pathname includes the base href, or exactly matches it
               const isActive = exact
-                ? pathname === href
-                : pathname === href || pathname?.startsWith(href + "?") || pathname?.startsWith(href + "/");
+                ? pathname === fullHref
+                : pathname === fullHref || pathname?.startsWith(fullHref + "?") || pathname?.startsWith(fullHref + "/");
               return (
                 <Link
                   key={href}
-                  href={href}
+                  href={fullHref}
                   className={cn(
-                    "relative px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200",
+                    "relative px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
                     isActive
                       ? "text-foreground bg-surface-hover"
-                      : "text-muted-foreground hover:text-foreground hover:bg-surface-hover/60"
+                      : "text-muted-foreground hover:text-foreground hover:bg-surface-hover/60",
+                    !activeWorkspaceId && "opacity-50 pointer-events-none"
                   )}
                 >
                   {label}
@@ -73,13 +78,6 @@ export default function Navbar() {
         <div className="flex items-center gap-4">
           {isSignedIn ? (
             <>
-              <Link
-                href="/settings/integrations/github"
-                className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-md hover:bg-surface-hover"
-                title="Settings"
-              >
-                <Settings className="w-4 h-4" />
-              </Link>
               <UserButton 
                 appearance={{
                   elements: {

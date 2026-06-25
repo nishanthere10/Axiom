@@ -45,6 +45,7 @@ Repository Context:
 {github_text if github_context else "No repository context provided."}
 
 Return a JSON object with exactly these keys. The value for each key MUST be a single Markdown string, NOT nested JSON objects or arrays:
+- "reasoning_scratchpad": A string where you actively debate the pros and cons, resolve contradictions in the evidence, and weigh tradeoffs mathematically against the repository context. This is your Chain-of-Thought space to reach the best conclusion. Do this FIRST.
 - "recommendation_context": A Markdown string containing a highly scannable recommendation. Use bullet points to highlight EXACTLY why this approach is best. Keep sentences very short and punchy. Include a brief code/config snippet if it helps clarity.
 - "tradeoffs": A Markdown string containing a rigorous but scannable analysis. Use bulleted lists for pros, cons, and risks. Highlight key metrics (latency, scale) in bold. No wall of text.
 - "alternatives": A Markdown string containing a bulleted list of 1-2 viable alternatives. Explain in one sentence when they apply and why they were rejected here.
@@ -71,6 +72,7 @@ Return only valid JSON. Ensure all strings correctly escape quotes and newlines 
     content = json.loads(response.choices[0].message.content)
 
     return {
+        "reasoning": enforce_string(content.get("reasoning_scratchpad", "No reasoning provided.")),
         "recommendation": enforce_string(content.get("recommendation_context", "Could not generate recommendation.")),
         "tradeoffs": enforce_string(content.get("tradeoffs", "Could not generate tradeoffs.")),
         "alternatives": enforce_string(content.get("alternatives", "Could not generate alternatives.")),

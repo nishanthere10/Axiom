@@ -9,6 +9,7 @@ import { submitResearch } from "@/lib/api";
 import { ResearchResponse } from "@/types";
 import { ArrowRight, Lightbulb } from "lucide-react";
 import Loader from "@/components/loader";
+import { motion, AnimatePresence } from "framer-motion";
 
 const SUGGESTED_PROMPTS = [
   "Design a high-write event logging system using Kafka and ClickHouse.",
@@ -83,81 +84,90 @@ export default function QuestionInput({ onSubmitted }: Props) {
     <div className="w-full max-w-2xl mx-auto">
       {/* Heading */}
       <div className="mb-8 text-center space-y-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-sm bg-surface border border-border text-primary text-xs font-mono tracking-widest uppercase mb-3">
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
-          </span>
-          Ready
-        </div>
-        <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-          Atlas Research
+        <h1 className="text-2xl md:text-3xl font-medium text-foreground tracking-tight">
+          What are you researching today?
         </h1>
         <p className="text-sm text-muted-foreground">
-          Ask a technical question. Get a structured engineering decision.
+          Ask a complex technical question to get a structured engineering decision.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-        {/* Textarea — grows with content */}
-        <div className="relative group">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {/* Sleek Textarea Wrapper */}
+        <div className="relative group rounded-2xl border border-border/60 bg-surface/40 backdrop-blur-sm shadow-sm hover:border-border/80 hover:bg-surface/80 focus-within:!bg-surface focus-within:shadow-md focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all duration-300">
           <textarea
             id="question-input"
             {...register("question")}
-            rows={4}
+            rows={3}
             placeholder="e.g. Should I use PostgreSQL or MongoDB for a high-write event log system?"
             disabled={isSubmitting}
-            style={{ resize: "vertical", minHeight: "120px", maxHeight: "400px" }}
-            className="w-full rounded-lg bg-surface border border-border text-foreground text-sm placeholder:text-muted-foreground p-4 pr-16 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 disabled:opacity-50 transition-all duration-200 font-mono leading-relaxed"
+            style={{ resize: "none", minHeight: "100px", maxHeight: "400px" }}
+            className="w-full bg-transparent text-foreground text-sm placeholder:text-muted-foreground/70 p-4 pb-14 focus:outline-none disabled:opacity-50 transition-all duration-200 leading-relaxed"
+            onInput={(e) => {
+              const target = e.target as HTMLTextAreaElement;
+              target.style.height = "auto";
+              target.style.height = `${target.scrollHeight}px`;
+            }}
           />
-          {/* Character counter with visual warning */}
-          {(() => {
-            const len = questionValue?.length ?? 0;
-            const counterColor =
-              len >= 950 ? "text-destructive-foreground" :
-              len >= 800 ? "text-amber-500" :
-              "text-muted-foreground";
-            return (
-              <span className={`absolute bottom-3 right-3 text-xs tabular-nums font-mono select-none transition-colors duration-200 ${counterColor}`}>
-                {len}/1000
-              </span>
-            );
-          })()}
+          
+          <div className="absolute bottom-3 right-3 flex items-center gap-4">
+            {/* Character counter with visual warning */}
+            {(() => {
+              const len = questionValue?.length ?? 0;
+              const counterColor =
+                len >= 950 ? "text-destructive-foreground" :
+                len >= 800 ? "text-amber-500" :
+                "text-muted-foreground/40";
+              return (
+                <span className={`text-xs tabular-nums font-mono select-none transition-colors duration-200 ${counterColor}`}>
+                  {len}/1000
+                </span>
+              );
+            })()}
+
+            {/* Submit Icon Button */}
+            <button
+              id="submit-research-btn"
+              type="submit"
+              disabled={isSubmitting || !questionValue?.trim() || !!errors.question}
+              className="flex items-center justify-center p-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:bg-surface-hover disabled:text-muted-foreground transition-all duration-200"
+            >
+              {isSubmitting ? (
+                <div className="w-5 h-5 relative flex items-center justify-center overflow-hidden">
+                  <Loader scale={0.4} color="currentColor" />
+                </div>
+              ) : (
+                <ArrowRight className="w-5 h-5" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Validation errors */}
-        {errors.question && (
-          <p className="text-xs text-destructive-foreground bg-destructive/10 border border-destructive/30 px-3 py-2 rounded-md" role="alert">
-            {errors.question.message}
-          </p>
-        )}
-        {apiError && (
-          <p className="text-xs text-destructive-foreground bg-destructive/10 border border-destructive/30 px-3 py-2 rounded-md" role="alert">
-            {apiError}
-          </p>
-        )}
-
-        {/* Submit */}
-        <button
-          id="submit-research-btn"
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 focus:ring-offset-background disabled:opacity-50 transition-all duration-200"
-        >
-          {isSubmitting ? (
-            <>
-              <div className="w-4 h-4 relative flex items-center justify-center overflow-hidden">
-                <Loader scale={0.3} color="currentColor" />
-              </div>
-              Submitting…
-            </>
-          ) : (
-            <>
-              Generate Decision
-              <ArrowRight className="w-4 h-4" />
-            </>
+        <AnimatePresence>
+          {errors.question && (
+            <motion.p 
+              initial={{ opacity: 0, y: -10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              exit={{ opacity: 0, y: -10 }}
+              className="text-xs text-destructive-foreground bg-destructive/10 border border-destructive/30 px-4 py-2.5 rounded-lg" 
+              role="alert"
+            >
+              {errors.question.message}
+            </motion.p>
           )}
-        </button>
+          {apiError && (
+            <motion.p 
+              initial={{ opacity: 0, y: -10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              exit={{ opacity: 0, y: -10 }}
+              className="text-xs text-destructive-foreground bg-destructive/10 border border-destructive/30 px-4 py-2.5 rounded-lg" 
+              role="alert"
+            >
+              {apiError}
+            </motion.p>
+          )}
+        </AnimatePresence>
       </form>
 
       {/* Zero State Prompts */}
@@ -176,7 +186,7 @@ export default function QuestionInput({ onSubmitted }: Props) {
                   setValue("question", prompt, { shouldValidate: true });
                   handleSubmit(onSubmit)();
                 }}
-                className="text-left p-4 rounded-xl bg-surface border border-border/50 hover:border-primary/40 hover:bg-surface-hover hover:shadow-[0_0_15px_rgba(59,130,246,0.1)] transition-all duration-300 group"
+                className="text-left p-4 rounded-xl bg-surface/30 backdrop-blur-sm border border-border/40 hover:border-primary/30 hover:bg-surface-hover/80 hover:shadow-[0_8px_20px_rgba(0,0,0,0.12)] hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300 group"
               >
                 <p className="text-xs text-muted-foreground group-hover:text-foreground font-medium leading-relaxed transition-colors">
                   "{prompt}"

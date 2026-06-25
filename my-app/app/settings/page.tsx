@@ -1,6 +1,21 @@
-import { redirect } from "next/navigation";
+"use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useWorkspace } from "@/components/WorkspaceContext";
 
-// Redirect /settings directly to the GitHub integration page as the default
-export default function SettingsPage() {
-  redirect("/settings/integrations/github");
+export default function SettingsRedirect() {
+  const router = useRouter();
+  const { activeWorkspaceId, isLoading } = useWorkspace();
+
+  useEffect(() => {
+    if (!isLoading) {
+      if (activeWorkspaceId) {
+        router.replace(`/workspaces/${activeWorkspaceId}/settings`);
+      } else {
+        router.replace("/workspaces");
+      }
+    }
+  }, [activeWorkspaceId, isLoading, router]);
+
+  return <div className="flex h-screen items-center justify-center text-muted-foreground text-sm">Redirecting to workspace...</div>;
 }

@@ -8,6 +8,8 @@ import asyncio
 from core.auth import get_current_user
 from services.db import supabase
 from services.context_providers.github_provider import github_provider
+from middleware.rate_limit import limiter
+from fastapi import Request
 
 router = APIRouter(prefix="/github", tags=["github"])
 logger = logging.getLogger(__name__)
@@ -182,7 +184,8 @@ async def sync_repo_background(user_id: str, repository_id: str, owner: str, rep
         }).eq("user_id", user_id).eq("repository_id", repository_id).execute()
 
 @router.post("/repositories/{repository_id}/sync")
-async def sync_repository(repository_id: str, req: SyncRepoRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user)):
+@limiter.limit("5/hour")
+async def sync_repository(request: Request, repository_id: str, req: SyncRepoRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user)):
     """
     Trigger a background sync for selected folders in a repository.
     """

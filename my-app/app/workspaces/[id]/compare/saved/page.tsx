@@ -5,13 +5,21 @@ import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import { getSavedComparisons, SavedComparisonItem } from "@/lib/compare";
 
-import ResizableLayout from "@/components/ui/ResizableLayout";
+import { useRightPanel } from "@/app/workspaces/[id]/layout";
+import { useWorkspace as useGlobalWorkspace } from "@/components/WorkspaceContext";
 
 export default function SavedComparisonsPage() {
   const { getToken } = useAuth();
   const [comparisons, setComparisons] = useState<SavedComparisonItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { hideRightPanel } = useRightPanel();
+  const { activeWorkspaceId } = useGlobalWorkspace();
+
+  useEffect(() => {
+    hideRightPanel();
+  }, [hideRightPanel]);
 
   useEffect(() => {
     async function loadComparisons() {
@@ -34,7 +42,7 @@ export default function SavedComparisonsPage() {
   }, []);
 
   return (
-    <ResizableLayout hideRightPanel>
+    <>
       <div className="w-full space-y-8 animate-in fade-in duration-300">
         <div className="border-b border-border pb-4">
           <h1 className="text-2xl font-bold">Saved Comparisons</h1>
@@ -60,7 +68,7 @@ export default function SavedComparisonsPage() {
             {comparisons.map((comp) => (
               <Link 
                 key={comp.id} 
-                href={`/compare?id=${comp.id}`}
+                href={activeWorkspaceId ? `/workspaces/${activeWorkspaceId}/compare?id=${comp.id}` : `/compare?id=${comp.id}`}
                 className="block p-6 border border-border bg-card rounded-md hover:border-primary/50 transition-colors group"
               >
                 <div className="flex flex-col h-full">
@@ -80,6 +88,6 @@ export default function SavedComparisonsPage() {
           </div>
         )}
       </div>
-    </ResizableLayout>
+    </>
   );
 }
