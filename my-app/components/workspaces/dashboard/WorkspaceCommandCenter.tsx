@@ -13,6 +13,7 @@ import {
   Activity,
   Plus
 } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 export function WorkspaceCommandCenter({ dashboardData, workspaceId }: { dashboardData: any, workspaceId: string }) {
   // 🛑 DEFENSIVE GUARD: Ensure data exists before checking .length
@@ -103,7 +104,7 @@ function WorkspaceHeader({ workspace, stats }: { workspace: any, stats: any }) {
           </div>
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>{Number(Object.values(stats.decision_summary || {}).reduce((a: any, b: any) => Number(a) + Number(b), 0))} Decisions</span>
+            <span>{String(Object.values(stats.decision_summary || {}).reduce((a: any, b: any) => Number(a) + Number(b), 0))} Decisions</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Activity className="w-3.5 h-3.5" />
@@ -119,88 +120,86 @@ function WorkspaceHeader({ workspace, stats }: { workspace: any, stats: any }) {
   );
 }
 
-function CardWrapper({ children, className = "" }: { children: React.ReactNode, className?: string }) {
-  return (
-    <div className={`w-full bg-surface border border-border rounded-lg p-5 flex flex-col ${className}`}>
-      {children}
-    </div>
-  );
-}
+// Removed CardWrapper in favor of Shadcn Card
 
 function DecisionTimeline({ decisions, workspaceId }: { decisions: any[], workspaceId: string }) {
   return (
-    <CardWrapper>
-      <div className="flex items-center gap-2 mb-4 border-b border-border pb-3">
+    <Card className="w-full flex flex-col h-full bg-surface border-border">
+      <CardHeader className="flex flex-row items-center gap-2 pb-3 mb-4 border-b border-border/50 space-y-0 px-5 pt-5">
         <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
-        <h2 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Decision Timeline</h2>
-      </div>
+        <CardTitle className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Decision Timeline</CardTitle>
+      </CardHeader>
       
-      {decisions.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground font-mono">
-          No decisions recorded.
-        </div>
-      ) : (
-        <div className="flex flex-col gap-0">
-          {decisions.map((d, idx) => (
-            <div key={idx} className="flex gap-4 py-3 border-b border-border/50 last:border-0 hover:bg-surface-hover/50 transition-colors px-2 -mx-2 rounded-md">
-              <div className="w-20 shrink-0 text-xs font-mono text-muted-foreground pt-0.5">
-                {new Date(d.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <Link href={`/workspaces/${workspaceId}/decisions/${d.id}`} className="text-sm font-medium text-foreground hover:underline block truncate mb-1.5">
-                  {d.title}
-                </Link>
-                <div className="flex flex-wrap gap-2 items-center text-[11px] font-mono">
-                  <span className={`px-1.5 py-0.5 rounded-sm capitalize border ${
-                    d.status === 'implemented' ? 'text-success border-success/30 bg-success/10' :
-                    d.status === 'approved' ? 'text-primary border-primary/30 bg-primary/10' :
-                    d.status === 'rejected' ? 'text-destructive border-destructive/30 bg-destructive/10' :
-                    'text-yellow-500 border-yellow-500/30 bg-yellow-500/10'
-                  }`}>
-                    {d.status || 'proposed'}
-                  </span>
-                  {d.confidence && (
-                    <span className="text-muted-foreground flex items-center gap-1">
-                      cnf:{d.confidence}%
+      <CardContent className="flex-1 flex flex-col px-5 pb-5 pt-0">
+        {decisions.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground font-mono">
+            No decisions recorded.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-0">
+            {decisions.map((d, idx) => (
+              <div key={idx} className="flex gap-4 py-3 border-b border-border/50 last:border-0 hover:bg-surface-hover/50 transition-colors px-2 -mx-2 rounded-md">
+                <div className="w-20 shrink-0 text-xs font-mono text-muted-foreground pt-0.5">
+                  {new Date(d.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <Link href={`/workspaces/${workspaceId}/decisions/${d.id}`} className="text-sm font-medium text-foreground hover:underline block truncate mb-1.5">
+                    {d.title}
+                  </Link>
+                  <div className="flex flex-wrap gap-2 items-center text-[11px] font-mono">
+                    <span className={`px-1.5 py-0.5 rounded-sm capitalize border ${
+                      d.status === 'implemented' ? 'text-success border-success/30 bg-success/10' :
+                      d.status === 'approved' ? 'text-primary border-primary/30 bg-primary/10' :
+                      d.status === 'rejected' ? 'text-destructive border-destructive/30 bg-destructive/10' :
+                      'text-yellow-500 border-yellow-500/30 bg-yellow-500/10'
+                    }`}>
+                      {d.status || 'proposed'}
                     </span>
-                  )}
+                    {d.confidence && (
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        cnf:{d.confidence}%
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </CardWrapper>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
 function DecisionStatusSummary({ summary }: { summary: any }) {
   return (
-    <CardWrapper>
-      <div className="flex items-center gap-2 mb-4 border-b border-border pb-3">
+    <Card className="w-full flex flex-col h-full bg-surface border-border">
+      <CardHeader className="flex flex-row items-center gap-2 pb-3 mb-4 border-b border-border/50 space-y-0 px-5 pt-5">
         <Activity className="w-4 h-4 text-muted-foreground" />
-        <h3 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Status Overview</h3>
-      </div>
-      <div className="grid grid-cols-2 gap-2 text-sm mt-auto">
-        <div className="flex justify-between items-center bg-background p-2 rounded-md border border-border">
-          <span className="text-muted-foreground text-xs font-medium">Proposed</span>
-          <span className="font-mono">{summary.proposed}</span>
+        <CardTitle className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Status Overview</CardTitle>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col px-5 pb-5 pt-0">
+        <div className="grid grid-cols-2 gap-2 text-sm mt-auto">
+          <div className="flex justify-between items-center bg-background p-2 rounded-md border border-border">
+            <span className="text-muted-foreground text-xs font-medium">Proposed</span>
+            <span className="font-mono">{summary.proposed}</span>
+          </div>
+          <div className="flex justify-between items-center bg-background p-2 rounded-md border border-border">
+            <span className="text-primary text-xs font-medium">Approved</span>
+            <span className="font-mono text-primary">{summary.approved}</span>
+          </div>
+          <div className="flex justify-between items-center bg-background p-2 rounded-md border border-border">
+            <span className="text-success text-xs font-medium">Implemented</span>
+            <span className="font-mono text-success">{summary.implemented}</span>
+          </div>
+          <div className="flex justify-between items-center bg-background p-2 rounded-md border border-border">
+            <span className="text-destructive text-xs font-medium">Rejected</span>
+            <span className="font-mono text-destructive">{summary.rejected}</span>
+          </div>
         </div>
-        <div className="flex justify-between items-center bg-background p-2 rounded-md border border-border">
-          <span className="text-primary text-xs font-medium">Approved</span>
-          <span className="font-mono text-primary">{summary.approved}</span>
-        </div>
-        <div className="flex justify-between items-center bg-background p-2 rounded-md border border-border">
-          <span className="text-success text-xs font-medium">Implemented</span>
-          <span className="font-mono text-success">{summary.implemented}</span>
-        </div>
-        <div className="flex justify-between items-center bg-background p-2 rounded-md border border-border">
-          <span className="text-destructive text-xs font-medium">Rejected</span>
-          <span className="font-mono text-destructive">{summary.rejected}</span>
-        </div>
-      </div>
-    </CardWrapper>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -209,157 +208,167 @@ function WorkspaceInsights({ insights }: { insights: any }) {
     return null;
   }
   return (
-    <CardWrapper>
-      <div className="flex items-center gap-2 mb-4 border-b border-border pb-3">
+    <Card className="w-full flex flex-col h-full bg-surface border-border">
+      <CardHeader className="flex flex-row items-center gap-2 pb-3 mb-4 border-b border-border/50 space-y-0 px-5 pt-5">
         <Lightbulb className="w-4 h-4 text-muted-foreground" />
-        <h3 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Insights</h3>
-      </div>
-      <div className="flex flex-col gap-3 text-sm mt-auto">
-        {insights.most_common_decision_category && (
-          <div className="flex justify-between items-start border-b border-border/50 pb-2 last:border-0 last:pb-0">
-            <span className="text-muted-foreground text-xs">Primary Category</span>
-            <span className="font-medium text-foreground text-right">{insights.most_common_decision_category}</span>
-          </div>
-        )}
-        {insights.most_referenced_repository && (
-          <div className="flex justify-between items-start border-b border-border/50 pb-2 last:border-0 last:pb-0">
-            <span className="text-muted-foreground text-xs">Top Repository</span>
-            <span className="font-mono text-xs text-foreground text-right">{insights.most_referenced_repository}</span>
-          </div>
-        )}
-        {insights.most_active_research_area && (
-          <div className="flex justify-between items-start pb-2 last:pb-0">
-            <span className="text-muted-foreground text-xs">Active Focus</span>
-            <span className="font-medium text-foreground text-right">{insights.most_active_research_area}</span>
-          </div>
-        )}
-      </div>
-    </CardWrapper>
+        <CardTitle className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Insights</CardTitle>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col px-5 pb-5 pt-0">
+        <div className="flex flex-col gap-3 text-sm mt-auto">
+          {insights.most_common_decision_category && (
+            <div className="flex justify-between items-start border-b border-border/50 pb-2 last:border-0 last:pb-0">
+              <span className="text-muted-foreground text-xs">Primary Category</span>
+              <span className="font-medium text-foreground text-right">{insights.most_common_decision_category}</span>
+            </div>
+          )}
+          {insights.most_referenced_repository && (
+            <div className="flex justify-between items-start border-b border-border/50 pb-2 last:border-0 last:pb-0">
+              <span className="text-muted-foreground text-xs">Top Repository</span>
+              <span className="font-mono text-xs text-foreground text-right">{insights.most_referenced_repository}</span>
+            </div>
+          )}
+          {insights.most_active_research_area && (
+            <div className="flex justify-between items-start pb-2 last:pb-0">
+              <span className="text-muted-foreground text-xs">Active Focus</span>
+              <span className="font-medium text-foreground text-right">{insights.most_active_research_area}</span>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
 function RepositoryPanel({ repos, summary, workspaceId }: { repos: any[], summary: any, workspaceId: string }) {
   return (
-    <CardWrapper>
-      <div className="flex justify-between items-center mb-4 border-b border-border pb-3">
+    <Card className="w-full flex flex-col h-full bg-surface border-border">
+      <CardHeader className="flex flex-row justify-between items-center pb-3 mb-4 border-b border-border/50 space-y-0 px-5 pt-5">
         <div className="flex items-center gap-2">
           <GitBranch className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Repositories</h3>
+          <CardTitle className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Repositories</CardTitle>
         </div>
         <span className="text-xs font-mono bg-background px-2 py-0.5 rounded-sm border border-border">{summary.connected_repos}</span>
-      </div>
+      </CardHeader>
       
-      {repos.length === 0 ? (
-        <p className="text-sm text-muted-foreground font-mono m-auto">No repositories connected.</p>
-      ) : (
-        <div className="flex flex-col gap-2 mt-auto">
-          {repos.map((r, i) => (
-            <div key={i} className="flex justify-between items-center p-2 rounded-md bg-background border border-border hover:bg-surface-hover transition-colors">
-              <div className="font-mono text-xs truncate mr-2">{r.repository_name}</div>
-              <div className="text-[10px] uppercase text-muted-foreground shrink-0">
-                {new Date(r.last_synced_at).toLocaleDateString()}
+      <CardContent className="flex-1 flex flex-col px-5 pb-5 pt-0">
+        {repos.length === 0 ? (
+          <p className="text-sm text-muted-foreground font-mono m-auto">No repositories connected.</p>
+        ) : (
+          <div className="flex flex-col gap-2 mt-auto">
+            {repos.map((r, i) => (
+              <div key={i} className="flex justify-between items-center p-2 rounded-md bg-background border border-border hover:bg-surface-hover transition-colors">
+                <div className="font-mono text-xs truncate mr-2">{r.repository_name}</div>
+                <div className="text-[10px] uppercase text-muted-foreground shrink-0">
+                  {new Date(r.last_synced_at).toLocaleDateString()}
+                </div>
               </div>
-            </div>
-          ))}
-          {summary.connected_repos > 5 && (
-            <Link href={`/workspaces/${workspaceId}/settings`} className="text-xs font-medium text-muted-foreground hover:text-foreground mt-2 transition-colors">
-              View all repositories &rarr;
-            </Link>
-          )}
-        </div>
-      )}
-    </CardWrapper>
+            ))}
+            {summary.connected_repos > 5 && (
+              <Link href={`/workspaces/${workspaceId}/settings`} className="text-xs font-medium text-muted-foreground hover:text-foreground mt-2 transition-colors">
+                View all repositories &rarr;
+              </Link>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
 function RecentResearchPanel({ research, summary, workspaceId }: { research: any[], summary: any, workspaceId: string }) {
   return (
-    <CardWrapper>
-      <div className="flex justify-between items-center mb-4 border-b border-border pb-3">
+    <Card className="w-full flex flex-col h-full bg-surface border-border">
+      <CardHeader className="flex flex-row justify-between items-center pb-3 mb-4 border-b border-border/50 space-y-0 px-5 pt-5">
         <div className="flex items-center gap-2">
           <FileText className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Research</h3>
+          <CardTitle className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Research</CardTitle>
         </div>
         <span className="text-xs font-mono bg-background px-2 py-0.5 rounded-sm border border-border">{summary.total_sessions}</span>
-      </div>
+      </CardHeader>
       
-      {research.length === 0 ? (
-        <p className="text-sm text-muted-foreground font-mono m-auto">No recent research.</p>
-      ) : (
-        <div className="flex flex-col gap-2 mt-auto">
-          {research.map((r, i) => (
-            <Link key={i} href={`/workspaces/${workspaceId}/research/${r.id}`} className="flex flex-col p-2.5 rounded-md bg-background border border-border hover:bg-surface-hover transition-colors">
-              <div className="font-medium text-sm text-foreground truncate">{r.question || 'Untitled Session'}</div>
-              <div className="text-[10px] font-mono text-muted-foreground mt-1 flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {new Date(r.created_at).toLocaleDateString()}
-              </div>
-            </Link>
-          ))}
-          {summary.total_sessions > 5 && (
-            <Link href={`/workspaces/${workspaceId}/research`} className="text-xs font-medium text-muted-foreground hover:text-foreground mt-2 transition-colors">
-              View all research &rarr;
-            </Link>
-          )}
-        </div>
-      )}
-    </CardWrapper>
+      <CardContent className="flex-1 flex flex-col px-5 pb-5 pt-0">
+        {research.length === 0 ? (
+          <p className="text-sm text-muted-foreground font-mono m-auto">No recent research.</p>
+        ) : (
+          <div className="flex flex-col gap-2 mt-auto">
+            {research.map((r, i) => (
+              <Link key={i} href={`/workspaces/${workspaceId}/research/${r.id}`} className="flex flex-col p-2.5 rounded-md bg-background border border-border hover:bg-surface-hover transition-colors">
+                <div className="font-medium text-sm text-foreground truncate">{r.question || 'Untitled Session'}</div>
+                <div className="text-[10px] font-mono text-muted-foreground mt-1 flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {new Date(r.created_at).toLocaleDateString()}
+                </div>
+              </Link>
+            ))}
+            {summary.total_sessions > 5 && (
+              <Link href={`/workspaces/${workspaceId}/research`} className="text-xs font-medium text-muted-foreground hover:text-foreground mt-2 transition-colors">
+                View all research &rarr;
+              </Link>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
 function ComparisonPanel({ comparisons, summary, workspaceId }: { comparisons: any[], summary: any, workspaceId: string }) {
   if (comparisons.length === 0) return null;
   return (
-    <CardWrapper>
-      <div className="flex justify-between items-center mb-4 border-b border-border pb-3">
+    <Card className="w-full flex flex-col h-full bg-surface border-border">
+      <CardHeader className="flex flex-row justify-between items-center pb-3 mb-4 border-b border-border/50 space-y-0 px-5 pt-5">
         <div className="flex items-center gap-2">
           <Layers className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Comparisons</h3>
+          <CardTitle className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Comparisons</CardTitle>
         </div>
         <span className="text-xs font-mono bg-background px-2 py-0.5 rounded-sm border border-border">{summary.total_comparisons}</span>
-      </div>
+      </CardHeader>
       
-      <div className="flex flex-col gap-2 mt-auto">
-        {comparisons.map((c, i) => (
-          <Link key={i} href={`/workspaces/${workspaceId}/compare/${c.id}`} className="flex flex-col p-2.5 rounded-md bg-background border border-border hover:bg-surface-hover transition-colors">
-            <div className="font-mono text-xs text-foreground truncate">CMP-{c.id.substring(0, 8).toUpperCase()}</div>
-            <div className="text-[10px] font-mono text-muted-foreground mt-1 flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {new Date(c.created_at).toLocaleDateString()}
-            </div>
-          </Link>
-        ))}
-      </div>
-    </CardWrapper>
+      <CardContent className="flex-1 flex flex-col px-5 pb-5 pt-0">
+        <div className="flex flex-col gap-2 mt-auto">
+          {comparisons.map((c, i) => (
+            <Link key={i} href={`/workspaces/${workspaceId}/compare/${c.id}`} className="flex flex-col p-2.5 rounded-md bg-background border border-border hover:bg-surface-hover transition-colors">
+              <div className="font-mono text-xs text-foreground truncate">CMP-{c.id.substring(0, 8).toUpperCase()}</div>
+              <div className="text-[10px] font-mono text-muted-foreground mt-1 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {new Date(c.created_at).toLocaleDateString()}
+              </div>
+            </Link>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
 function MemoryPanel({ summary, workspaceId }: { summary: any, workspaceId: string }) {
   return (
-    <CardWrapper>
-      <div className="flex items-center gap-2 mb-4 border-b border-border pb-3">
+    <Card className="w-full flex flex-col h-full bg-surface border-border">
+      <CardHeader className="flex flex-row items-center gap-2 pb-3 mb-4 border-b border-border/50 space-y-0 px-5 pt-5">
         <Database className="w-4 h-4 text-muted-foreground" />
-        <h3 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Memory Stats</h3>
-      </div>
+        <CardTitle className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Memory Stats</CardTitle>
+      </CardHeader>
       
-      <div className="flex flex-col gap-2 text-sm mt-auto">
-        <div className="flex justify-between items-center p-2 rounded-md bg-background border border-border">
-          <span className="text-muted-foreground text-xs font-medium">Global</span>
-          <span className="font-mono text-xs">{summary.global_memories}</span>
+      <CardContent className="flex-1 flex flex-col px-5 pb-5 pt-0">
+        <div className="flex flex-col gap-2 text-sm mt-auto">
+          <div className="flex justify-between items-center p-2 rounded-md bg-background border border-border">
+            <span className="text-muted-foreground text-xs font-medium">Global</span>
+            <span className="font-mono text-xs">{summary.global_memories}</span>
+          </div>
+          <div className="flex justify-between items-center p-2 rounded-md bg-background border border-border">
+            <span className="text-muted-foreground text-xs font-medium">Workspace</span>
+            <span className="font-mono text-xs text-primary">{summary.workspace_memories}</span>
+          </div>
+          <div className="flex justify-between items-center p-2 rounded-md bg-background border border-border">
+            <span className="text-muted-foreground text-xs font-medium">Pinned</span>
+            <span className="font-mono text-xs">{summary.pinned_memories}</span>
+          </div>
         </div>
-        <div className="flex justify-between items-center p-2 rounded-md bg-background border border-border">
-          <span className="text-muted-foreground text-xs font-medium">Workspace</span>
-          <span className="font-mono text-xs text-primary">{summary.workspace_memories}</span>
-        </div>
-        <div className="flex justify-between items-center p-2 rounded-md bg-background border border-border">
-          <span className="text-muted-foreground text-xs font-medium">Pinned</span>
-          <span className="font-mono text-xs">{summary.pinned_memories}</span>
-        </div>
-      </div>
-      
-      <Link href={`/workspaces/${workspaceId}/memory`} className="w-full mt-4 py-2 rounded-md border border-border text-center text-xs font-medium hover:bg-surface-hover transition-colors">
-        Manage Memory
-      </Link>
-    </CardWrapper>
+        
+        <Link href={`/workspaces/${workspaceId}/memory`} className="w-full mt-4 py-2 rounded-md border border-border text-center text-xs font-medium hover:bg-surface-hover transition-colors">
+          Manage Memory
+        </Link>
+      </CardContent>
+    </Card>
   );
 }

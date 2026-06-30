@@ -37,6 +37,7 @@ def submit_research(request: Request, body: ResearchRequest, background_tasks: B
         question=body.question,
         force_refresh=body.force_refresh,
         user_id=user_id,
+        workspace_id=workspace_id,
     )
 
     return ResearchResponse(

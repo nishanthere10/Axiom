@@ -8,7 +8,7 @@ import {
   DecisionListResponse,
 } from "@/types";
 
-const RAW_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "https://atlas-1sr4.onrender.com";
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || (process.env.NODE_ENV === "production" ? "https://atlas-1sr4.onrender.com" : "http://127.0.0.1:8000");
 export const API_BASE_URL = RAW_API_URL.replace(/\/$/, "");
 
 export async function apiFetch<T>(

@@ -22,7 +22,7 @@ export function SystemStatusBanner() {
     
     const checkHealth = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://atlas-1sr4.onrender.com";
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "production" ? "https://atlas-1sr4.onrender.com" : "http://127.0.0.1:8000");
         const res = await fetch(`${apiUrl}/health`);
         
         if (res.ok && mounted) {

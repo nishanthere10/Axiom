@@ -30,12 +30,27 @@ async def lifespan(app: FastAPI):
     # Startup: Start the memory sweeper background task
     sweeper_task = asyncio.create_task(run_memory_sweeper())
     yield
-    # Shutdown: Cancel the task
+    # Shutdown: Cancel the memory sweeper
     sweeper_task.cancel()
     try:
         await sweeper_task
     except asyncio.CancelledError:
         pass
+    # Shutdown: Cleanly stop LiteLLM's internal async LoggingWorker if running.
+    # Without this, uvicorn logs 'Task was destroyed but it is pending!' on every reload.
+    try:
+        import litellm.utils as _lu
+        worker = getattr(_lu, "_logging_worker", None) or getattr(_lu, "logging_worker", None)
+        if worker is not None and hasattr(worker, "_worker_loop"):
+            worker_task = getattr(worker, "_task", None)
+            if worker_task and not worker_task.done():
+                worker_task.cancel()
+                try:
+                    await worker_task
+                except asyncio.CancelledError:
+                    pass
+    except Exception:
+        pass  # Non-fatal — never let cleanup crash the shutdown
 
 app = FastAPI(
     title="Atlas Research v1 API",

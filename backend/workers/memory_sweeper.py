@@ -16,9 +16,10 @@ async def process_memory_job(job: dict):
     
     try:
         logger.info(f"Processing memory job {job_id} (attempt {attempt_count + 1})")
-        # Ensure session_id and user_id are passed to create_memory
+        # Ensure session_id, user_id, and workspace_id are passed to create_memory
         payload["session_id"] = job["session_id"]
         payload["user_id"] = job["user_id"]
+        # workspace_id is stored inside payload itself (set at enqueue time)
         
         # We run the synchronous LangGraph nodes in a thread
         def run_nodes():

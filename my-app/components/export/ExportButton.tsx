@@ -29,7 +29,7 @@ export default function ExportButton({ sessionId, sessionType }: ExportButtonPro
     setIsExporting(true);
     try {
       const token = await getToken();
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://atlas-1sr4.onrender.com";
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "production" ? "https://atlas-1sr4.onrender.com" : "http://127.0.0.1:8000");
       
       const response = await fetch(`${baseUrl}/export/${sessionType}/${sessionId}/${format}`, {
         headers: {

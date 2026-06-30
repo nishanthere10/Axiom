@@ -49,7 +49,17 @@ def _create_decision_memory(state: Dict[str, Any]) -> Dict[str, Any]:
         memories = []
         session_id = state.get("session_id")
         source_id = session_id if session_id else f"sess_{uuid.uuid4().hex[:8]}"
-        
+        workspace_id = state.get("workspace_id")
+        constraints = state.get("constraints", [])
+
+        # Build richer embed_text: question + summary + constraints.
+        # This closes the semantic gap between how the memory is stored
+        # (answer-oriented summary) vs how it's later searched (question-oriented query).
+        embed_parts = [f"QUESTION: {question}", f"DECISION: {summary}"]
+        if constraints:
+            embed_parts.append(f"CONSTRAINTS: {', '.join(str(c) for c in constraints)}")
+        embed_text = "\n".join(embed_parts)
+
         decision_memory = MemoryItemCreate(
             memory_type="decision",
             source_id=source_id,
@@ -58,11 +68,13 @@ def _create_decision_memory(state: Dict[str, Any]) -> Dict[str, Any]:
             metadata={
                 "question": question,
                 "summary": summary,
+                "embed_text": embed_text,  # Richer text for Pinecone embedding
                 "memory_type": "decision"
             },
             scope="temporary",
             user_id=state.get("user_id", "anonymous"),
-            workspace_id=state.get("workspace_id")
+            workspace_id=workspace_id,
+            visibility="WORKSPACE" if workspace_id else "GLOBAL",
         )
         memories.append(decision_memory)
         return {"new_memories": memories}
@@ -99,7 +111,11 @@ def _create_comparison_memory(state: Dict[str, Any]) -> Dict[str, Any]:
         
         memories = []
         comparison_id = state.get("comparison_id", f"comp_{uuid.uuid4().hex[:8]}")
-        
+        workspace_id = state.get("workspace_id")
+
+        # Build richer embed_text for comparison memories
+        embed_text = f"COMPARISON: {session_a} vs {session_b}\nOUTCOME: {summary}"
+
         comp_memory = MemoryItemCreate(
             memory_type="comparison",
             source_id=comparison_id,
@@ -109,11 +125,13 @@ def _create_comparison_memory(state: Dict[str, Any]) -> Dict[str, Any]:
                 "session_a": session_a,
                 "session_b": session_b,
                 "summary": summary,
+                "embed_text": embed_text,  # Richer text for Pinecone embedding
                 "memory_type": "comparison"
             },
             scope="temporary",
             user_id=state.get("user_id", "anonymous"),
-            workspace_id=state.get("workspace_id")
+            workspace_id=workspace_id,
+            visibility="WORKSPACE" if workspace_id else "GLOBAL",
         )
         memories.append(comp_memory)
         return {"new_memories": memories}

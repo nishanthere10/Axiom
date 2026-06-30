@@ -17,6 +17,12 @@ import { getSessionHistory, getSavedComparisons } from "@/lib/api";
 import type { SessionHistoryItem, SavedComparisonItem } from "@/types";
 import AnimatedList from "@/components/AnimatedList";
 import Loader from "@/components/loader";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const PAGE_SIZE = 10;
 
@@ -25,13 +31,27 @@ function HistorySkeleton() {
   return (
     <div className="space-y-1 px-1 pt-1">
       {[80, 60, 90, 50, 75].map((w, i) => (
-        <div
+        <Skeleton
           key={i}
-          className="h-8 rounded-md bg-surface-hover/60 animate-pulse"
+          className="h-8 rounded-md"
           style={{ width: `${w}%` }}
         />
       ))}
     </div>
+  );
+}
+
+function SidebarItemTooltip({ isCollapsed, content, children }: { isCollapsed: boolean, content: string, children: React.ReactNode }) {
+  if (!isCollapsed) return <>{children}</>;
+  return (
+    <Tooltip delayDuration={100}>
+      <TooltipTrigger asChild>
+        {children}
+      </TooltipTrigger>
+      <TooltipContent side="right">
+        <p className="max-w-[200px] truncate">{content}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -168,18 +188,20 @@ export default function LeftSidebar({
         className="flex-1 overflow-y-auto p-2 space-y-1"
       >
         {/* New action button */}
-        <button
-          onClick={handleNewAction}
-          className={cn(
-            "w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-surface-hover transition-colors text-muted-foreground hover:text-foreground text-sm font-medium mb-3",
-            isCollapsed && "justify-center px-2 py-2"
-          )}
-        >
-          <Plus className="w-4 h-4 shrink-0" />
-          {!isCollapsed && (
-            <span className="truncate min-w-0">{isCompareMode ? "New Comparison" : "New Research"}</span>
-          )}
-        </button>
+        <SidebarItemTooltip isCollapsed={isCollapsed} content={isCompareMode ? "New Comparison" : "New Research"}>
+          <button
+            onClick={handleNewAction}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-surface-hover transition-colors text-muted-foreground hover:text-foreground text-sm font-medium mb-3",
+              isCollapsed && "justify-center px-2 py-2"
+            )}
+          >
+            <Plus className="w-4 h-4 shrink-0" />
+            {!isCollapsed && (
+              <span className="truncate min-w-0">{isCompareMode ? "New Comparison" : "New Research"}</span>
+            )}
+          </button>
+        </SidebarItemTooltip>
 
         {/* Content */}
         {loading ? (
@@ -206,19 +228,20 @@ export default function LeftSidebar({
               items={comparisons.map(comp => ({
                 id: comp.id,
                 render: () => (
-                  <div
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-sm text-left",
-                      activeComparisonId === comp.id
-                        ? "bg-surface-hover text-foreground"
-                        : "text-muted-foreground hover:bg-surface-hover/60 hover:text-foreground",
-                      isCollapsed && "justify-center px-2 py-2"
-                    )}
-                    title={isCollapsed ? comp.summary : undefined}
-                  >
-                    <GitCompare className="w-4 h-4 shrink-0" />
-                    {!isCollapsed && <span className="truncate">{comp.summary}</span>}
-                  </div>
+                  <SidebarItemTooltip isCollapsed={isCollapsed} content={comp.summary}>
+                    <div
+                      className={cn(
+                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-sm text-left",
+                        activeComparisonId === comp.id
+                          ? "bg-surface-hover text-foreground"
+                          : "text-muted-foreground hover:bg-surface-hover/60 hover:text-foreground",
+                        isCollapsed && "justify-center px-2 py-2"
+                      )}
+                    >
+                      <GitCompare className="w-4 h-4 shrink-0" />
+                      {!isCollapsed && <span className="truncate">{comp.summary}</span>}
+                    </div>
+                  </SidebarItemTooltip>
                 ),
               }))}
               onItemSelect={(item: any) => handleCompareClick(item.id)}
@@ -247,19 +270,20 @@ export default function LeftSidebar({
                 items={sessions.map(session => ({
                   id: session.id,
                   render: () => (
-                    <div
-                      className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-sm text-left",
-                        activeSessionId === session.id
-                          ? "bg-surface-hover text-foreground"
-                          : "text-muted-foreground hover:bg-surface-hover/60 hover:text-foreground",
-                        isCollapsed && "justify-center px-2 py-2"
-                      )}
-                      title={isCollapsed ? session.question : undefined}
-                    >
-                      <MessageSquare className="w-3.5 h-3.5 shrink-0" />
-                      {!isCollapsed && <span className="truncate">{session.question}</span>}
-                    </div>
+                    <SidebarItemTooltip isCollapsed={isCollapsed} content={session.question}>
+                      <div
+                        className={cn(
+                          "w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-sm text-left",
+                          activeSessionId === session.id
+                            ? "bg-surface-hover text-foreground"
+                            : "text-muted-foreground hover:bg-surface-hover/60 hover:text-foreground",
+                          isCollapsed && "justify-center px-2 py-2"
+                        )}
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+                        {!isCollapsed && <span className="truncate">{session.question}</span>}
+                      </div>
+                    </SidebarItemTooltip>
                   ),
                 }))}
                 onItemSelect={(item: any) => handleSessionClick(item.id)}
@@ -277,16 +301,18 @@ export default function LeftSidebar({
       </div>
 
       <div className="px-2 py-2 border-t border-border/50 shrink-0">
-        <button
-          onClick={() => router.push(activeWorkspaceId ? `/workspaces/${activeWorkspaceId}/settings` : "/settings")}
-          className={cn(
-            "w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-surface-hover transition-colors text-muted-foreground hover:text-foreground text-xs font-medium",
-            isCollapsed && "justify-center"
-          )}
-        >
-          <Settings className="w-4 h-4 shrink-0" />
-          {!isCollapsed && <span>Settings</span>}
-        </button>
+        <SidebarItemTooltip isCollapsed={isCollapsed} content="Settings">
+          <button
+            onClick={() => router.push(activeWorkspaceId ? `/workspaces/${activeWorkspaceId}/settings` : "/settings")}
+            className={cn(
+              "w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-surface-hover transition-colors text-muted-foreground hover:text-foreground text-xs font-medium",
+              isCollapsed && "justify-center"
+            )}
+          >
+            <Settings className="w-4 h-4 shrink-0" />
+            {!isCollapsed && <span>Settings</span>}
+          </button>
+        </SidebarItemTooltip>
       </div>
 
     </div>

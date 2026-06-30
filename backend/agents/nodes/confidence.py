@@ -11,16 +11,32 @@ def build_confidence(state: ResearchState) -> dict:
     Node 3: Scores the confidence of the generated decision across 4 dimensions.
     The system must never claim certainty n— scores reflect evidence quality.
     """
-    recommendation = state["recommendation"]
-    tradeoffs = state["tradeoffs"]
+    recommendation = state.get("recommendation", "")
+    tradeoffs = state.get("tradeoffs", "")
     consensus = state.get("consensus", "Unknown")
+    evidence = state.get("evidence", [])
+
+    # Compute evidence-grounded confidence BEFORE calling LLM
+    trust_scores = [float(e.get("trust_score", 0.5)) for e in evidence]
+    avg_trust = sum(trust_scores) / len(trust_scores) if trust_scores else 0.5
+    high_quality_count = sum(1 for s in trust_scores if s >= 0.8)
+    contradiction_count = sum(1 for s in trust_scores if s < 0.5)
 
     prompt = f"""You are an epistemically careful engineering analyst. 
 Evaluate the confidence of this technical recommendation based on the tradeoffs identified and the external evidence consensus.
 The system must NEVER claim certainty. All scores should reflect genuine uncertainty.
-Strong consensus should increase confidence, while conflicting or weak consensus should lower it.
 
-Evidence Consensus: {consensus}
+EVIDENCE STATS (computed, not estimated):
+- Total evidence items: {len(evidence)}
+- Average trust score: {avg_trust:.2f}
+- High-quality sources (≥0.8): {high_quality_count}
+- Contradicted/low-quality sources (<0.5): {contradiction_count}
+- Consensus label: {consensus}
+
+Use these FACTS to calibrate the confidence scores. 
+evidence_coverage must correlate with total evidence count.
+contradiction_risk must correlate with contradiction_count / total.
+source_quality must correlate with average trust score and high-quality count.
 
 Recommendation: {str(recommendation)[:1000]}
 

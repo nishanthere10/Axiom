@@ -53,7 +53,7 @@ def search_tavily(queries: list[str]) -> list[dict]:
                         "content": result.get("raw_content") or result.get("content", "")
                     })
                     
-                    if len(all_results) >= 10:
+                    if len(all_results) >= 15:
                         return all_results
                         
-    return all_results[:10]
+    return all_results[:15]

@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { AnimatePresence, motion } from "framer-motion";
 import QuestionInput from "@/components/features/QuestionInput";
@@ -21,6 +21,8 @@ function ResearchPageInner() {
   const { getToken } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const params = useParams();
+  const workspaceId = params?.id as string | undefined;
 
   const { setRightPanel, hideRightPanel } = useRightPanel();
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
@@ -78,10 +80,10 @@ function ResearchPageInner() {
   const handleComplete = useCallback(() => {
     setPollingState("completed");
     setPageState("done");
-    if (sessionId) {
-      router.push(`/research?session_id=${sessionId}`);
+    if (sessionId && workspaceId) {
+      router.push(`/workspaces/${workspaceId}/research?session_id=${sessionId}`);
     }
-  }, [router, sessionId]);
+  }, [router, sessionId, workspaceId]);
 
   const handleFailed = useCallback((error: string) => {
     setPollingState("failed");
@@ -96,7 +98,7 @@ function ResearchPageInner() {
     setSessionId(null);
     setDoc(null);
     setErrorMessage(null);
-    router.push("/research");
+    router.push(workspaceId ? `/workspaces/${workspaceId}/research` : "/");
   }
 
   const handleRefreshEvidence = (newSessionId: string) => {

@@ -15,7 +15,7 @@ export default function MemoryPanel() {
     try {
       const token = await getToken();
       if (!token) return;
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://atlas-1sr4.onrender.com"}/memory`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "production" ? "https://atlas-1sr4.onrender.com" : "http://127.0.0.1:8000")}/memory`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {

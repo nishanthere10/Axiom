@@ -23,7 +23,7 @@ const AnimatedItem = ({ children, delay = 0, index, onMouseEnter, onClick }) => 
 
 /**
  * @param {Object} props
- * @param {any[]} [props.items=[]]
+ * @param {any[]} [props.items]
  * @param {Function} [props.onItemSelect]
  * @param {boolean} [props.showGradients=true]
  * @param {boolean} [props.enableArrowNavigation=true]
@@ -34,7 +34,7 @@ const AnimatedItem = ({ children, delay = 0, index, onMouseEnter, onClick }) => 
  * @param {number} [props.initialSelectedIndex=-1]
  */
 const AnimatedList = ({
-  items = [],
+  items = /** @type {any[]} */ ([]),
   onItemSelect,
   showGradients = true,
   enableArrowNavigation = true,

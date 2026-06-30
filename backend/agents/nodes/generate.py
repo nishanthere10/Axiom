@@ -15,13 +15,33 @@ def generate_decision(state: ResearchState) -> dict:
     question = state["question"]
     summary = state["summary"]
     evidence = state.get("evidence", [])
+    github_context = state.get("github_context", [])
     memory_context = state.get("memory_context", {})
-    github_context = memory_context.get("github_context", [])
     
-    # Format evidence for the prompt
+    # Extract ALL memory context fields
+    preferences = memory_context.get("preferences", [])
+    historical_patterns = memory_context.get("historical_patterns", [])
+    related_decisions = memory_context.get("related_decisions", [])
+    consistency_warnings = memory_context.get("consistency_warnings", [])
+
+    memory_text = ""
+    if preferences:
+        memory_text += "\n**USER PREFERENCES (from memory):**\n" + "\n".join(f"- {p['value']}: {p['reason']}" for p in preferences)
+    if historical_patterns:
+        memory_text += "\n**HISTORICAL PATTERNS:**\n" + "\n".join(f"- {h}" for h in historical_patterns)
+    if related_decisions:
+        memory_text += "\n**RELATED PAST DECISIONS:**\n" + "\n".join(f"- {d}" for d in related_decisions)
+    if consistency_warnings:
+        memory_text += "\n**⚠️ CONSISTENCY WARNINGS:**\n" + "\n".join(f"- {w}" for w in consistency_warnings)
+
+    # Format evidence for the prompt with rich formatting and sorted by trust_score
     evidence_text = "\n\n".join(
-        f"[Source {i+1}]: {e['title']} - {e['claim']}" 
-        for i, e in enumerate(evidence)
+        f"[Source {i+1}] ({e.get('claim_type','unknown').upper()} | trust:{e.get('trust_score',0):.2f} | {e.get('source_year','?')})\n"
+        f"  Title: {e.get('title')}\n"
+        f"  Claim: {e.get('claim')}\n"
+        f"  Metrics: {e.get('metrics') or 'none'}\n"
+        f"  URL: {e.get('url')}"
+        for i, e in enumerate(sorted(evidence, key=lambda x: x.get('trust_score', 0), reverse=True))
     )
 
     # Format repository context
@@ -30,13 +50,22 @@ def generate_decision(state: ResearchState) -> dict:
         for chunk in github_context
     )
 
-    prompt = f"""You are a distinguished Principal Software Engineer. Based on the technical question, analysis, and the provided EVIDENCE and REPOSITORY CONTEXT, generate a highly scannable, expert-level decision document. 
+    prompt = f"""You are a distinguished Principal Software Engineer. Based on the technical question, analysis, and the provided EVIDENCE, MEMORY, and REPOSITORY CONTEXT, generate a highly scannable, expert-level decision document. 
 Do not use huge text blocks. Use bullet points and bold text to make it readable at a glance. Prioritize context-rich quality over quantity.
-CRITICAL: You MUST base your decision on the Evidence and Repository Context provided. You must cite your sources (e.g. "[Source 1]" or "[Source: file_path]") when making claims.
+
+CRITICAL RULES:
+1. Your recommendation MUST directly address the user's detected constraints and existing architecture.
+2. You MUST reference user preferences from memory when they exist (e.g. "Given your existing use of Redis, consider...")  
+3. For every key claim, cite the source: [Source N] or [Source: file_path] — do NOT make uncited claims.
+4. If consistency_warnings exist in MEMORY, address them explicitly in your reasoning_scratchpad.
+5. Your recommendation MUST include at least one concrete metric (latency, throughput, cost) derived from Evidence if available.
+6. Keep each bullet point ≤15 words. No paragraph prose.
 
 Question: {question}
 
 Analysis: {summary}
+
+Memory Context:{memory_text if memory_text else " No memory context."}
 
 Evidence:
 {evidence_text if evidence else "No external evidence provided."}
@@ -45,7 +74,7 @@ Repository Context:
 {github_text if github_context else "No repository context provided."}
 
 Return a JSON object with exactly these keys. The value for each key MUST be a single Markdown string, NOT nested JSON objects or arrays:
-- "reasoning_scratchpad": A string where you actively debate the pros and cons, resolve contradictions in the evidence, and weigh tradeoffs mathematically against the repository context. This is your Chain-of-Thought space to reach the best conclusion. Do this FIRST.
+- "reasoning_scratchpad": A string where you actively debate the pros and cons, resolve contradictions in the evidence, and weigh tradeoffs mathematically against the repository context and memory context. This is your Chain-of-Thought space to reach the best conclusion. Do this FIRST.
 - "recommendation_context": A Markdown string containing a highly scannable recommendation. Use bullet points to highlight EXACTLY why this approach is best. Keep sentences very short and punchy. Include a brief code/config snippet if it helps clarity.
 - "tradeoffs": A Markdown string containing a rigorous but scannable analysis. Use bulleted lists for pros, cons, and risks. Highlight key metrics (latency, scale) in bold. No wall of text.
 - "alternatives": A Markdown string containing a bulleted list of 1-2 viable alternatives. Explain in one sentence when they apply and why they were rejected here.

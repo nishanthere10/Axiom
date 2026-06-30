@@ -6,7 +6,7 @@ from typing import Dict, Any, List, Optional, Tuple, Callable
 from services.context_providers.base import ContextProvider
 from services.clerk_service import get_github_oauth_token
 from services.embedding_provider import generate_embedding
-from services.pinecone_service import index as pinecone_index
+from services.pinecone_service import get_pinecone_index
 from services.llm_provider import generate_chat_completion
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -218,6 +218,7 @@ class GitHubProvider(ContextProvider):
             if not token:
                 return False
 
+            pinecone_index = get_pinecone_index()
             if not pinecone_index:
                 return False
 
@@ -294,6 +295,7 @@ class GitHubProvider(ContextProvider):
             return False
 
     async def retrieve(self, query: str, user_id: str, scope: Optional[str] = None) -> List[Dict[str, Any]]:
+        pinecone_index = get_pinecone_index()
         if not pinecone_index:
             return []
 

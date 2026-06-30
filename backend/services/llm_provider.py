@@ -18,6 +18,15 @@ if settings.MISTRAL_API_KEY:
 if settings.NVIDIA_API_KEY:
     os.environ["NVIDIA_NIM_API_KEY"] = settings.NVIDIA_API_KEY
 
+# Fix: Disable LiteLLM's internal async LoggingWorker to prevent
+# 'Task was destroyed but it is pending!' warnings on request teardown.
+litellm.suppress_debug_info = True
+litellm._async_success_callback = []
+litellm.callbacks = []
+
+# Sampling params that Gemini does not accept and will throw deprecation warnings for
+_GEMINI_INCOMPATIBLE_PARAMS = {"temperature", "top_p", "top_k", "presence_penalty", "frequency_penalty"}
+
 def _build_fallbacks() -> List[Dict[str, str]]:
     """Builds a dynamic list of fallback models based on available API keys."""
     fallbacks = [
@@ -48,6 +57,12 @@ def generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/
     """
     
     fallbacks = _build_fallbacks()
+    
+    # Strip Gemini-incompatible sampling params if routing to a Gemini model,
+    # or always strip them from kwargs since fallbacks can land on Gemini.
+    # We encode sampling intent in the system prompt instead.
+    if model.startswith("gemini/") or any("gemini" in f.get("model", "") for f in fallbacks):
+        kwargs = {k: v for k, v in kwargs.items() if k not in _GEMINI_INCOMPATIBLE_PARAMS}
     
     try:
         logger.debug("Requesting LLM completion (Primary: %s)", model)

@@ -29,6 +29,8 @@ import CommandPalette from "@/components/ui/CommandPalette";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import { WorkspaceProvider } from "@/components/WorkspaceContext";
 
+import { TooltipProvider } from "@/components/ui/tooltip";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -38,17 +40,19 @@ export default function RootLayout({
     <ClerkProvider>
       <WorkspaceProvider>
         <ToastProvider>
-          <html
-        lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} ${plusJakartaSans.variable} h-full antialiased dark`}
-      >
-        <body className="h-screen w-screen overflow-hidden flex flex-col" suppressHydrationWarning>
-          <CommandPalette />
-          <Navbar />
-          <SystemStatusBanner />
-          <main className="flex-1 overflow-hidden flex">{children}</main>
-        </body>
-          </html>
+          <TooltipProvider>
+            <html
+              lang="en"
+              className={`${geistSans.variable} ${geistMono.variable} ${plusJakartaSans.variable} h-full antialiased dark`}
+            >
+              <body className="h-screen w-screen overflow-hidden flex flex-col" suppressHydrationWarning>
+                <CommandPalette />
+                <Navbar />
+                <SystemStatusBanner />
+                <main className="flex-1 overflow-hidden flex">{children}</main>
+              </body>
+            </html>
+          </TooltipProvider>
         </ToastProvider>
       </WorkspaceProvider>
     </ClerkProvider>

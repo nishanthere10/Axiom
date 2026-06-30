@@ -5,13 +5,13 @@ import { useAuth } from "@clerk/nextjs";
 import { getJobStatus } from "@/lib/api";
 import { PollingState } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle2, Layers, Cpu, ShieldCheck, FileText } from "lucide-react";
 
 const PIPELINE_STEPS = [
-  { key: "decompose_question", label: "Decompose",  threshold: 25 },
-  { key: "generate_decision",  label: "Generate",   threshold: 60 },
-  { key: "build_confidence",   label: "Evaluate",   threshold: 85 },
-  { key: "format_document",    label: "Format",     threshold: 100 },
+  { key: "decompose_question", label: "Decompose", threshold: 25,  Icon: Layers    },
+  { key: "generate_decision",  label: "Generate",  threshold: 60,  Icon: Cpu       },
+  { key: "build_confidence",   label: "Evaluate",  threshold: 85,  Icon: ShieldCheck },
+  { key: "format_document",    label: "Format",    threshold: 100, Icon: FileText  },
 ];
 
 const STEP_LABELS: Record<string, string> = {
@@ -24,6 +24,14 @@ const STEP_LABELS: Record<string, string> = {
   done:                 "Complete",
   error:                "An error occurred.",
 };
+
+/** Color-code log lines by their prefix token */
+function logLineClass(line: string): string {
+  if (line.includes("[ done ]"))  return "text-emerald-400";
+  if (line.includes("[ error ]")) return "text-red-400";
+  if (line.includes("[ init ]") || line.includes("[ system ]")) return "text-muted-foreground/60";
+  return "text-muted-foreground";
+}
 
 interface Props {
   jobId: string;
@@ -108,10 +116,10 @@ export default function ResearchProgress({ jobId, onComplete, onFailed }: Props)
         </span>
       </div>
 
-      {/* Progress bar */}
-      <div className="w-full h-1 bg-surface-hover rounded-full overflow-hidden">
+      {/* Progress bar — gradient */}
+      <div className="w-full h-1.5 bg-surface-hover rounded-full overflow-hidden">
         <motion.div
-          className="h-full bg-primary rounded-full"
+          className="h-full rounded-full bg-gradient-to-r from-primary via-blue-400 to-cyan-400"
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.6, ease: "easeOut" }}
@@ -120,22 +128,29 @@ export default function ResearchProgress({ jobId, onComplete, onFailed }: Props)
 
       {/* Pipeline step indicators */}
       <div className="grid grid-cols-4 gap-2">
-        {PIPELINE_STEPS.map(({ key, label, threshold }) => {
+        {PIPELINE_STEPS.map(({ key, label, threshold, Icon }) => {
           const isDone   = progress >= threshold;
           const isActive = step === key;
           return (
-            <div key={key} className="space-y-1.5 text-center">
+            <div key={key} className="flex flex-col items-center gap-1.5 text-center">
               <div
-                className={`h-px w-full rounded-full transition-colors duration-500 ${
-                  isDone ? "bg-primary" : isActive ? "bg-primary/40" : "bg-surface-hover"
+                className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all duration-500 ${
+                  isDone
+                    ? "bg-primary/15 border-primary/40 text-primary"
+                    : isActive
+                    ? "bg-primary/10 border-primary/30 text-primary/70"
+                    : "bg-surface-hover border-border/50 text-muted-foreground/40"
                 }`}
-              />
-              <span className={`flex items-center justify-center text-[10px] font-mono transition-colors duration-300 h-4 ${
-                isDone ? "text-primary" : isActive ? "text-foreground" : "text-muted-foreground"
-              }`}>
+              >
                 {isDone && !isActive
-                  ? <CheckCircle className="w-3 h-3" />
-                  : label}
+                  ? <CheckCircle2 className="w-4 h-4" />
+                  : <Icon className="w-4 h-4" />
+                }
+              </div>
+              <span className={`text-[10px] font-mono transition-colors duration-300 ${
+                isDone ? "text-primary" : isActive ? "text-foreground" : "text-muted-foreground/50"
+              }`}>
+                {label}
               </span>
             </div>
           );
@@ -143,26 +158,35 @@ export default function ResearchProgress({ jobId, onComplete, onFailed }: Props)
       </div>
 
       {/* Monospace log terminal */}
-      <div className="rounded-lg border border-border bg-surface p-4 h-36 overflow-y-auto font-mono text-xs space-y-1">
-        {logLines.map((line, i) => {
-          const isLast = i === logLines.length - 1;
-          const isRunning = status !== "completed" && status !== "failed";
-          return (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -4 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.15 }}
-              className="flex items-center gap-1.5 leading-relaxed"
-            >
-              <span className="text-muted-foreground">{line}</span>
-              {isLast && isRunning && (
-                <span className="inline-block w-1.5 h-3.5 bg-primary/70 animate-pulse rounded-sm shrink-0" />
-              )}
-            </motion.div>
-          );
-        })}
-        <div ref={logEndRef} />
+      <div className="rounded-lg border border-border bg-surface overflow-hidden">
+        {/* Terminal chrome bar */}
+        <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border/50 bg-surface-hover/50">
+          <span className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-500/60" />
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" />
+          <span className="ml-2 text-[10px] font-mono text-muted-foreground/50">research pipeline</span>
+        </div>
+        <div className="p-4 h-32 overflow-y-auto font-mono text-xs space-y-1">
+          {logLines.map((line, i) => {
+            const isLast = i === logLines.length - 1;
+            const isRunning = status !== "completed" && status !== "failed";
+            return (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -4 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.15 }}
+                className="flex items-center gap-1.5 leading-relaxed"
+              >
+                <span className={logLineClass(line)}>{line}</span>
+                {isLast && isRunning && (
+                  <span className="inline-block w-1.5 h-3.5 bg-primary/70 animate-pulse rounded-sm shrink-0" />
+                )}
+              </motion.div>
+            );
+          })}
+          <div ref={logEndRef} />
+        </div>
       </div>
     </div>
   );

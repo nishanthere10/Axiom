@@ -9,6 +9,7 @@ class ResearchState(TypedDict):
     question: str
     user_id: str
     summary: str
+    constraints: list[str]
     reasoning: str
     recommendation: str
     tradeoffs: str

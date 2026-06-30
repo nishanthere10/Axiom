@@ -41,7 +41,9 @@ def store_memory(state: Dict[str, Any]) -> Dict[str, Any]:
                 
                 upsert_memory(
                     memory_id=memory_id,
-                    summary=memory_create.summary,
+                    # Use richer embed_text if create_memory built one (question + summary + constraints).
+                    # Falls back to summary for backward compat with memories created before this change.
+                    summary=metadata.pop("embed_text", None) or memory_create.summary,
                     metadata=metadata
                 )
             else:

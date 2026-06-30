@@ -22,7 +22,7 @@ _NODE_PROGRESS = {
 
 import anyio
 
-async def run_research_background_task(session_id: str, job_id: str, question: str, force_refresh: bool = False, user_id: str = "anonymous") -> dict:
+async def run_research_background_task(session_id: str, job_id: str, question: str, force_refresh: bool = False, user_id: str = "anonymous", workspace_id: str | None = None) -> dict:
     """
     Background task that runs the LangGraph decision pipeline natively via FastAPI.
 
@@ -42,8 +42,11 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
         # 2. Stream the graph — get state updates after each node
         current_state = {
             "question": question, 
-            "user_id": user_id,  # ADDED: Required for retrieve_memory to search the correct Pinecone namespace
-            "summary": "", 
+            "user_id": user_id,
+            "workspace_id": workspace_id,
+            "summary": "",
+            "constraints": [],
+            "reasoning": "",
             "recommendation": "", 
             "tradeoffs": "", 
             "alternatives": "", 
@@ -137,8 +140,22 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
             logger.warning(f"Failed to emit research metric: {e}")
 
         # 5. Background Memory Creation
-        # Memory generation is now deferred until a Decision Record is APPROVED.
-        logger.debug("Research completed. Decision record memory deferral applied.")
+        # Enqueue a memory job so the sweeper writes this decision to Supabase + Pinecone.
+        # This is fire-and-forget — failures here do not fail the research job.
+        try:
+            from services.memory_job_service import create_job
+            memory_payload = {
+                "question": question,
+                "recommendation": final_state.get("recommendation", ""),
+                "summary": final_state.get("summary", ""),
+                "tradeoffs": final_state.get("tradeoffs", ""),
+                "alternatives": final_state.get("alternatives", ""),
+                "workspace_id": workspace_id,  # Critical: stamps memory to the correct workspace
+            }
+            await anyio.to_thread.run_sync(create_job, user_id, session_id, memory_payload)
+            logger.debug("Memory job enqueued for session %s", session_id)
+        except Exception as e:
+            logger.warning("Failed to enqueue memory job (non-fatal): %s", e)
 
         return {"session_id": session_id, "job_id": job_id, "status": "completed"}
 

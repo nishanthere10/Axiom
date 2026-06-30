@@ -10,6 +10,7 @@ import { ResearchResponse } from "@/types";
 import { ArrowRight, Lightbulb } from "lucide-react";
 import Loader from "@/components/loader";
 import { motion, AnimatePresence } from "framer-motion";
+import { Textarea } from "@/components/ui/textarea";
 
 const SUGGESTED_PROMPTS = [
   "Design a high-write event logging system using Kafka and ClickHouse.",
@@ -30,6 +31,30 @@ interface Props {
   onSubmitted: (response: ResearchResponse) => void;
 }
 
+const CharCounter = ({ length }: { length: number }) => {
+  const counterColor =
+    length >= 950 ? "text-destructive-foreground" :
+    length >= 800 ? "text-amber-500" :
+    "text-muted-foreground/40";
+  return (
+    <span className={`text-xs tabular-nums font-mono select-none transition-colors duration-200 ${counterColor}`}>
+      {length}/1000
+    </span>
+  );
+};
+
+const ErrorMessage = ({ message }: { message: string }) => (
+  <motion.p 
+    initial={{ opacity: 0, y: -10 }} 
+    animate={{ opacity: 1, y: 0 }} 
+    exit={{ opacity: 0, y: -10 }}
+    className="text-xs text-destructive-foreground bg-destructive/10 border border-destructive/30 px-4 py-2.5 rounded-lg" 
+    role="alert"
+  >
+    {message}
+  </motion.p>
+);
+
 export default function QuestionInput({ onSubmitted }: Props) {
   const { getToken } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,19 +71,22 @@ export default function QuestionInput({ onSubmitted }: Props) {
   const questionValue = watch("question", "");
 
   useEffect(() => {
-    const draft = localStorage.getItem("research_draft_question");
-    // Only restore if current input is empty, prevents overriding active typing
-    if (draft && !questionValue) {
-      setValue("question", draft, { shouldValidate: true });
+    if (typeof window !== "undefined") {
+      const draft = localStorage.getItem("research_draft_question");
+      if (draft && !questionValue) {
+        setValue("question", draft, { shouldValidate: true });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setValue]);
 
   useEffect(() => {
-    if (questionValue && questionValue.length > 0) {
-      localStorage.setItem("research_draft_question", questionValue);
-    } else {
-      localStorage.removeItem("research_draft_question");
+    if (typeof window !== "undefined") {
+      if (questionValue && questionValue.length > 0) {
+        localStorage.setItem("research_draft_question", questionValue);
+      } else {
+        localStorage.removeItem("research_draft_question");
+      }
     }
   }, [questionValue]);
 
@@ -68,7 +96,9 @@ export default function QuestionInput({ onSubmitted }: Props) {
     try {
       const token = (await getToken()) ?? "";
       const response = await submitResearch(data.question, false, token);
-      localStorage.removeItem("research_draft_question");
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("research_draft_question");
+      }
       setValue("question", "");
       onSubmitted(response);
     } catch (err) {
@@ -94,36 +124,19 @@ export default function QuestionInput({ onSubmitted }: Props) {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {/* Sleek Textarea Wrapper */}
-        <div className="relative group rounded-2xl border border-border/60 bg-surface/40 backdrop-blur-sm shadow-sm hover:border-border/80 hover:bg-surface/80 focus-within:!bg-surface focus-within:shadow-md focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all duration-300">
-          <textarea
+        <div className="relative group rounded-2xl border border-border/60 bg-surface/40 backdrop-blur-sm shadow-sm hover:border-primary/30 hover:bg-surface/80 hover:shadow-[0_0_15px_rgba(59,130,246,0.1)] focus-within:!bg-surface focus-within:shadow-[0_0_20px_rgba(59,130,246,0.15)] focus-within:ring-1 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all duration-500">
+          <Textarea
             id="question-input"
             {...register("question")}
             rows={3}
             placeholder="e.g. Should I use PostgreSQL or MongoDB for a high-write event log system?"
             disabled={isSubmitting}
-            style={{ resize: "none", minHeight: "100px", maxHeight: "400px" }}
-            className="w-full bg-transparent text-foreground text-sm placeholder:text-muted-foreground/70 p-4 pb-14 focus:outline-none disabled:opacity-50 transition-all duration-200 leading-relaxed"
-            onInput={(e) => {
-              const target = e.target as HTMLTextAreaElement;
-              target.style.height = "auto";
-              target.style.height = `${target.scrollHeight}px`;
-            }}
+            style={{ resize: "none", minHeight: "100px" }}
+            className="w-full bg-transparent border-0 ring-0 focus-visible:ring-0 focus-visible:border-0 shadow-none text-foreground text-sm placeholder:text-muted-foreground/70 p-4 pb-14 focus:outline-none disabled:opacity-50 transition-all duration-200 leading-relaxed"
           />
           
           <div className="absolute bottom-3 right-3 flex items-center gap-4">
-            {/* Character counter with visual warning */}
-            {(() => {
-              const len = questionValue?.length ?? 0;
-              const counterColor =
-                len >= 950 ? "text-destructive-foreground" :
-                len >= 800 ? "text-amber-500" :
-                "text-muted-foreground/40";
-              return (
-                <span className={`text-xs tabular-nums font-mono select-none transition-colors duration-200 ${counterColor}`}>
-                  {len}/1000
-                </span>
-              );
-            })()}
+            <CharCounter length={questionValue?.length ?? 0} />
 
             {/* Submit Icon Button */}
             <button
@@ -145,28 +158,8 @@ export default function QuestionInput({ onSubmitted }: Props) {
 
         {/* Validation errors */}
         <AnimatePresence>
-          {errors.question && (
-            <motion.p 
-              initial={{ opacity: 0, y: -10 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              exit={{ opacity: 0, y: -10 }}
-              className="text-xs text-destructive-foreground bg-destructive/10 border border-destructive/30 px-4 py-2.5 rounded-lg" 
-              role="alert"
-            >
-              {errors.question.message}
-            </motion.p>
-          )}
-          {apiError && (
-            <motion.p 
-              initial={{ opacity: 0, y: -10 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              exit={{ opacity: 0, y: -10 }}
-              className="text-xs text-destructive-foreground bg-destructive/10 border border-destructive/30 px-4 py-2.5 rounded-lg" 
-              role="alert"
-            >
-              {apiError}
-            </motion.p>
-          )}
+          {errors.question && <ErrorMessage message={errors.question.message as string} />}
+          {apiError && <ErrorMessage message={apiError} />}
         </AnimatePresence>
       </form>
 
@@ -189,7 +182,7 @@ export default function QuestionInput({ onSubmitted }: Props) {
                 className="text-left p-4 rounded-xl bg-surface/30 backdrop-blur-sm border border-border/40 hover:border-primary/30 hover:bg-surface-hover/80 hover:shadow-[0_8px_20px_rgba(0,0,0,0.12)] hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300 group"
               >
                 <p className="text-xs text-muted-foreground group-hover:text-foreground font-medium leading-relaxed transition-colors">
-                  "{prompt}"
+                  &quot;{prompt}&quot;
                 </p>
               </button>
             ))}
