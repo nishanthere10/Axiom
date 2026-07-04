@@ -24,6 +24,11 @@ litellm.suppress_debug_info = True
 litellm._async_success_callback = []
 litellm.callbacks = []
 
+# CRITICAL: Tell LiteLLM to silently drop kwargs that a specific provider doesn't support.
+# Without this, if Groq fails and it falls back to Gemini, Gemini throws a 400 BadRequest
+# for unknown args (like certain instructor kwargs), which aborts the fallback chain completely.
+litellm.drop_params = True
+
 # Sampling params that Gemini does not accept and will throw deprecation warnings for
 _GEMINI_INCOMPATIBLE_PARAMS = {"temperature", "top_p", "top_k", "presence_penalty", "frequency_penalty"}
 
