@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, HTTPException, Depends, Header, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, Header, BackgroundTasks, Response
 from api.schemas.decision import DecisionRecordCreate, DecisionRecordUpdate, DecisionRecordResponse, DecisionListResponse
 from core.auth import get_current_user
 from services.db import supabase
@@ -10,7 +10,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.post("", response_model=DecisionRecordResponse)
-def create_decision(body: DecisionRecordCreate, user_id: str = Depends(get_current_user), x_workspace_id: str | None = Header(default=None, alias="x-workspace-id")):
+def create_decision(body: DecisionRecordCreate, response: Response, user_id: str = Depends(get_current_user), x_workspace_id: str | None = Header(default=None, alias="x-workspace-id")):
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "Phase 4 — use /workspaces/{id}/decisions"
     # Check if a record already exists for this session
     existing = supabase.table("decision_records").select("id").eq("research_session_id", body.research_session_id).execute()
     if existing.data:
@@ -35,7 +37,9 @@ def create_decision(body: DecisionRecordCreate, user_id: str = Depends(get_curre
         raise HTTPException(status_code=500, detail="Failed to create decision record")
 
 @router.get("", response_model=DecisionListResponse)
-def list_decisions(user_id: str = Depends(get_current_user), x_workspace_id: str | None = Header(default=None, alias="x-workspace-id")):
+def list_decisions(response: Response, user_id: str = Depends(get_current_user), x_workspace_id: str | None = Header(default=None, alias="x-workspace-id")):
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "Phase 4 — use /workspaces/{id}/decisions"
     query = supabase.table("decision_records").select("*")
     
     if x_workspace_id:
@@ -69,7 +73,9 @@ def list_decisions(user_id: str = Depends(get_current_user), x_workspace_id: str
     return DecisionListResponse(decisions=decisions)
 
 @router.get("/{decision_id}", response_model=DecisionRecordResponse)
-def get_decision(decision_id: str, user_id: str = Depends(get_current_user)):
+def get_decision(decision_id: str, response: Response, user_id: str = Depends(get_current_user)):
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "Phase 4 — use /workspaces/{id}/decisions"
     res = supabase.table("decision_records").select("*").eq("id", decision_id).execute()
     
     if not res.data:
@@ -87,7 +93,9 @@ def get_decision(decision_id: str, user_id: str = Depends(get_current_user)):
     return row
 
 @router.patch("/{decision_id}", response_model=DecisionRecordResponse)
-def update_decision_status(decision_id: str, body: DecisionRecordUpdate, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user)):
+def update_decision_status(decision_id: str, body: DecisionRecordUpdate, response: Response, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user)):
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "Phase 4 — use /workspaces/{id}/decisions"
     payload = {"status": body.status}
     if body.title:
         payload["title"] = body.title

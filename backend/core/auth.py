@@ -211,3 +211,27 @@ async def verify_workspace_access(
         logger.error("Workspace verification error: %s", e)
         raise HTTPException(status_code=500, detail="Error verifying workspace access")
 
+async def verify_workspace_path(
+    workspace_id: str,
+    user_id: str = Depends(get_current_user)
+) -> str:
+    """
+    Verifies that the current user has access to the workspace_id provided in the URL path.
+    Raises 403 Forbidden if access is explicitly denied.
+    """
+    if not workspace_id:
+        raise HTTPException(status_code=400, detail="workspace_id is required")
+        
+    try:
+        supabase = get_supabase()
+        response = supabase.table("workspace_members").select("id").eq("workspace_id", workspace_id).eq("user_id", user_id).limit(1).execute()
+        if not response.data:
+            logger.warning("AUTH REJECT: user_id=%s attempted to access workspace_id=%s without permission", user_id, workspace_id)
+            raise HTTPException(status_code=403, detail="Forbidden: You do not have access to this workspace")
+        return workspace_id
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Workspace path verification error: %s", e)
+        raise HTTPException(status_code=500, detail="Error verifying workspace access")
+

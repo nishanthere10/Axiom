@@ -39,11 +39,14 @@ def build_decision_graph():
     # Phase 1: Parallel initial data gathering
     graph.add_edge(START, "decompose_question")
     graph.add_edge(START, "retrieve_memory")
-    graph.add_edge(START, "retrieve_github_context")
     graph.add_edge(START, "canonicalize_topic")
+
+    # GitHub retrieval now waits for decomposed intent before searching
+    graph.add_edge("decompose_question", "retrieve_github_context")
 
     # Phase 2: Analyze memory and generate queries
     graph.add_edge("retrieve_memory", "memory_relevance_evaluator")
+    # analyze_memory waits for: memory relevance eval + targeted github context
     graph.add_edge(["memory_relevance_evaluator", "retrieve_github_context"], "analyze_memory")
     graph.add_edge("decompose_question", "generate_queries")
 

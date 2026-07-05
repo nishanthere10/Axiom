@@ -12,6 +12,7 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ i
   const workspaceId = unwrappedParams.id;
   
   const [dashboardData, setDashboardData] = useState<any>(null);
+  const [activity, setActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -32,7 +33,25 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ i
       }
     }
 
-    loadDashboard();
+    async function loadActivity() {
+      try {
+        const token = await getToken();
+        if (!token) return;
+        const data = await apiFetch<{ activity: any[] }>(
+          `/workspaces/${workspaceId}/activity`,
+          token,
+          { getToken }
+        );
+        setActivity(data.activity);
+      } catch (err) {
+        console.error("Failed to load activity", err);
+      }
+    }
+
+    if (workspaceId) {
+      loadDashboard();
+      loadActivity();
+    }
   }, [workspaceId, getToken]);
 
   if (loading) {
@@ -51,5 +70,5 @@ export default function WorkspaceDashboardPage({ params }: { params: Promise<{ i
     );
   }
 
-  return <WorkspaceCommandCenter dashboardData={dashboardData} workspaceId={workspaceId} />;
+  return <WorkspaceCommandCenter dashboardData={dashboardData} activity={activity} workspaceId={workspaceId} />;
 }

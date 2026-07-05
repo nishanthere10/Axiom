@@ -1,168 +1,80 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { useWorkspace } from "@/components/WorkspaceContext";
+import { cn } from "@/lib/utils";
 import {
+  Home,
+  FlaskConical,
+  BookMarked,
+  FolderKanban,
+  Settings,
   ChevronLeft,
   ChevronRight,
-  MessageSquare,
-  Plus,
-  Settings,
-  GitCompare,
 } from "lucide-react";
-import { useAuth } from "@clerk/nextjs";
-import { cn } from "@/lib/utils";
-import { useWorkspace } from "@/components/WorkspaceContext";
-import { getSessionHistory, getSavedComparisons } from "@/lib/api";
-import type { SessionHistoryItem, SavedComparisonItem } from "@/types";
-import AnimatedList from "@/components/AnimatedList";
-import Loader from "@/components/loader";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-const PAGE_SIZE = 10;
+type NavItem = {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  href: (workspaceId: string) => string;
+  disabled?: boolean;
+};
 
-/** Skeleton loader that mimics the shape of a history row */
-function HistorySkeleton() {
-  return (
-    <div className="space-y-1 px-1 pt-1">
-      {[80, 60, 90, 50, 75].map((w, i) => (
-        <Skeleton
-          key={i}
-          className="h-8 rounded-md"
-          style={{ width: `${w}%` }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function SidebarItemTooltip({ isCollapsed, content, children }: { isCollapsed: boolean, content: string, children: React.ReactNode }) {
-  if (!isCollapsed) return <>{children}</>;
-  return (
-    <Tooltip delayDuration={100}>
-      <TooltipTrigger asChild>
-        {children}
-      </TooltipTrigger>
-      <TooltipContent side="right">
-        <p className="max-w-[200px] truncate">{content}</p>
-      </TooltipContent>
-    </Tooltip>
-  );
-}
+const NAV_ITEMS: NavItem[] = [
+  {
+    id: "home",
+    label: "Home",
+    icon: <Home className="w-4 h-4" />,
+    href: (id) => `/workspaces/${id}`,
+  },
+  {
+    id: "research",
+    label: "Research",
+    icon: <FlaskConical className="w-4 h-4" />,
+    href: (id) => `/workspaces/${id}/research`,
+  },
+  {
+    id: "decisions",
+    label: "Decisions",
+    icon: <BookMarked className="w-4 h-4" />,
+    href: (id) => `/workspaces/${id}/decisions`,
+  },
+  {
+    id: "projects",
+    label: "Projects",
+    icon: <FolderKanban className="w-4 h-4" />,
+    href: (id) => `/workspaces/${id}/projects`,
+    disabled: true,   // Enabled in Phase 4
+  },
+];
 
 export default function LeftSidebar({
   isCollapsed = false,
   toggleCollapse,
-  initialSessions,
-  initialComparisons,
 }: {
   isCollapsed?: boolean;
   toggleCollapse?: () => void;
-  initialSessions?: SessionHistoryItem[];
-  initialComparisons?: SavedComparisonItem[];
 }) {
-  const { isLoaded, isSignedIn, getToken } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { activeWorkspaceId } = useWorkspace();
-  const activeSessionId = searchParams.get("session_id");
-  const activeComparisonId = searchParams.get("comparison_id");
 
-  const isCompareMode = pathname?.startsWith("/compare") ?? false;
-
-  const [sessions, setSessions] = useState<SessionHistoryItem[]>(initialSessions || []);
-  const [comparisons, setComparisons] = useState<SavedComparisonItem[]>(initialComparisons || []);
-  const [loading, setLoading] = useState(isCompareMode ? !initialComparisons : !initialSessions);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(isCompareMode ? false : (initialSessions ? initialSessions.length === PAGE_SIZE : true));
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  // Initial fetch
-  useEffect(() => {
-    let isMounted = true;
-    async function fetchInitial() {
-      // Block the request until Clerk is fully initialized and authenticated
-      if (!isLoaded || !isSignedIn) return;
-
-      setLoading(true);
-      try {
-        const token = await getToken();
-
-        // CRITICAL: Block literal string "null" or "undefined" that sometimes leak in Next.js
-        if (!token || token === "null" || token === "undefined") {
-          console.warn("Clerk provided an empty or invalid token string. Aborting fetch.");
-          if (isMounted) { setComparisons([]); setSessions([]); setHasMore(false); }
-          return;
-        }
-
-        // Log a truncated version to prove we have a real JWT (Format: eyJhb...)
-        console.log("Valid JWT generated. Prefix:", token.substring(0, 15));
-        if (isCompareMode) {
-          if (initialComparisons) {
-            if (isMounted) setLoading(false);
-            return;
-          }
-          const data = await getSavedComparisons(token, getToken);
-          if (isMounted) { setComparisons(data.comparisons); setHasMore(false); }
-        } else {
-          if (initialSessions) {
-            if (isMounted) setLoading(false);
-            return;
-          }
-          const data = await getSessionHistory(PAGE_SIZE, 0, token, getToken);
-          if (isMounted) { setSessions(data.sessions); setHasMore(data.sessions.length === PAGE_SIZE); }
-        }
-      } catch (err) {
-        console.error("Failed to fetch sidebar history:", err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
-    fetchInitial();
-    return () => { isMounted = false; };
-  }, [isCompareMode, isLoaded, isSignedIn, getToken]);
-
-  const loadMore = useCallback(async () => {
-    if (isCompareMode || loadingMore || !hasMore) return;
-    const token = await getToken();
-    if (!token) return;
-    setLoadingMore(true);
-    try {
-      const data = await getSessionHistory(PAGE_SIZE, sessions.length, token, getToken);
-      setSessions(prev => [...prev, ...data.sessions]);
-      setHasMore(data.sessions.length === PAGE_SIZE);
-    } catch (err) {
-      console.error("Failed to load more sessions:", err);
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [isCompareMode, loadingMore, hasMore, sessions.length, getToken]);
-
-  const handleScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el || !hasMore || loadingMore || isCompareMode) return;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 50) loadMore();
-  }, [loadMore, hasMore, loadingMore, isCompareMode]);
-
-  const getWorkspacePrefix = () => activeWorkspaceId ? `/workspaces/${activeWorkspaceId}` : "";
-  const handleNewAction = () => router.push(isCompareMode ? `${getWorkspacePrefix()}/compare` : `${getWorkspacePrefix()}/research`);
-  const handleSessionClick = (sessionId: string) => router.push(`${getWorkspacePrefix()}/research?session_id=${sessionId}`);
-  const handleCompareClick = (compId: string) => router.push(`${getWorkspacePrefix()}/compare/saved?comparison_id=${compId}`);
+  const isActive = (item: NavItem) => {
+    if (!activeWorkspaceId) return false;
+    const href = item.href(activeWorkspaceId);
+    if (item.id === "home") return pathname === href;
+    return pathname.startsWith(href);
+  };
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
-
       {/* Header */}
       <div className="flex items-center justify-between px-3 border-b border-border/50 h-12 shrink-0">
         {!isCollapsed && (
-          <span className="text-xs font-semibold text-muted-foreground tracking-widest uppercase select-none truncate min-w-0 pr-2">
-            {isCompareMode ? "Compare History" : "History"}
+          <span className="text-xs font-semibold text-muted-foreground tracking-widest uppercase select-none">
+            Navigation
           </span>
         )}
         {toggleCollapse && (
@@ -174,147 +86,73 @@ export default function LeftSidebar({
             )}
             aria-label="Toggle Sidebar"
           >
-            {isCollapsed
-              ? <ChevronRight className="w-4 h-4" />
-              : <ChevronLeft className="w-4 h-4" />}
+            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
         )}
       </div>
 
-      {/* Scrollable body */}
-      <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-2 space-y-1"
-      >
-        {/* New action button */}
-        <SidebarItemTooltip isCollapsed={isCollapsed} content={isCompareMode ? "New Comparison" : "New Research"}>
-          <button
-            onClick={handleNewAction}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-surface-hover transition-colors text-muted-foreground hover:text-foreground text-sm font-medium mb-3",
-              isCollapsed && "justify-center px-2 py-2"
-            )}
-          >
-            <Plus className="w-4 h-4 shrink-0" />
-            {!isCollapsed && (
-              <span className="truncate min-w-0">{isCompareMode ? "New Comparison" : "New Research"}</span>
-            )}
-          </button>
-        </SidebarItemTooltip>
+      {/* Nav items */}
+      <div className="flex-1 overflow-y-auto p-2 space-y-1 pt-3">
+        {NAV_ITEMS.map((item) => {
+          const active = isActive(item);
+          const href = activeWorkspaceId ? item.href(activeWorkspaceId) : "#";
 
-        {/* Content */}
-        {loading ? (
-          !isCollapsed ? <HistorySkeleton /> : (
-            <div className="flex justify-center pt-2">
-              <div className="w-4 h-4 relative flex items-center justify-center overflow-hidden">
-                <Loader scale={0.3} color="hsl(var(--muted-foreground))" />
-              </div>
-            </div>
-          )
-        ) : isCompareMode ? (
-          comparisons.length === 0 ? (
-            !isCollapsed && (
-              <p className="text-xs text-muted-foreground text-center px-2 py-6">
-                No saved comparisons yet.
-              </p>
-            )
-          ) : (
-            <AnimatedList
-              className="!w-full !p-0 !max-w-none"
-              innerClassName="overflow-visible p-0 flex flex-col gap-0.5"
-              displayScrollbar={false}
-              showGradients={false}
-              items={comparisons.map(comp => ({
-                id: comp.id,
-                render: () => (
-                  <SidebarItemTooltip isCollapsed={isCollapsed} content={comp.summary}>
-                    <div
-                      className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-sm text-left",
-                        activeComparisonId === comp.id
-                          ? "bg-surface-hover text-foreground"
-                          : "text-muted-foreground hover:bg-surface-hover/60 hover:text-foreground",
-                        isCollapsed && "justify-center px-2 py-2"
-                      )}
-                    >
-                      <GitCompare className="w-4 h-4 shrink-0" />
-                      {!isCollapsed && <span className="truncate">{comp.summary}</span>}
-                    </div>
-                  </SidebarItemTooltip>
-                ),
-              }))}
-              onItemSelect={(item: any) => handleCompareClick(item.id)}
-            />
-          )
-        ) : (
-          sessions.length === 0 ? (
-            !isCollapsed && (
-              <p className="text-xs text-muted-foreground text-center px-2 py-6">
-                No research sessions yet.{" "}
-                <button
-                  onClick={handleNewAction}
-                  className="text-primary underline underline-offset-2"
-                >
-                  Start one above.
-                </button>
-              </p>
-            )
-          ) : (
-            <>
-              <AnimatedList
-                className="!w-full !p-0 !max-w-none"
-                innerClassName="overflow-visible p-0 flex flex-col gap-0.5"
-                displayScrollbar={false}
-                showGradients={false}
-                items={sessions.map(session => ({
-                  id: session.id,
-                  render: () => (
-                    <SidebarItemTooltip isCollapsed={isCollapsed} content={session.question}>
-                      <div
-                        className={cn(
-                          "w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-sm text-left",
-                          activeSessionId === session.id
-                            ? "bg-surface-hover text-foreground"
-                            : "text-muted-foreground hover:bg-surface-hover/60 hover:text-foreground",
-                          isCollapsed && "justify-center px-2 py-2"
-                        )}
-                      >
-                        <MessageSquare className="w-3.5 h-3.5 shrink-0" />
-                        {!isCollapsed && <span className="truncate">{session.question}</span>}
-                      </div>
-                    </SidebarItemTooltip>
-                  ),
-                }))}
-                onItemSelect={(item: any) => handleSessionClick(item.id)}
-              />
-              {loadingMore && (
-                <div className="flex justify-center py-2">
-                  <div className="w-4 h-4 relative flex items-center justify-center overflow-hidden">
-                    <Loader scale={0.3} color="hsl(var(--muted-foreground))" />
-                  </div>
-                </div>
+          const btn = (
+            <button
+              key={item.id}
+              disabled={item.disabled}
+              onClick={() => !item.disabled && router.push(href)}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-sm font-medium",
+                active
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-surface-hover hover:text-foreground",
+                isCollapsed && "justify-center px-2 py-2",
+                item.disabled && "opacity-40 cursor-not-allowed"
               )}
-            </>
-          )
-        )}
+            >
+              {item.icon}
+              {!isCollapsed && <span className="truncate">{item.label}</span>}
+              {!isCollapsed && item.disabled && (
+                <span className="ml-auto text-[10px] text-muted-foreground font-mono bg-surface px-1 rounded">
+                  soon
+                </span>
+              )}
+            </button>
+          );
+
+          if (isCollapsed) {
+            return (
+              <Tooltip key={item.id} delayDuration={100}>
+                <TooltipTrigger asChild>{btn}</TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>{item.label}{item.disabled ? " (coming soon)" : ""}</p>
+                </TooltipContent>
+              </Tooltip>
+            );
+          }
+          return btn;
+        })}
       </div>
 
+      {/* Settings footer */}
       <div className="px-2 py-2 border-t border-border/50 shrink-0">
-        <SidebarItemTooltip isCollapsed={isCollapsed} content="Settings">
-          <button
-            onClick={() => router.push(activeWorkspaceId ? `/workspaces/${activeWorkspaceId}/settings` : "/settings")}
-            className={cn(
-              "w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-surface-hover transition-colors text-muted-foreground hover:text-foreground text-xs font-medium",
-              isCollapsed && "justify-center"
-            )}
-          >
-            <Settings className="w-4 h-4 shrink-0" />
-            {!isCollapsed && <span>Settings</span>}
-          </button>
-        </SidebarItemTooltip>
+        <Tooltip delayDuration={100}>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => activeWorkspaceId && router.push(`/workspaces/${activeWorkspaceId}/settings`)}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-surface-hover transition-colors text-muted-foreground hover:text-foreground text-xs font-medium",
+                isCollapsed && "justify-center"
+              )}
+            >
+              <Settings className="w-4 h-4 shrink-0" />
+              {!isCollapsed && <span>Settings</span>}
+            </button>
+          </TooltipTrigger>
+          {isCollapsed && <TooltipContent side="right"><p>Settings</p></TooltipContent>}
+        </Tooltip>
       </div>
-
     </div>
   );
 }

@@ -127,3 +127,57 @@ export async function createDecision(
 export async function listDecisions(token: string, getToken?: () => Promise<string | null>): Promise<DecisionListResponse> {
   return apiFetch<DecisionListResponse>("/decisions", token, { getToken });
 }
+
+/** Submit research within a workspace (workspace-scoped route) */
+export async function submitWorkspaceResearch(
+  workspaceId: string,
+  question: string,
+  forceRefresh: boolean = false,
+  token: string,
+  getToken?: () => Promise<string | null>
+): Promise<ResearchResponse> {
+  return apiFetch<ResearchResponse>(`/workspaces/${workspaceId}/research`, token, {
+    method: "POST",
+    body: JSON.stringify({ question, force_refresh: forceRefresh }),
+    getToken,
+  });
+}
+
+/** Get research history within a workspace */
+export async function getWorkspaceResearchHistory(
+  workspaceId: string,
+  limit: number = 10,
+  offset: number = 0,
+  token: string,
+  getToken?: () => Promise<string | null>
+): Promise<SessionHistoryResponse> {
+  return apiFetch<SessionHistoryResponse>(
+    `/workspaces/${workspaceId}/research/history?limit=${limit}&offset=${offset}`,
+    token,
+    { getToken }
+  );
+}
+
+/** List decisions within a workspace */
+export async function listWorkspaceDecisions(
+  workspaceId: string,
+  token: string,
+  getToken?: () => Promise<string | null>
+): Promise<DecisionListResponse> {
+  return apiFetch<DecisionListResponse>(`/workspaces/${workspaceId}/decisions`, token, { getToken });
+}
+
+/** Get workspace activity feed */
+export async function getWorkspaceActivity(
+  workspaceId: string,
+  limit: number = 20,
+  token: string,
+  getToken?: () => Promise<string | null>
+): Promise<{ activity: any[] }> {
+  return apiFetch<{ activity: any[] }>(
+    `/workspaces/${workspaceId}/activity?limit=${limit}`,
+    token,
+    { getToken }
+  );
+}
+

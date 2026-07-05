@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Request, Header
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Request, Header, Response
 from api.schemas.research import (
     ResearchRequest,
     ResearchResponse,
@@ -19,7 +19,9 @@ router = APIRouter()
 
 @router.post("", response_model=ResearchResponse, status_code=202)
 @limiter.limit("5/minute")
-def submit_research(request: Request, body: ResearchRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user), workspace_id: str | None = Depends(verify_workspace_access)):
+def submit_research(request: Request, response: Response, body: ResearchRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user), workspace_id: str | None = Depends(verify_workspace_access)):
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "Phase 4 — use /workspaces/{id}/research"
     """
     POST /research
     Accepts a technical question, creates a session and job in Supabase,
@@ -48,7 +50,9 @@ def submit_research(request: Request, body: ResearchRequest, background_tasks: B
 
 
 @router.get("/jobs/{job_id}", response_model=JobStatusResponse)
-def get_job_status(job_id: str, user_id: str = Depends(get_current_user)):
+def get_job_status(job_id: str, response: Response, user_id: str = Depends(get_current_user)):
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "Phase 4 — use /workspaces/{id}/research"
     """
     GET /research/jobs/{job_id}
     Returns the current status, progress (0-100), and step of a background job.
@@ -66,7 +70,9 @@ def get_job_status(job_id: str, user_id: str = Depends(get_current_user)):
 
 
 @router.get("/sessions/{session_id}", response_model=SessionDocumentResponse)
-def get_session_document(session_id: str, user_id: str = Depends(get_current_user)):
+def get_session_document(session_id: str, response: Response, user_id: str = Depends(get_current_user)):
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "Phase 4 — use /workspaces/{id}/research"
     """
     GET /research/sessions/{session_id}
     Returns the completed decision document for the given session, checking cache first.
@@ -87,7 +93,9 @@ def get_session_document(session_id: str, user_id: str = Depends(get_current_use
 
 
 @router.get("/history", response_model=SessionHistoryResponse)
-def get_session_history(limit: int = 10, offset: int = 0, user_id: str = Depends(get_current_user), workspace_id: str | None = Depends(verify_workspace_access)):
+def get_session_history(response: Response, limit: int = 10, offset: int = 0, user_id: str = Depends(get_current_user), workspace_id: str | None = Depends(verify_workspace_access)):
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "Phase 4 — use /workspaces/{id}/research"
     """
     GET /research/history?limit=10&offset=0
     Returns a paginated list of recent completed sessions for the current user.
@@ -98,7 +106,9 @@ def get_session_history(limit: int = 10, offset: int = 0, user_id: str = Depends
 import anyio
 
 @router.post("/regenerate-visuals", response_model=RegenerateVisualsResponse)
-async def regenerate_visuals(body: RegenerateVisualsRequest, user_id: str = Depends(get_current_user)):
+async def regenerate_visuals(body: RegenerateVisualsRequest, response: Response, user_id: str = Depends(get_current_user)):
+    response.headers["Deprecation"] = "true"
+    response.headers["Sunset"] = "Phase 4 — use /workspaces/{id}/research"
     """
     POST /research/regenerate-visuals
     Regenerates only the visuals for an existing session and updates the database.

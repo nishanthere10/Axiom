@@ -153,7 +153,7 @@ function ResearchPageInner() {
               <div className="absolute w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[80px] translate-x-1/4 -translate-y-1/4" />
             </div>
             
-            <QuestionInput onSubmitted={handleSubmitted} />
+            <QuestionInput workspaceId={workspaceId} onSubmitted={handleSubmitted} />
           </motion.div>
         )}
 

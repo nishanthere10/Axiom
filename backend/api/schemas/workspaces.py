@@ -63,3 +63,13 @@ class WorkspaceDashboardResponse(BaseModel):
     recent_comparisons: List[dict]
     connected_repositories: List[dict]
     quick_insights: QuickInsights
+
+class WorkspaceActivityItem(BaseModel):
+    type: str          # "research" | "decision" | "comparison"
+    id: str
+    title: str
+    status: str
+    created_at: str
+
+class WorkspaceActivityResponse(BaseModel):
+    activity: List[WorkspaceActivityItem]

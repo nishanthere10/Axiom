@@ -180,3 +180,40 @@ async def get_workspace_dashboard(workspace_id: str, user_id: str) -> Dict[str, 
         "connected_repositories": connected_repos,
         "quick_insights": quick_insights
     }
+
+async def get_workspace_activity(workspace_id: str, user_id: str, limit: int = 20) -> list[dict]:
+    """
+    Returns a unified activity feed mixing research sessions, decisions, and comparisons
+    sorted by most recent. Used for the workspace dashboard activity timeline.
+    """
+    import asyncio
+    from services.db import get_supabase
+    supabase = get_supabase()
+
+    async def _fetch(table: str, select: str, label: str):
+        def _q():
+            return supabase.table(table).select(select).eq("workspace_id", workspace_id).order("created_at", desc=True).limit(limit).execute()
+        try:
+            res = await asyncio.to_thread(_q)
+            items = []
+            for row in (res.data or []):
+                items.append({
+                    "type": label,
+                    "id": row.get("id"),
+                    "title": row.get("question") or row.get("title") or row.get("summary", ""),
+                    "status": row.get("status", ""),
+                    "created_at": row.get("created_at"),
+                })
+            return items
+        except Exception:
+            return []
+
+    results = await asyncio.gather(
+        _fetch("research_sessions", "id, question, status, created_at", "research"),
+        _fetch("decision_records", "id, title, status, created_at", "decision"),
+        _fetch("comparisons", "id, summary, created_at", "comparison"),
+    )
+
+    all_items = results[0] + results[1] + results[2]
+    all_items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return all_items[:limit]

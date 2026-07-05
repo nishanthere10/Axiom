@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@clerk/nextjs";
-import { submitResearch } from "@/lib/api";
+import { submitResearch, submitWorkspaceResearch } from "@/lib/api";
 import { ResearchResponse } from "@/types";
 import { ArrowRight, Lightbulb } from "lucide-react";
 import Loader from "@/components/loader";
@@ -28,6 +28,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 interface Props {
+  workspaceId?: string;
   onSubmitted: (response: ResearchResponse) => void;
 }
 
@@ -55,7 +56,7 @@ const ErrorMessage = ({ message }: { message: string }) => (
   </motion.p>
 );
 
-export default function QuestionInput({ onSubmitted }: Props) {
+export default function QuestionInput({ workspaceId, onSubmitted }: Props) {
   const { getToken } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -95,7 +96,12 @@ export default function QuestionInput({ onSubmitted }: Props) {
     setApiError(null);
     try {
       const token = (await getToken()) ?? "";
-      const response = await submitResearch(data.question, false, token);
+      let response;
+      if (workspaceId) {
+        response = await submitWorkspaceResearch(workspaceId, data.question, false, token);
+      } else {
+        response = await submitResearch(data.question, false, token);
+      }
       if (typeof window !== "undefined") {
         localStorage.removeItem("research_draft_question");
       }

@@ -14,6 +14,14 @@ def retrieve_github_context(state: ResearchState) -> Dict[str, Any]:
     
     question = state.get("question", "")
     user_id = state.get("user_id", "anonymous")
+    sub_questions = state.get("sub_questions", [])
+    
+    if sub_questions:
+        search_query = question + " " + " ".join(sub_questions[:3])
+    else:
+        search_query = question
+
+    logger.debug("Retrieving targeted GitHub context for: %s...", search_query[:80])
     
     import asyncio
     import concurrent.futures
@@ -22,7 +30,7 @@ def retrieve_github_context(state: ResearchState) -> Dict[str, Any]:
         # asyncio.run() or loop.run_until_complete() will crash if called from within a running loop.
         # We safely execute the async retrieve method by running it in a new thread.
         def _run_async_retrieve():
-            return asyncio.run(github_provider.retrieve(question, user_id))
+            return asyncio.run(github_provider.retrieve(search_query, user_id))
             
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
             future = pool.submit(_run_async_retrieve)

@@ -8,6 +8,7 @@ class ResearchState(TypedDict):
     """Represents the state of the LangGraph research pipeline."""
     question: str
     user_id: str
+    sub_questions: list[str]
     summary: str
     constraints: list[str]
     reasoning: str

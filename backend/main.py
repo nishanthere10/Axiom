@@ -118,9 +118,15 @@ app.include_router(webhooks_router, prefix="/webhooks", tags=["webhooks"])
 app.include_router(admin_router, prefix="/admin", tags=["admin"])
 app.include_router(workspaces_router, prefix="/workspaces", tags=["workspaces"])
 app.include_router(decisions_router, prefix="/decisions", tags=["decisions"])
+from api.routes.workspace_research import router as ws_research_router
+from api.routes.workspace_decisions import router as ws_decisions_router
+
 app.include_router(export_router)
 app.include_router(github_router)
 
+# Register workspace-scoped routes
+app.include_router(ws_research_router, prefix="/workspaces/{workspace_id}/research", tags=["workspace-research"])
+app.include_router(ws_decisions_router, prefix="/workspaces/{workspace_id}/decisions", tags=["workspace-decisions"])
 
 @app.get("/health", tags=["system"])
 async def health_check():

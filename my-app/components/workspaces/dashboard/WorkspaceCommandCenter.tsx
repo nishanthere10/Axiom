@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
-export function WorkspaceCommandCenter({ dashboardData, workspaceId }: { dashboardData: any, workspaceId: string }) {
+export function WorkspaceCommandCenter({ dashboardData, activity = [], workspaceId }: { dashboardData: any, activity?: any[], workspaceId: string }) {
   // 🛑 DEFENSIVE GUARD: Ensure data exists before checking .length
   if (!dashboardData || !dashboardData.recent_decisions || !dashboardData.recent_research) {
     return null;
@@ -50,6 +50,10 @@ export function WorkspaceCommandCenter({ dashboardData, workspaceId }: { dashboa
 
         <div className="flex-[1_1_320px] min-w-[320px] flex">
           <ComparisonPanel comparisons={dashboardData.recent_comparisons} summary={dashboardData.comparison_summary} workspaceId={workspaceId} />
+        </div>
+
+        <div className="flex-[1_1_320px] min-w-[320px] flex">
+          <WorkspaceActivityFeed activity={activity} />
         </div>
 
         <div className="flex-[1_1_320px] min-w-[320px] flex">
@@ -367,7 +371,37 @@ function MemoryPanel({ summary, workspaceId }: { summary: any, workspaceId: stri
         
         <Link href={`/workspaces/${workspaceId}/memory`} className="w-full mt-4 py-2 rounded-md border border-border text-center text-xs font-medium hover:bg-surface-hover transition-colors">
           Manage Memory
-        </Link>
+    </Card>
+  );
+}
+
+function WorkspaceActivityFeed({ activity }: { activity: any[] }) {
+  return (
+    <Card className="w-full flex flex-col h-full bg-surface border-border">
+      <CardHeader className="flex flex-row items-center gap-2 pb-3 mb-4 border-b border-border/50 space-y-0 px-5 pt-5">
+        <Activity className="w-4 h-4 text-muted-foreground" />
+        <CardTitle className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Activity Feed</CardTitle>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col px-5 pb-5 pt-0 overflow-y-auto">
+        <div className="flex flex-col gap-0 mt-auto">
+          {activity.map((item, idx) => (
+            <div key={item.id || idx} className="flex items-start gap-3 py-2 border-b border-border/30 last:border-0">
+              <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
+                item.type === "decision" ? "bg-primary" : 
+                item.type === "research" ? "bg-blue-400" : "bg-purple-400"
+              }`} />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm truncate text-foreground">{item.title}</p>
+                <p className="text-xs text-muted-foreground capitalize">
+                  {item.type} • {new Date(item.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          ))}
+          {activity.length === 0 && (
+            <p className="text-sm text-muted-foreground font-mono m-auto">No recent activity.</p>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
