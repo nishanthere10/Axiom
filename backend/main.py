@@ -27,6 +27,11 @@ import asyncio
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Startup: Recover stale jobs
+    from services.research_service import recover_stale_jobs
+    import asyncio
+    await asyncio.to_thread(recover_stale_jobs)
+
     # Startup: Start the memory sweeper background task
     sweeper_task = asyncio.create_task(run_memory_sweeper())
     yield

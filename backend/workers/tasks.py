@@ -22,7 +22,7 @@ _NODE_PROGRESS = {
 
 import anyio
 
-async def run_research_background_task(session_id: str, job_id: str, question: str, force_refresh: bool = False, user_id: str = "anonymous", workspace_id: str | None = None) -> dict:
+async def run_research_background_task(session_id: str, job_id: str, question: str, user_id: str, force_refresh: bool = False, workspace_id: str | None = None) -> dict:
     """
     Background task that runs the LangGraph decision pipeline natively via FastAPI.
 
@@ -66,23 +66,30 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
         }
         
         max_progress = 5
-        async for chunk in decision_graph.astream(current_state):
-            for node_name, node_state in chunk.items():
-                # LangGraph stream yields only the updates from the current node.
-                # We must accumulate them to have the full state for saving.
-                current_state.update(node_state)
-                
-                _, progress = _NODE_PROGRESS.get(node_name, (0, 0))
-                if progress > max_progress:
-                    max_progress = progress
+        with anyio.move_on_after(900) as scope:
+            async for chunk in decision_graph.astream(current_state):
+                for node_name, node_state in chunk.items():
+                    # LangGraph stream yields only the updates from the current node.
+                    # We must accumulate them to have the full state for saving.
+                    current_state.update(node_state)
                     
-                await anyio.to_thread.run_sync(
-                    research_service.update_job_status,
-                    job_id,
-                    "running",
-                    max_progress,
-                    node_name
-                )
+                    _, progress = _NODE_PROGRESS.get(node_name, (0, 0))
+                    if progress > max_progress:
+                        max_progress = progress
+                        
+                    await anyio.to_thread.run_sync(
+                        research_service.update_job_status,
+                        job_id,
+                        "running",
+                        max_progress,
+                        node_name
+                    )
+
+        if scope.cancel_called:
+            logger.error("Research job %s timed out", job_id)
+            await anyio.to_thread.run_sync(research_service.update_job_status, job_id, "failed", 0, "timeout")
+            await anyio.to_thread.run_sync(research_service.update_session_status, session_id, "failed")
+            return {"session_id": session_id, "job_id": job_id, "status": "timeout"}
                 
         final_state = current_state
 

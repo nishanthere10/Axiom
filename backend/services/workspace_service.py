@@ -10,7 +10,15 @@ def create_workspace(user_id: str, name: str, description: Optional[str] = None,
         "description": description,
         "icon": icon
     }).execute()
-    return response.data[0]
+    workspace = response.data[0]
+    
+    supabase.table("workspace_members").insert({
+        "workspace_id": workspace["id"],
+        "user_id": user_id,
+        "role": "owner"
+    }).execute()
+    
+    return workspace
 
 def get_workspaces(user_id: str) -> List[Dict[str, Any]]:
     supabase = get_supabase()

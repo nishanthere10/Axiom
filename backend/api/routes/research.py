@@ -71,16 +71,10 @@ def get_session_document(session_id: str, user_id: str = Depends(get_current_use
     GET /research/sessions/{session_id}
     Returns the completed decision document for the given session, checking cache first.
     """
-    cache_key = f"doc_{session_id}"
+    cache_key = f"doc_{user_id}_{session_id}"
     cached_doc = cache.get(cache_key)
     if cached_doc:
-        # Note: In a true multi-tenant setup, cache keys should include user_id. 
-        # For now, we trust the DB fetch for auth. If cached, we should technically verify ownership.
-        # But fixing the cache key is safer:
-        cache_key = f"doc_{user_id}_{session_id}"
-        cached_doc = cache.get(cache_key)
-        if cached_doc:
-            return SessionDocumentResponse(document=cached_doc)
+        return SessionDocumentResponse(document=cached_doc)
 
     document = research_service.get_document_by_session(session_id, user_id=user_id)
     if not document:

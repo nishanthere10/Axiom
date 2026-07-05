@@ -88,29 +88,11 @@ def search_memories(query: str, user_id: str, workspace_id: Optional[str] = None
     try:
         logger.debug("Querying pinecone index...")
         filter_dict = {"user_id": {"$eq": user_id}}
-        if workspace_id:
-            # Matches GLOBAL memories (no workspace_id) OR WORKSPACE memories
-            # Pinecone metadata filtering doesn't natively support OR across fields easily without complex syntax,
-            # so we'll filter by user_id and then in Python we'll prefer the workspace ones if they overlap.
-            # Actually, to be safe, we just get top K for the user, and filter manually if we need to.
-            # But the spec says: Metadata Filtering: {"workspace_id": "...", "scope": "..."}
-            # For Pinecone $in or $or:
-            filter_dict = {
-                "user_id": {"$eq": user_id},
-                "$or": [
-                    {"workspace_id": {"$exists": False}},
-                    {"workspace_id": {"$eq": workspace_id}}
-                ]
-            }
-        else:
-            filter_dict = {
-                "user_id": {"$eq": user_id},
-                "workspace_id": {"$exists": False}
-            }
+        filter_dict = {"user_id": {"$eq": user_id}}
 
         results = index.query(
             vector=embedding,
-            top_k=top_k,
+            top_k=top_k * 2,
             include_metadata=True,
             filter=filter_dict
         )
@@ -120,9 +102,16 @@ def search_memories(query: str, user_id: str, workspace_id: Optional[str] = None
         for match in results.get("matches", []):
             match_dict = match.to_dict() if hasattr(match, "to_dict") else dict(match)
             score = match_dict.get("score", 0.0)
-            logger.debug("Pinecone match found: id=%s score=%.3f", match_dict.get('id'), score)
+            metadata = match_dict.get("metadata", {})
+            match_workspace = metadata.get("workspace_id")
+            
             if score >= threshold:
-                valid_matches.append(match_dict)
+                if workspace_id:
+                    if not match_workspace or match_workspace == workspace_id:
+                        valid_matches.append(match_dict)
+                else:
+                    if not match_workspace:
+                        valid_matches.append(match_dict)
 
         # Sort by score descending so best evidence is first
         valid_matches.sort(key=lambda m: m.get("score", 0.0), reverse=True)

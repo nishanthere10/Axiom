@@ -12,7 +12,7 @@ _SUPABASE_RETRY = dict(
 
 
 @retry(**_SUPABASE_RETRY)
-def create_session(question: str, user_id: str = "anonymous", workspace_id: str | None = None) -> dict:
+def create_session(question: str, user_id: str, workspace_id: str | None = None) -> dict:
     """Create a research session row. Returns the created row."""
     payload = {"question": question, "status": "draft", "version": 1, "user_id": user_id}
     if workspace_id:
@@ -51,7 +51,7 @@ def update_session_status(session_id: str, status: str) -> None:
 
 
 @retry(**_SUPABASE_RETRY)
-def save_document(session_id: str, question: str, state: dict, user_id: str = "anonymous", warnings: list = None) -> dict:
+def save_document(session_id: str, question: str, state: dict, user_id: str, warnings: list = None) -> dict:
     """Save the final decision document to Supabase."""
     from datetime import datetime
     confidence = state.get("confidence", {})
@@ -117,7 +117,7 @@ def get_document_by_session(session_id: str, user_id: str) -> dict | None:
 
 
 @retry(**_SUPABASE_RETRY)
-def get_recent_sessions(limit: int = 10, offset: int = 0, user_id: str = "anonymous", workspace_id: str | None = None) -> list[dict]:
+def get_recent_sessions(user_id: str, limit: int = 10, offset: int = 0, workspace_id: str | None = None) -> list[dict]:
     """Fetch recent completed research sessions for a specific user and workspace with pagination."""
     query = (
         supabase.table("research_sessions")
@@ -136,3 +136,14 @@ def get_recent_sessions(limit: int = 10, offset: int = 0, user_id: str = "anonym
     return response.data or []
 
 
+@retry(**_SUPABASE_RETRY)
+def recover_stale_jobs() -> None:
+    """Find running jobs older than 15 mins and mark failed."""
+    from datetime import datetime, timedelta
+    cutoff = (datetime.utcnow() - timedelta(minutes=15)).isoformat()
+    try:
+        supabase.table("research_jobs").update(
+            {"status": "failed", "step": "timeout"}
+        ).eq("status", "running").lt("created_at", cutoff).execute()
+    except Exception as e:
+        pass

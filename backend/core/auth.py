@@ -200,7 +200,7 @@ async def verify_workspace_access(
         
     try:
         supabase = get_supabase()
-        response = supabase.table("workspaces").select("id").eq("id", workspace_id).eq("user_id", user_id).limit(1).execute()
+        response = supabase.table("workspace_members").select("id").eq("workspace_id", workspace_id).eq("user_id", user_id).limit(1).execute()
         if not response.data:
             logger.warning("AUTH REJECT: user_id=%s attempted to access workspace_id=%s without permission", user_id, workspace_id)
             raise HTTPException(status_code=403, detail="Forbidden: You do not have access to this workspace")
