@@ -10,6 +10,7 @@ class DecisionRecordCreate(BaseModel):
 class DecisionRecordUpdate(BaseModel):
     status: str
     title: Optional[str] = None
+    note: Optional[str] = None
 
 class DecisionRecordResponse(BaseModel):
     id: str

@@ -5,9 +5,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@clerk/nextjs";
-import { submitResearch, submitWorkspaceResearch } from "@/lib/api";
+import { submitResearch, submitWorkspaceResearch, apiFetch } from "@/lib/api";
 import { ResearchResponse } from "@/types";
-import { ArrowRight, Lightbulb } from "lucide-react";
+import { ArrowRight, Lightbulb, FolderKanban } from "lucide-react";
 import Loader from "@/components/loader";
 import { motion, AnimatePresence } from "framer-motion";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,6 +60,26 @@ export default function QuestionInput({ workspaceId, onSubmitted }: Props) {
   const { getToken } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+
+  useEffect(() => {
+    if (!workspaceId) return;
+    async function loadProjects() {
+      try {
+        const token = await getToken();
+        if (!token) return;
+        const data = await apiFetch<{ projects: any[] }>(
+          `/workspaces/${workspaceId}/projects`,
+          token
+        );
+        setProjects(data.projects?.filter((p: any) => p.status === "active") || []);
+      } catch (e) {
+        // Non-fatal
+      }
+    }
+    loadProjects();
+  }, [workspaceId, getToken]);
 
   const {
     register,
@@ -98,7 +118,7 @@ export default function QuestionInput({ workspaceId, onSubmitted }: Props) {
       const token = (await getToken()) ?? "";
       let response;
       if (workspaceId) {
-        response = await submitWorkspaceResearch(workspaceId, data.question, false, token);
+        response = await submitWorkspaceResearch(workspaceId, data.question, false, token, getToken, selectedProjectId || undefined);
       } else {
         response = await submitResearch(data.question, false, token);
       }
@@ -142,6 +162,21 @@ export default function QuestionInput({ workspaceId, onSubmitted }: Props) {
           />
           
           <div className="absolute bottom-3 right-3 flex items-center gap-4">
+            {projects.length > 0 && (
+              <div className="flex items-center gap-2 mr-2">
+                <FolderKanban className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <select
+                  value={selectedProjectId}
+                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  className="text-xs bg-transparent border-none text-muted-foreground focus:outline-none focus:text-foreground cursor-pointer"
+                >
+                  <option value="">No project</option>
+                  {projects.map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <CharCounter length={questionValue?.length ?? 0} />
 
             {/* Submit Icon Button */}

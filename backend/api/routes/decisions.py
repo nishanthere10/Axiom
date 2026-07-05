@@ -31,7 +31,7 @@ def create_decision(body: DecisionRecordCreate, response: Response, user_id: str
         created = res.data[0]
         
         # We need to return it with the research fields joined, so we fetch it back
-        return get_decision(created["id"], user_id)
+        return get_decision(created["id"], response, user_id)
     except Exception as e:
         logger.error(f"Failed to create decision record: {e}")
         raise HTTPException(status_code=500, detail="Failed to create decision record")
@@ -96,10 +96,29 @@ def get_decision(decision_id: str, response: Response, user_id: str = Depends(ge
 def update_decision_status(decision_id: str, body: DecisionRecordUpdate, response: Response, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user)):
     response.headers["Deprecation"] = "true"
     response.headers["Sunset"] = "Phase 4 — use /workspaces/{id}/decisions"
+
+    # Fetch current status for history
+    current = supabase.table("decision_records").select("status").eq("id", decision_id).execute()
+    if not current.data:
+        raise HTTPException(status_code=404, detail="Decision not found")
+    from_status = current.data[0]["status"]
+
     payload = {"status": body.status}
     if body.title:
         payload["title"] = body.title
         
+    # Write history row BEFORE updating
+    try:
+        supabase.table("decision_status_history").insert({
+            "decision_id": decision_id,
+            "from_status": from_status,
+            "to_status": body.status,
+            "changed_by": user_id,
+            "note": getattr(body, "note", None),  # optional note field
+        }).execute()
+    except Exception as e:
+        logger.warning("Failed to write decision history row: %s", e)
+
     res = supabase.table("decision_records").update(payload).eq("id", decision_id).eq("created_by", user_id).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Decision record not found or unauthorized")
@@ -108,4 +127,4 @@ def update_decision_status(decision_id: str, body: DecisionRecordUpdate, respons
     if body.status in ["APPROVED", "IMPLEMENTED"]:
         background_tasks.add_task(generate_and_store_decision_memory, decision_id, user_id)
         
-    return get_decision(decision_id, user_id)
+    return get_decision(decision_id, response, user_id)

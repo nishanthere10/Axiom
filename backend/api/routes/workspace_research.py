@@ -28,7 +28,13 @@ def submit_research_in_workspace(
     _ws: str = Depends(verify_workspace_path),
 ):
     """POST /workspaces/{id}/research"""
-    session = research_service.create_session(body.question, user_id=user_id, workspace_id=workspace_id)
+    # Create the research session, scoped to the workspace and project (if any)
+    session = research_service.create_session(
+        body.question,
+        user_id=user_id,
+        workspace_id=workspace_id,
+        project_id=body.project_id
+    )
     job = research_service.create_job(session["id"])
 
     background_tasks.add_task(

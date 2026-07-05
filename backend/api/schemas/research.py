@@ -4,6 +4,7 @@ from typing import Optional, Any, Dict
 class ResearchRequest(BaseModel):
     question: str = Field(..., min_length=10, max_length=1000)
     force_refresh: bool = False
+    project_id: Optional[str] = None
 
 
 class DecisionDocument(BaseModel):

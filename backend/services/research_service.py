@@ -12,11 +12,13 @@ _SUPABASE_RETRY = dict(
 
 
 @retry(**_SUPABASE_RETRY)
-def create_session(question: str, user_id: str, workspace_id: str | None = None) -> dict:
+def create_session(question: str, user_id: str, workspace_id: str | None = None, project_id: str | None = None) -> dict:
     """Create a research session row. Returns the created row."""
     payload = {"question": question, "status": "draft", "version": 1, "user_id": user_id}
     if workspace_id:
         payload["workspace_id"] = workspace_id
+    if project_id:
+        payload["project_id"] = project_id
     response = (
         supabase.table("research_sessions")
         .insert(payload)

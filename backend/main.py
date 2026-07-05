@@ -7,7 +7,6 @@ from contextlib import asynccontextmanager
 from core.logging_config import configure_human_readable_logging
 configure_human_readable_logging()
 
-from api.routes.research import router as research_router
 from api.routes.compare import router as compare_router
 from api.routes.memory import router as memory_router
 from api.routes.webhooks import router as webhooks_router
@@ -15,7 +14,6 @@ from api.routes.admin import router as admin_router
 from api.routes.export import router as export_router
 from api.routes.github import router as github_router
 from api.routes.workspaces import router as workspaces_router
-from api.routes.decisions import router as decisions_router
 
 from middleware.rate_limit import limiter
 from middleware.logging_middleware import StructlogMiddleware
@@ -110,16 +108,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register routers
-app.include_router(research_router, prefix="/research", tags=["research"])
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
+
+deprecated_router = APIRouter()
+
+@deprecated_router.api_route("", methods=["GET", "POST", "PATCH", "DELETE"])
+@deprecated_router.api_route("/", methods=["GET", "POST", "PATCH", "DELETE"])
+@deprecated_router.api_route("/{path:path}", methods=["GET", "POST", "PATCH", "DELETE"])
+async def deprecated_endpoint(path: str = ""):
+    return JSONResponse(
+        status_code=410,
+        content={"error": "This endpoint has moved. Use /workspaces/{id}/research or /workspaces/{id}/decisions"}
+    )
+
+app.include_router(deprecated_router, prefix="/research", tags=["deprecated"])
+app.include_router(deprecated_router, prefix="/decisions", tags=["deprecated"])
 app.include_router(compare_router, prefix="/compare", tags=["compare"])
 app.include_router(memory_router, prefix="/memory", tags=["memory"])
 app.include_router(webhooks_router, prefix="/webhooks", tags=["webhooks"])
 app.include_router(admin_router, prefix="/admin", tags=["admin"])
 app.include_router(workspaces_router, prefix="/workspaces", tags=["workspaces"])
-app.include_router(decisions_router, prefix="/decisions", tags=["decisions"])
+
 from api.routes.workspace_research import router as ws_research_router
 from api.routes.workspace_decisions import router as ws_decisions_router
+from api.routes.workspace_projects import router as ws_projects_router
 
 app.include_router(export_router)
 app.include_router(github_router)
@@ -127,6 +140,7 @@ app.include_router(github_router)
 # Register workspace-scoped routes
 app.include_router(ws_research_router, prefix="/workspaces/{workspace_id}/research", tags=["workspace-research"])
 app.include_router(ws_decisions_router, prefix="/workspaces/{workspace_id}/decisions", tags=["workspace-decisions"])
+app.include_router(ws_projects_router, prefix="/workspaces/{workspace_id}/projects", tags=["workspace-projects"])
 
 @app.get("/health", tags=["system"])
 async def health_check():

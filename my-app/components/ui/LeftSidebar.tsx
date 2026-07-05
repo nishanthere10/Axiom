@@ -46,7 +46,6 @@ const NAV_ITEMS: NavItem[] = [
     label: "Projects",
     icon: <FolderKanban className="w-4 h-4" />,
     href: (id) => `/workspaces/${id}/projects`,
-    disabled: true,   // Enabled in Phase 4
   },
 ];
 

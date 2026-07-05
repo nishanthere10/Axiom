@@ -81,7 +81,7 @@ export async function apiFetch<T>(
   return res.json() as Promise<T>;
 }
 
-/** Submit a technical question and start a research job. */
+/** Submit a technical question and start a research job. (DEPRECATED) */
 export async function submitResearch(question: string, forceRefresh: boolean = false, token: string, getToken?: () => Promise<string | null>): Promise<ResearchResponse> {
   return apiFetch<ResearchResponse>("/research", token, {
     method: "POST",
@@ -100,32 +100,9 @@ export async function getSessionDocument(sessionId: string, token: string, getTo
   return apiFetch<SessionDocumentResponse>(`/research/sessions/${sessionId}`, token, { getToken });
 }
 
-/** Fetch a paginated list of recent research sessions. */
-export async function getSessionHistory(limit: number = 10, offset: number = 0, token: string, getToken?: () => Promise<string | null>): Promise<SessionHistoryResponse> {
-  return apiFetch<SessionHistoryResponse>(`/research/history?limit=${limit}&offset=${offset}`, token, { getToken });
-}
-
 /** Fetch all saved comparisons. */
 export async function getSavedComparisons(token: string, getToken?: () => Promise<string | null>): Promise<SavedComparisonsResponse> {
   return apiFetch<SavedComparisonsResponse>("/compare/saved", token, { getToken });
-}
-
-/** Create a new Decision Record. */
-export async function createDecision(
-  payload: { research_session_id: string; title: string; status: string },
-  token: string,
-  getToken?: () => Promise<string | null>
-): Promise<DecisionRecord> {
-  return apiFetch<DecisionRecord>("/decisions", token, {
-    method: "POST",
-    body: JSON.stringify(payload),
-    getToken,
-  });
-}
-
-/** List Decision Records. */
-export async function listDecisions(token: string, getToken?: () => Promise<string | null>): Promise<DecisionListResponse> {
-  return apiFetch<DecisionListResponse>("/decisions", token, { getToken });
 }
 
 /** Submit research within a workspace (workspace-scoped route) */
@@ -134,11 +111,16 @@ export async function submitWorkspaceResearch(
   question: string,
   forceRefresh: boolean = false,
   token: string,
-  getToken?: () => Promise<string | null>
+  getToken?: () => Promise<string | null>,
+  projectId?: string
 ): Promise<ResearchResponse> {
   return apiFetch<ResearchResponse>(`/workspaces/${workspaceId}/research`, token, {
     method: "POST",
-    body: JSON.stringify({ question, force_refresh: forceRefresh }),
+    body: JSON.stringify({ 
+      question, 
+      force_refresh: forceRefresh,
+      project_id: projectId || undefined 
+    }),
     getToken,
   });
 }
@@ -181,3 +163,52 @@ export async function getWorkspaceActivity(
   );
 }
 
+/** Search decisions within a workspace */
+export async function searchWorkspaceDecisions(
+  workspaceId: string,
+  q: string,
+  status: string = "",
+  limit: number = 20,
+  token: string,
+  getToken?: () => Promise<string | null>
+): Promise<{ results: any[]; total: number }> {
+  const params = new URLSearchParams({ q, limit: String(limit) });
+  if (status) params.set("status", status);
+  return apiFetch<{ results: any[]; total: number }>(
+    `/workspaces/${workspaceId}/decisions/search?${params}`,
+    token, { getToken }
+  );
+}
+
+/** Get full decision detail with research context and history */
+export async function getDecisionFull(
+  workspaceId: string,
+  decisionId: string,
+  token: string,
+  getToken?: () => Promise<string | null>
+): Promise<{ decision: any; research: any; history: any[] }> {
+  return apiFetch(
+    `/workspaces/${workspaceId}/decisions/${decisionId}/full`,
+    token, { getToken }
+  );
+}
+
+/** Update decision status with optional note */
+export async function updateDecisionStatus(
+  workspaceId: string,
+  decisionId: string,
+  status: string,
+  note?: string,
+  token: string = "",
+  getToken?: () => Promise<string | null>
+): Promise<any> {
+  return apiFetch(
+    `/workspaces/${workspaceId}/decisions/${decisionId}`,
+    token,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status, note }),
+      getToken,
+    }
+  );
+}
