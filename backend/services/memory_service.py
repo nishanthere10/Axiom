@@ -6,8 +6,38 @@ from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
+import hashlib
+
 def create_memory_item(data: MemoryItemCreate) -> Optional[Dict[str, Any]]:
-    """Creates a memory item in Supabase."""
+    """Creates a memory item in Supabase, with deduplication based on summary."""
+    
+    # Compute dedup hash
+    dedup_hash = hashlib.sha256(data.summary.strip().lower().encode()).hexdigest()
+
+    # Check for existing active memory with same hash in this workspace
+    try:
+        existing = (
+            supabase.table("memory_items")
+            .select("id")
+            .eq("user_id", data.user_id)
+            .eq("workspace_id", data.workspace_id)
+            .eq("dedup_hash", dedup_hash)
+            .eq("is_active", True)
+            .execute()
+        )
+        if existing.data:
+            logger.info("Skipping duplicate memory (hash=%s...)", dedup_hash[:12])
+            # Update last_used_at on the existing memory instead
+            supabase.table("memory_items").update(
+                {"last_used_at": datetime.utcnow().isoformat()}
+            ).eq("id", existing.data[0]["id"]).execute()
+            
+            # Return existing memory item but mark it as skipped so caller knows
+            existing_memory = existing.data[0]
+            existing_memory["_dedup_skipped"] = True
+            return existing_memory
+    except Exception as e:
+        logger.warning("Error checking for memory dedup: %s", e)
     
     # Calculate expiration for temporary memories
     expires_at = data.expires_at
@@ -25,7 +55,8 @@ def create_memory_item(data: MemoryItemCreate) -> Optional[Dict[str, Any]]:
         "expires_at": expires_at.isoformat() if expires_at else None,
         "user_id": data.user_id,
         "workspace_id": data.workspace_id,
-        "visibility": data.visibility
+        "visibility": data.visibility,
+        "dedup_hash": dedup_hash,
     }
     
     try:

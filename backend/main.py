@@ -148,6 +148,8 @@ app.include_router(workspaces_router, prefix="/workspaces", tags=["workspaces"])
 from api.routes.workspace_research import router as ws_research_router
 from api.routes.workspace_decisions import router as ws_decisions_router
 from api.routes.workspace_projects import router as ws_projects_router
+from api.routes.workspace_memory import router as ws_memory_router
+from api.routes.workspace_search import router as ws_search_router
 
 app.include_router(export_router)
 app.include_router(github_router)
@@ -156,6 +158,8 @@ app.include_router(github_router)
 app.include_router(ws_research_router, prefix="/workspaces/{workspace_id}/research", tags=["workspace-research"])
 app.include_router(ws_decisions_router, prefix="/workspaces/{workspace_id}/decisions", tags=["workspace-decisions"])
 app.include_router(ws_projects_router, prefix="/workspaces/{workspace_id}/projects", tags=["workspace-projects"])
+app.include_router(ws_memory_router, prefix="/workspaces/{workspace_id}/memory", tags=["workspace-memory"])
+app.include_router(ws_search_router, prefix="/workspaces/{workspace_id}/search", tags=["workspace-search"])
 
 @app.get("/health", tags=["system"])
 async def health_check():

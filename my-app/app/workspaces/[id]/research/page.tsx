@@ -11,6 +11,8 @@ import type { DecisionDocument as DecisionDocumentType, PollingState, ResearchRe
 import DecisionDocument, { AuxiliaryDocumentData } from "@/components/features/DecisionDocument";
 import ExportButton from "@/components/export/ExportButton";
 import SaveDecisionModal from "@/components/features/SaveDecisionModal";
+import { MemorySidebar } from "@/components/features/MemorySidebar";
+import { Brain } from "lucide-react";
 import { useWorkspace as useGlobalWorkspace } from "@/components/WorkspaceContext";
 import { useRightPanel } from "@/app/workspaces/[id]/layout";
 import { createPortal } from "react-dom";
@@ -34,6 +36,8 @@ function ResearchPageInner() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [doc, setDoc] = useState<DecisionDocumentType | null>(null);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showMemory, setShowMemory] = useState(false);
+  const [currentQuestion, setCurrentQuestion] = useState("");
 
   useEffect(() => {
     if (pageState !== "idle") {
@@ -73,6 +77,7 @@ function ResearchPageInner() {
   function handleSubmitted(response: ResearchResponse) {
     setJobId(response.job_id);
     setSessionId(response.session_id);
+    setCurrentQuestion(response.question || "");
     setPollingState("queued");
     setPageState("polling");
   }
@@ -138,6 +143,29 @@ function ResearchPageInner() {
   return (
     <>
       {portalNode && createPortal(rightPanelContent, portalNode)}
+      
+      {/* Memory Sidebar Overlay */}
+      {workspaceId && (
+        <MemorySidebar
+          workspaceId={workspaceId}
+          context={currentQuestion}
+          isOpen={showMemory}
+          onClose={() => setShowMemory(false)}
+        />
+      )}
+
+      {/* Memory Trigger Button */}
+      {pageState !== "idle" && (
+        <div className="fixed top-20 right-6 z-30 no-print">
+          <button
+            onClick={() => setShowMemory(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-background border border-border shadow-sm rounded-lg hover:bg-surface transition-colors text-foreground"
+          >
+            <Brain className="w-3.5 h-3.5 text-primary" /> Atlas Memory
+          </button>
+        </div>
+      )}
+
       <AnimatePresence mode="wait">
         {pageState === "idle" && (
           <motion.div
@@ -153,7 +181,14 @@ function ResearchPageInner() {
               <div className="absolute w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[80px] translate-x-1/4 -translate-y-1/4" />
             </div>
             
-            <QuestionInput workspaceId={workspaceId} onSubmitted={handleSubmitted} />
+            <QuestionInput 
+              workspaceId={workspaceId} 
+              onSubmitted={(res) => {
+                const questionElement = document.querySelector('textarea[name="question"]') as HTMLTextAreaElement;
+                if (questionElement) setCurrentQuestion(questionElement.value);
+                handleSubmitted(res);
+              }} 
+            />
           </motion.div>
         )}
 

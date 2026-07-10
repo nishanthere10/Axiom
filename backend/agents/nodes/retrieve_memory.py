@@ -47,6 +47,22 @@ def retrieve_memory(state: Dict[str, Any]) -> Dict[str, Any]:
 
     latency_ms = int((time.time() - start_time) * 1000)
     logger.debug("retrieve_memory: %d memories in %dms", len(memories), latency_ms)
+    
+    if memories:
+        import threading
+        from datetime import datetime
+        def _update_last_used():
+            try:
+                from services.db import get_supabase
+                supabase = get_supabase()
+                memory_ids = [m.get("id") for m in memories if m.get("id")]
+                if memory_ids:
+                    supabase.table("memory_items").update(
+                        {"last_used_at": datetime.utcnow().isoformat()}
+                    ).in_("id", memory_ids).execute()
+            except Exception as e:
+                logger.warning("Failed to update last_used_at: %s", e)
+        threading.Thread(target=_update_last_used, daemon=True).start()
 
     try:
         from services.metrics_service import emit_memory_retrieved

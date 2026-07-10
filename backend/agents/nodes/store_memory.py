@@ -27,6 +27,10 @@ def store_memory(state: Dict[str, Any]) -> Dict[str, Any]:
             pg_memory = create_memory_item(memory_create)
             
             if pg_memory:
+                if pg_memory.get("_dedup_skipped"):
+                    logger.debug("Memory deduplicated (id=%s), skipping Pinecone upsert.", pg_memory['id'])
+                    continue
+                    
                 logger.debug("Saved to Postgres (id=%s). Upserting to Pinecone...", pg_memory['id'])
                 # Upsert to Pinecone if Postgres insert succeeded
                 # Use the UUID assigned by Postgres
