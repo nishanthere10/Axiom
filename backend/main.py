@@ -32,13 +32,28 @@ async def lifespan(app: FastAPI):
 
     # Startup: Start the memory sweeper background task
     sweeper_task = asyncio.create_task(run_memory_sweeper())
+
+    # Startup: Start periodic EventBus + SSE ticket cleanup (every 5 minutes)
+    async def _cleanup_loop():
+        while True:
+            await asyncio.sleep(300)
+            from services.event_bus import cleanup_stale_jobs
+            from services.sse_ticket_service import cleanup_expired
+            cleanup_stale_jobs()
+            cleanup_expired()
+
+    cleanup_task = asyncio.create_task(_cleanup_loop())
+
     yield
-    # Shutdown: Cancel the memory sweeper
+
+    # Shutdown: Cancel background tasks
     sweeper_task.cancel()
-    try:
-        await sweeper_task
-    except asyncio.CancelledError:
-        pass
+    cleanup_task.cancel()
+    for t in (sweeper_task, cleanup_task):
+        try:
+            await t
+        except asyncio.CancelledError:
+            pass
     # Shutdown: Cleanly stop LiteLLM's internal async LoggingWorker if running.
     # Without this, uvicorn logs 'Task was destroyed but it is pending!' on every reload.
     try:

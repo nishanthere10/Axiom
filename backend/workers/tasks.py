@@ -1,23 +1,47 @@
 import logging
 from agents.graph.decision_graph import decision_graph
 from services import research_service
+from services.event_bus import publish as bus_publish
 
 logger = logging.getLogger(__name__)
 
-# Progress milestones per node (used when streaming the graph)
-_NODE_PROGRESS = {
-    "decompose_question": (2, 5),
-    "retrieve_memory": (5, 10),
-    "analyze_memory": (10, 15),
-    "canonicalize_topic": (15, 20),
-    "generate_queries": (20, 25),
-    "collect_and_score_evidence": (25, 45),
-    "generate_decision": (45, 70),
-    "build_confidence": (70, 80),
-    "generate_visual_spec": (80, 88),
-    "validate_visual_spec": (88, 92),
-    "format_document": (92, 100),
+# Human-readable labels shown in the frontend progress UI
+STEP_LABELS = {
+    "decompose_question":          "Understanding your question…",
+    "retrieve_memory":             "Checking your knowledge archive…",
+    "retrieve_github_context":     "Reading your codebase…",
+    "canonicalize_topic":          "Classifying topic…",
+    "memory_relevance_evaluator":  "Evaluating memory relevance…",
+    "analyze_memory":              "Analyzing past decisions…",
+    "context_relevance_scorer":    "Filtering relevant context…",
+    "generate_queries":            "Building research queries…",
+    "collect_and_score_evidence":  "Searching and scoring evidence…",
+    "generate_decision":           "Generating recommendation…",
+    "build_confidence":            "Scoring confidence…",
+    "generate_visual_spec":        "Creating diagrams…",
+    "validate_visual_spec":        "Validating visuals…",
+    "format_document":             "Assembling final report…",
 }
+
+# Deterministic progress value per node (never decreases)
+NODE_PROGRESS = {
+    "decompose_question":          5,
+    "retrieve_memory":             10,
+    "retrieve_github_context":     15,
+    "canonicalize_topic":          18,
+    "memory_relevance_evaluator":  22,
+    "analyze_memory":              28,
+    "context_relevance_scorer":    34,
+    "generate_queries":            35,
+    "collect_and_score_evidence":  58,
+    "generate_decision":           72,
+    "build_confidence":            80,
+    "generate_visual_spec":        86,
+    "validate_visual_spec":        92,
+    "format_document":             97,
+}
+
+
 
 
 import anyio
@@ -72,17 +96,43 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
                     # LangGraph stream yields only the updates from the current node.
                     # We must accumulate them to have the full state for saving.
                     current_state.update(node_state)
-                    
-                    _, progress = _NODE_PROGRESS.get(node_name, (0, 0))
+
+                    progress = NODE_PROGRESS.get(node_name, max_progress)
                     if progress > max_progress:
                         max_progress = progress
-                        
+
+                    step_label = STEP_LABELS.get(node_name, node_name)
+
+                    # Build SSE metadata for retrieval nodes
+                    meta: dict = {}
+                    if node_name == "retrieve_memory":
+                        memories = node_state.get("retrieved_memories", [])
+                        meta["memories_found"] = len(memories)
+                        if memories:
+                            meta["memory_summaries"] = [
+                                m.get("metadata", {}).get("summary", "")[:80]
+                                for m in memories[:3]
+                            ]
+                    elif node_name == "retrieve_github_context":
+                        chunks = node_state.get("github_context", [])
+                        meta["github_chunks"] = len(chunks)
+
+                    # Publish to SSE event bus (non-blocking)
+                    await bus_publish(job_id, {
+                        "status":   "running",
+                        "progress": max_progress,
+                        "step":     step_label,
+                        "node":     node_name,
+                        "meta":     meta,
+                    })
+
+                    # Also update Supabase for polling fallback
                     await anyio.to_thread.run_sync(
                         research_service.update_job_status,
                         job_id,
                         "running",
                         max_progress,
-                        node_name
+                        step_label,
                     )
 
         if scope.cancel_called:
@@ -95,6 +145,37 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
 
         if final_state is None or final_state.get("status") != "complete":
             raise ValueError("Graph did not complete successfully.")
+
+        try:
+            from services.db import get_supabase
+            supabase = get_supabase()
+            
+            scored_mems = final_state.get("scored_memories", [])
+            scored_git  = final_state.get("scored_github", [])
+            retrieved_mems = final_state.get("retrieved_memories", [])
+            retrieved_git  = final_state.get("github_context", [])
+
+            mem_scores = [m.get("relevance_score", 0) for m in scored_mems]
+            git_scores = [g.get("relevance_score", 0) for g in scored_git]
+
+            await anyio.to_thread.run_sync(
+                lambda: supabase.table("context_relevance_log").insert({
+                    "session_id":         session_id,
+                    "user_id":            user_id,
+                    "workspace_id":       workspace_id,
+                    "memories_retrieved": len(retrieved_mems),
+                    "memories_injected":  len(scored_mems),
+                    "github_retrieved":   len(retrieved_git),
+                    "github_injected":    len(scored_git),
+                    "total_dropped":      final_state.get("dropped_context_count", 0),
+                    "best_memory_score":  max(mem_scores) if mem_scores else None,
+                    "worst_memory_score": min(mem_scores) if mem_scores else None,
+                    "best_github_score":  max(git_scores) if git_scores else None,
+                    "worst_github_score": min(git_scores) if git_scores else None,
+                }).execute()
+            )
+        except Exception as e:
+            logger.warning("Failed to write context_relevance_log (non-fatal): %s", e)
 
         # 3. Save the decision document
         pipeline_warnings = final_state.get("warnings", [])
@@ -109,8 +190,16 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
 
         # 4. Mark session and job as complete
         logger.info(f"Research job {job_id} completed successfully.")
-        await anyio.to_thread.run_sync(research_service.update_job_status, job_id, "completed", 100, "done")
+        await anyio.to_thread.run_sync(research_service.update_job_status, job_id, "completed", 100, "Done")
         await anyio.to_thread.run_sync(research_service.update_session_status, session_id, "complete")
+
+        # Publish terminal SSE event so the frontend closes the EventSource
+        await bus_publish(job_id, {
+            "status":     "completed",
+            "progress":   100,
+            "step":       "Done",
+            "session_id": session_id,
+        })
 
         # Record metrics
         try:
@@ -170,4 +259,11 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
         logger.error("Research background task failed: %s", exc, exc_info=True)
         await anyio.to_thread.run_sync(research_service.update_job_status, job_id, "failed", 0, "error")
         await anyio.to_thread.run_sync(research_service.update_session_status, session_id, "failed")
+        # Publish failure event so the frontend can show an error state
+        await bus_publish(job_id, {
+            "status":   "failed",
+            "progress": 0,
+            "step":     "Research failed",
+            "error":    str(exc)[:200],
+        })
         raise

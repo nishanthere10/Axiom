@@ -15,8 +15,20 @@ def generate_decision(state: ResearchState) -> dict:
     question = state["question"]
     summary = state["summary"]
     evidence = state.get("evidence", [])
-    github_context = state.get("github_context", [])
+    
+    # Use relevance-filtered context if available
+    memories = state.get("scored_memories") or state.get("retrieved_memories", [])
+    github_context = state.get("scored_github") or state.get("github_context", [])
     memory_context = state.get("memory_context", {})
+
+    injected_mem = state.get("injected_memory_count", len(memories))
+    injected_git = state.get("injected_github_count", len(github_context))
+    dropped = state.get("dropped_context_count", 0)
+
+    logger.info(
+        "generate_decision: injecting %d memories, %d github chunks (%d dropped by relevance gate)",
+        injected_mem, injected_git, dropped
+    )
     
     # Extract ALL memory context fields
     preferences = memory_context.get("preferences", [])
@@ -30,9 +42,15 @@ def generate_decision(state: ResearchState) -> dict:
     if historical_patterns:
         memory_text += "\n**HISTORICAL PATTERNS:**\n" + "\n".join(f"- {h}" for h in historical_patterns)
     if related_decisions:
-        memory_text += "\n**RELATED PAST DECISIONS:**\n" + "\n".join(f"- {d}" for d in related_decisions)
+        memory_text += "\n**RELATED PAST DECISIONS (Summary):**\n" + "\n".join(f"- {d}" for d in related_decisions)
     if consistency_warnings:
         memory_text += "\n**⚠️ CONSISTENCY WARNINGS:**\n" + "\n".join(f"- {w}" for w in consistency_warnings)
+        
+    if memories:
+        memory_text += "\n**RELEVANT PAST DECISIONS (Raw Context):**\n" + "\n".join(
+            f"- [{m.get('metadata', {}).get('memory_type', 'unknown')}] {m.get('metadata', {}).get('summary', '')}"
+            for m in memories
+        )
 
     # Format evidence for the prompt with rich formatting and sorted by trust_score
     evidence_text = "\n\n".join(

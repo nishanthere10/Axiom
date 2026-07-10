@@ -13,6 +13,7 @@ from agents.nodes.memory_relevance_evaluator import memory_relevance_evaluator
 from agents.nodes.analyze_memory import analyze_memory
 from agents.nodes.format import format_document
 from agents.nodes.retrieve_github_context import retrieve_github_context
+from agents.nodes.context_relevance_scorer import context_relevance_scorer
 
 def build_decision_graph():
     """
@@ -34,6 +35,7 @@ def build_decision_graph():
     graph.add_node("generate_visual_spec", generate_visual_spec)
     graph.add_node("validate_visual_spec", validate_visual_spec)
     graph.add_node("format_document", format_document)
+    graph.add_node("context_relevance_scorer", context_relevance_scorer)
 
     # Wire edges
     # Phase 1: Parallel initial data gathering
@@ -51,7 +53,11 @@ def build_decision_graph():
     graph.add_edge("decompose_question", "generate_queries")
 
     # Phase 3: Wait for both queries and memory to collect evidence
-    graph.add_edge(["generate_queries", "analyze_memory"], "collect_and_score_evidence")
+    graph.add_edge("analyze_memory", "context_relevance_scorer")
+    graph.add_edge([
+        "generate_queries",
+        "context_relevance_scorer"
+    ], "collect_and_score_evidence")
     
     # Phase 4: Decision generation
     graph.add_edge("collect_and_score_evidence", "generate_decision")

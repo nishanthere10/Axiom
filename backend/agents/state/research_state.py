@@ -27,6 +27,12 @@ class ResearchState(TypedDict):
     retrieved_memories: list[dict]
     memory_context: dict
     github_context: list[dict]
+    
+    scored_memories: list[dict]
+    scored_github: list[dict]
+    injected_memory_count: int
+    injected_github_count: int
+    dropped_context_count: int
     warnings: list[str]
     
     status: Annotated[str | None, override_status]
