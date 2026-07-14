@@ -1,7 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useWorkspace } from "@/components/WorkspaceContext";
+import { WorkspaceSearchModal } from "@/components/workspaces/WorkspaceSearchModal";
 import { cn } from "@/lib/utils";
 import {
   Home,
@@ -11,6 +13,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Search,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -59,6 +62,18 @@ export default function LeftSidebar({
   const router = useRouter();
   const pathname = usePathname();
   const { activeWorkspaceId } = useWorkspace();
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const isActive = (item: NavItem) => {
     if (!activeWorkspaceId) return false;
@@ -90,8 +105,33 @@ export default function LeftSidebar({
         )}
       </div>
 
+      <div className="px-2 pb-2 mt-2">
+        <Tooltip delayDuration={100}>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setSearchOpen(true)}
+              className={cn(
+                "w-full flex items-center px-2.5 py-1.5 text-xs text-muted-foreground bg-surface border border-border/50 rounded-md hover:bg-surface-hover hover:text-foreground transition-colors",
+                isCollapsed ? "justify-center" : "justify-between"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <Search className="w-3.5 h-3.5 shrink-0" />
+                {!isCollapsed && <span>Search...</span>}
+              </div>
+              {!isCollapsed && (
+                <span className="font-mono text-[10px] bg-background px-1 rounded border border-border/50 shadow-sm shrink-0">
+                  ⌘K
+                </span>
+              )}
+            </button>
+          </TooltipTrigger>
+          {isCollapsed && <TooltipContent side="right"><p>Search (⌘K)</p></TooltipContent>}
+        </Tooltip>
+      </div>
+
       {/* Nav items */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-1 pt-3">
+      <div className="flex-1 overflow-y-auto p-2 space-y-1 pt-1 border-t border-border/50">
         {NAV_ITEMS.map((item) => {
           const active = isActive(item);
           const href = activeWorkspaceId ? item.href(activeWorkspaceId) : "#";
@@ -152,6 +192,14 @@ export default function LeftSidebar({
           {isCollapsed && <TooltipContent side="right"><p>Settings</p></TooltipContent>}
         </Tooltip>
       </div>
+
+      {activeWorkspaceId && (
+        <WorkspaceSearchModal
+          workspaceId={activeWorkspaceId}
+          isOpen={searchOpen}
+          onClose={() => setSearchOpen(false)}
+        />
+      )}
     </div>
   );
 }
