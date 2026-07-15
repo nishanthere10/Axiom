@@ -78,6 +78,10 @@ export async function apiFetch<T>(
     throw new Error(message);
   }
 
+  if (res.status === 204) {
+    return {} as T;
+  }
+
   return res.json() as Promise<T>;
 }
 
@@ -208,6 +212,24 @@ export async function updateDecisionStatus(
     {
       method: "PATCH",
       body: JSON.stringify({ status, note }),
+      getToken,
+    }
+  );
+}
+
+/** Create a decision within a workspace */
+export async function createDecision(
+  workspaceId: string,
+  data: any,
+  token: string,
+  getToken?: () => Promise<string | null>
+): Promise<any> {
+  return apiFetch(
+    `/workspaces/${workspaceId}/decisions`,
+    token,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
       getToken,
     }
   );

@@ -168,6 +168,19 @@ export default function GitHubIntegrationPage() {
     }
   };
 
+  const disconnectRepo = async (repoId: string) => {
+    try {
+      const token = await getToken();
+      if (!token) return;
+      await apiFetch(`/github/repositories/${repoId}/disconnect`, token, {
+        method: "DELETE"
+      });
+      fetchStatus();
+    } catch (error) {
+      console.error("Failed to disconnect repo", error);
+    }
+  };
+
   const startConfiguringSync = async (repo: ActiveRepository) => {
     setSyncRepo(repo);
     setSyncStep(1);
@@ -273,12 +286,20 @@ export default function GitHubIntegrationPage() {
                         {repo.last_synced_at ? `Last synced: ${new Date(repo.last_synced_at).toLocaleString()}` : "Never synced"}
                       </p>
                     </div>
-                    <button
-                      onClick={() => startConfiguringSync(repo)}
-                      className="flex items-center gap-2 px-4 py-2 bg-surface/60 border border-border/40 text-foreground rounded-xl text-sm font-medium hover:bg-surface hover:border-border/80 transition-all duration-200"
-                    >
-                      Configure Sync <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => disconnectRepo(repo.repository_id)}
+                        className="px-3 py-2 border border-destructive/30 text-destructive rounded-xl text-sm font-medium hover:bg-destructive/10 transition-all duration-200"
+                      >
+                        Disconnect
+                      </button>
+                      <button
+                        onClick={() => startConfiguringSync(repo)}
+                        className="flex items-center gap-2 px-4 py-2 bg-surface/60 border border-border/40 text-foreground rounded-xl text-sm font-medium hover:bg-surface hover:border-border/80 transition-all duration-200"
+                      >
+                        Configure Sync <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

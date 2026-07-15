@@ -135,10 +135,13 @@ def update_memory(
     if not body.summary or len(body.summary.strip()) < 5:
         raise HTTPException(status_code=400, detail="summary must be at least 5 characters")
 
+    import hashlib
+    new_hash = hashlib.sha256(body.summary.strip().lower().encode()).hexdigest()
+
     supabase = get_supabase()
     res = (
         supabase.table("memory_items")
-        .update({"summary": body.summary})
+        .update({"summary": body.summary, "dedup_hash": new_hash})
         .eq("id", memory_id)
         .eq("workspace_id", workspace_id)
         .eq("is_active", True)

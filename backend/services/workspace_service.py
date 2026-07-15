@@ -79,12 +79,35 @@ async def get_workspace_dashboard(workspace_id: str, user_id: str) -> Dict[str, 
         except Exception:
             return []
 
+    async def fetch_repos_with_profiles():
+        def _q():
+            return supabase.table("github_repositories").select(
+                "id, repository_name, repository_owner, last_sync_at, indexed_file_count, total_file_count, github_repository_profiles(tech_stack, architecture_summary)"
+            ).eq("user_id", user_id).eq("is_active", True).order("created_at", desc=True).limit(5).execute()
+        try:
+            res = await asyncio.to_thread(_q)
+            repos = []
+            for r in res.data:
+                prof = r.get("github_repository_profiles", [])
+                repos.append({
+                    "id": r.get("id"),
+                    "repository_name": r.get("repository_name"),
+                    "repository_owner": r.get("repository_owner"),
+                    "last_sync_at": r.get("last_sync_at"),
+                    "indexed_file_count": r.get("indexed_file_count"),
+                    "total_file_count": r.get("total_file_count"),
+                    "profile": prof[0] if prof else None
+                })
+            return repos
+        except Exception as e:
+            return []
+
     # Parallel queries for lists
     results = await asyncio.gather(
         fetch_table("decision_records", filters={"workspace_id": workspace_id, "created_by": user_id}, limit=5),
         fetch_table("research_sessions", filters={"workspace_id": workspace_id, "user_id": user_id}, limit=5),
         fetch_table("comparisons", filters={"workspace_id": workspace_id, "user_id": user_id}, limit=5),
-        fetch_table("github_repositories", filters={"user_id": user_id, "is_active": True}, order_by="last_synced_at", limit=5),
+        fetch_repos_with_profiles(),
     )
     
     recent_decisions = results[0]

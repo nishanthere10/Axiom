@@ -8,6 +8,9 @@ from services.clerk_service import get_github_oauth_token
 from services.embedding_provider import generate_embedding
 from services.pinecone_service import get_pinecone_index
 from services.llm_provider import generate_chat_completion
+from services.db import get_supabase
+from services.code_extractor import should_index, extract_for_indexing
+from services.gitignore_parser import GitignoreFilter
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
@@ -294,7 +297,240 @@ class GitHubProvider(ContextProvider):
             logger.error(f"[GITHUB SYNC] Error syncing {resource_id}: {e}", exc_info=True)
             return False
 
-    async def retrieve(self, query: str, user_id: str, scope: Optional[str] = None) -> List[Dict[str, Any]]:
+    async def sync_incremental(
+        self,
+        user_id: str,
+        repo_id: str,
+        resource_id: str,
+        workspace_id: Optional[str] = None,
+        selected_paths: Optional[list[str]] = None,
+        progress_callback: Optional[Callable] = None,
+    ) -> dict:
+        """
+        Incremental sync: only re-index files whose SHA has changed.
+        Returns a summary dict: { added, updated, deleted, skipped, total }.
+        """
+        import time as _time
+        start = _time.time()
+        supabase = get_supabase()
+        parts = resource_id.split("/")
+        if len(parts) != 2:
+            return {"success": False, "error": "Invalid resource_id"}
+        owner, repo = parts
+
+        token = await self.get_token(user_id)
+        if not token:
+            return {"success": False, "error": "No GitHub token"}
+
+        pinecone_index = get_pinecone_index()
+        if not pinecone_index:
+            return {"success": False, "error": "Pinecone unavailable"}
+
+        # 1. Fetch current file tree with SHAs from GitHub
+        headers = self._build_headers(token)
+        tree_url = f"https://api.github.com/repos/{owner}/{repo}/git/trees/HEAD?recursive=1"
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            r = await client.get(tree_url, headers=headers)
+            if r.status_code != 200:
+                return {"success": False, "error": f"GitHub tree API returned {r.status_code}"}
+            tree_data = r.json()
+
+        all_files = tree_data.get("tree", [])
+
+        # 2. Fetch .gitignore from repo root
+        gitignore_content = ""
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                gi_url = f"https://api.github.com/repos/{owner}/{repo}/contents/.gitignore"
+                gi_r = await client.get(gi_url, headers=headers)
+                if gi_r.status_code == 200:
+                    import base64 as _b64
+                    gi_data = gi_r.json()
+                    gitignore_content = _b64.b64decode(gi_data.get("content", "")).decode("utf-8", errors="replace")
+        except Exception:
+            pass
+        gitignore = GitignoreFilter(gitignore_content)
+
+        # 3. Filter files to index
+        indexable = []
+        for f in all_files:
+            if f.get("type") != "blob":
+                continue
+            path = f["path"]
+            size = f.get("size", 0)
+            sha = f.get("sha", "")
+
+            if gitignore.should_ignore(path):
+                continue
+            if not should_index(path, size):
+                continue
+            if selected_paths and not any(path.startswith(p) for p in selected_paths):
+                continue
+
+            indexable.append({"path": path, "sha": sha, "size": size})
+
+        # 4. Load stored hashes
+        repo_row = supabase.table("github_repositories").select(
+            "file_hashes"
+        ).eq("id", repo_id).execute()
+        stored_hashes: dict[str, str] = (repo_row.data[0].get("file_hashes") or {}) if repo_row.data else {}
+
+        # 5. Diff: what to add/update, what to delete
+        current_paths = {f["path"] for f in indexable}
+        to_process  = [f for f in indexable if stored_hashes.get(f["path"]) != f["sha"]]
+        to_delete   = [p for p in stored_hashes if p not in current_paths]
+
+        total = len(indexable)
+        skipped = total - len(to_process)
+
+        # 6. Delete removed files from Pinecone
+        deleted_count = 0
+        for path in to_delete:
+            safe_path = path.replace("/", "_").replace(".", "_")
+            vector_id = f"github_{user_id}_{owner}_{repo}_{safe_path}"
+            try:
+                def _del(vid=vector_id):
+                    pinecone_index.delete(ids=[vid])
+                await asyncio.to_thread(_del)
+                deleted_count += 1
+            except Exception as e:
+                logger.warning("Failed to delete Pinecone vector for %s: %s", path, e)
+
+        # 7. Re-index changed/new files (rate-aware batching)
+        repo_metadata = await self.fetch_repo_metadata(token, owner, repo)
+        sem = asyncio.Semaphore(3)   # max 3 concurrent GitHub API calls
+        BATCH_SIZE = 50
+        RATE_LIMIT_PAUSE = 1.0      # seconds between batches
+
+        added_count = 0
+        updated_count = 0
+        new_hashes = dict(stored_hashes)
+        for path in to_delete:
+            new_hashes.pop(path, None)
+
+        async def process_one(file_info: dict) -> Optional[dict]:
+            path = file_info["path"]
+            async with sem:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    r = await client.get(
+                        f"https://api.github.com/repos/{owner}/{repo}/contents/{path}",
+                        headers=headers,
+                    )
+                    if r.status_code == 429:  # rate limited
+                        retry_after = int(r.headers.get("Retry-After", "60"))
+                        logger.warning("GitHub rate limited. Waiting %ds", retry_after)
+                        await asyncio.sleep(retry_after)
+                        return None
+                    if r.status_code != 200:
+                        return None
+
+                    file_data = r.json()
+                    import base64 as _b64
+                    raw = _b64.b64decode(file_data.get("content", "")).decode("utf-8", errors="replace")
+
+            indexable_text = extract_for_indexing(raw, path)
+            if not indexable_text.strip():
+                return {"discarded": True, "path": path, "sha": file_info["sha"]}
+
+            # For code files: still run LLM summarization for context enrichment
+            # For docs: summarize as before
+            summary = await self.summarize(path, indexable_text, repo_metadata)
+
+            embedding = await asyncio.to_thread(generate_embedding, summary)
+            if not embedding:
+                return {"discarded": True, "path": path, "sha": file_info["sha"]}
+
+            safe_path = path.replace("/", "_").replace(".", "_")
+            vector_id = f"github_{user_id}_{owner}_{repo}_{safe_path}"
+
+            from pathlib import Path as _P
+            ext = _P(path).suffix.lower().lstrip(".")
+
+            metadata = {
+                "user_id":       user_id,
+                "workspace_id":  workspace_id or "",
+                "provider":      "github",
+                "repository":    resource_id,
+                "file_path":     path,
+                "document_type": "code" if ext not in {"md", "mdx", "txt", "rst"} else "markdown",
+                "language":      ext,
+                "content":       summary[:8000],
+                "raw_snippet":   raw[:500],
+            }
+            return {"id": vector_id, "values": embedding, "metadata": metadata, "path": path, "sha": file_info["sha"], "is_new": path not in stored_hashes}
+
+        # Process in batches
+        vectors = []
+        for i in range(0, len(to_process), BATCH_SIZE):
+            batch = to_process[i:i + BATCH_SIZE]
+            results = await asyncio.gather(*[process_one(f) for f in batch])
+            for res in results:
+                if res:
+                    if res.get("discarded"):
+                        new_hashes[res["path"]] = res["sha"]
+                        continue
+                    vectors.append(res)
+                    if res.get("is_new"):
+                        added_count += 1
+                    else:
+                        updated_count += 1
+                    new_hashes[res["path"]] = res["sha"]
+                    if progress_callback:
+                        if asyncio.iscoroutinefunction(progress_callback):
+                            await progress_callback(res["path"])
+                        else:
+                            progress_callback(res["path"])
+            if i + BATCH_SIZE < len(to_process):
+                await asyncio.sleep(RATE_LIMIT_PAUSE)
+
+        # 8. Batch upsert to Pinecone
+        if vectors:
+            pinecone_vectors = [{"id": v["id"], "values": v["values"], "metadata": v["metadata"]} for v in vectors]
+            def _upsert():
+                for j in range(0, len(pinecone_vectors), 100):
+                    pinecone_index.upsert(vectors=pinecone_vectors[j:j + 100])
+            await asyncio.to_thread(_upsert)
+
+        # 9. Update stored hashes and sync metadata
+        duration_ms = int((_time.time() - start) * 1000)
+        supabase.table("github_repositories").update({
+            "file_hashes":       new_hashes,
+            "last_sync_at":      __import__("datetime").datetime.utcnow().isoformat(),
+            "indexed_file_count": len(new_hashes),
+            "total_file_count":   len(indexable),
+        }).eq("id", repo_id).execute()
+
+        # 10. Log sync
+        supabase.table("github_sync_log").insert({
+            "repository_id": repo_id,
+            "user_id":       user_id,
+            "trigger":       "manual",
+            "files_added":   added_count,
+            "files_updated": updated_count,
+            "files_deleted": deleted_count,
+            "files_total":   total,
+            "duration_ms":   duration_ms,
+            "success":       True,
+        }).execute()
+
+        from services.repo_summarizer import generate_architecture_summary
+        import threading
+        threading.Thread(
+            target=generate_architecture_summary,
+            args=(repo_id, resource_id, workspace_id, user_id, len(new_hashes)),
+            daemon=True,
+        ).start()
+
+        return {
+            "success": True,
+            "added":   added_count,
+            "updated": updated_count,
+            "deleted": deleted_count,
+            "skipped": skipped,
+            "total":   total,
+        }
+
+    async def retrieve(self, query: str, user_id: str, scope: Optional[str] = None, workspace_id: Optional[str] = None) -> List[Dict[str, Any]]:
         pinecone_index = get_pinecone_index()
         if not pinecone_index:
             return []
@@ -308,6 +544,8 @@ class GitHubProvider(ContextProvider):
                 "user_id": {"$eq": user_id},
                 "provider": {"$eq": "github"}
             }
+            if workspace_id:
+                filter_dict["workspace_id"] = {"$eq": workspace_id}
             if scope:
                 filter_dict["repository"] = {"$eq": scope}
 

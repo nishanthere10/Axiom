@@ -249,7 +249,7 @@ function RepositoryPanel({ repos, summary, workspaceId }: { repos: any[], summar
       <CardHeader className="flex flex-row justify-between items-center pb-3 mb-4 border-b border-border/50 space-y-0 px-5 pt-5">
         <div className="flex items-center gap-2">
           <GitBranch className="w-4 h-4 text-muted-foreground" />
-          <CardTitle className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Repositories</CardTitle>
+          <CardTitle className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">Repository Intelligence</CardTitle>
         </div>
         <span className="text-xs font-mono bg-background px-2 py-0.5 rounded-sm border border-border">{summary.connected_repos}</span>
       </CardHeader>
@@ -258,17 +258,41 @@ function RepositoryPanel({ repos, summary, workspaceId }: { repos: any[], summar
         {repos.length === 0 ? (
           <p className="text-sm text-muted-foreground font-mono m-auto">No repositories connected.</p>
         ) : (
-          <div className="flex flex-col gap-2 mt-auto">
+          <div className="flex flex-col gap-4 mt-auto">
             {repos.map((r, i) => (
-              <div key={i} className="flex justify-between items-center p-2 rounded-md bg-background border border-border hover:bg-surface-hover transition-colors">
-                <div className="font-mono text-xs truncate mr-2">{r.repository_name}</div>
-                <div className="text-[10px] uppercase text-muted-foreground shrink-0">
-                  {new Date(r.last_synced_at).toLocaleDateString()}
+              <div key={i} className="flex flex-col gap-2 p-3 rounded-md bg-background border border-border hover:bg-surface-hover transition-colors">
+                <div className="flex justify-between items-center">
+                  <div className="font-mono text-xs font-semibold text-foreground truncate">{r.repository_name}</div>
+                  <div className="text-[10px] uppercase text-muted-foreground shrink-0">
+                    {r.last_sync_at ? `Synced: ${new Date(r.last_sync_at).toLocaleDateString()}` : "Pending Sync"}
+                  </div>
+                </div>
+                
+                {/* Tech Stack Pills */}
+                {r.profile?.tech_stack && r.profile.tech_stack.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {r.profile.tech_stack.slice(0, 5).map((tech: any, idx: number) => (
+                      <span key={idx} className="text-[9px] px-1.5 py-0.5 rounded-sm bg-primary/10 text-primary border border-primary/20 font-mono">
+                        {tech.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Architecture Summary */}
+                {r.profile?.architecture_summary && (
+                  <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3 mt-1">
+                    {r.profile.architecture_summary}
+                  </p>
+                )}
+                
+                <div className="text-[10px] text-muted-foreground font-mono mt-1 pt-2 border-t border-border/50">
+                  {r.indexed_file_count || 0} / {r.total_file_count || 0} files indexed
                 </div>
               </div>
             ))}
             {summary.connected_repos > 5 && (
-              <Link href={`/workspaces/${workspaceId}/settings`} className="text-xs font-medium text-muted-foreground hover:text-foreground mt-2 transition-colors">
+              <Link href={`/workspaces/${workspaceId}/settings/integrations/github`} className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors text-center">
                 View all repositories &rarr;
               </Link>
             )}
@@ -371,6 +395,8 @@ function MemoryPanel({ summary, workspaceId }: { summary: any, workspaceId: stri
         
         <Link href={`/workspaces/${workspaceId}/memory`} className="w-full mt-4 py-2 rounded-md border border-border text-center text-xs font-medium hover:bg-surface-hover transition-colors">
           Manage Memory
+        </Link>
+      </CardContent>
     </Card>
   );
 }

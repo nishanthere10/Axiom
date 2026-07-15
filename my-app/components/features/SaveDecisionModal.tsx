@@ -39,6 +39,7 @@ export default function SaveDecisionModal({ sessionId, defaultTitle, onClose, on
       if (!token) throw new Error("Authentication token not found");
 
       const created = await createDecision(
+        activeWorkspaceId!,
         {
           research_session_id: sessionId,
           title,

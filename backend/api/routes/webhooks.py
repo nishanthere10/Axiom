@@ -1,8 +1,11 @@
 import logging
-from fastapi import APIRouter, Request, HTTPException, status
+import hmac
+import hashlib
+import json
+from fastapi import APIRouter, Request, Header, HTTPException, status, BackgroundTasks
 from svix.webhooks import Webhook, WebhookVerificationError
 from core.config import settings
-from services.db import supabase
+from services.db import get_supabase, supabase
 
 logger = logging.getLogger(__name__)
 
@@ -100,3 +103,69 @@ async def clerk_webhook(request: Request):
         raise HTTPException(status_code=500, detail="Database operation failed")
 
     return {"status": "success"}
+
+@router.post("/github/push")
+async def github_push_webhook(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    x_hub_signature_256: str = Header(None, alias="X-Hub-Signature-256"),
+    x_github_event: str = Header(None, alias="X-GitHub-Event"),
+):
+    """
+    POST /webhooks/github/push
+    Public endpoint — called by GitHub. Verified via HMAC-SHA256.
+    Triggers incremental sync for the affected repository.
+    """
+    body = await request.body()
+
+    if x_github_event == "ping":
+        return {"ok": True, "message": "ping received"}
+
+    if x_github_event != "push":
+        return {"ok": True, "message": f"Ignoring event: {x_github_event}"}
+
+    payload = json.loads(body)
+    repo_full_name = payload.get("repository", {}).get("full_name")
+    if not repo_full_name:
+        raise HTTPException(status_code=400, detail="Missing repository.full_name")
+
+    # Lookup repo
+    db = get_supabase()
+    repo_res = (
+        db.table("github_repositories")
+        .select("id, user_id, webhook_secret, workspace_id")
+        .eq("repository_name", repo_full_name.split('/')[-1])
+        .eq("repository_owner", repo_full_name.split('/')[0])
+        .eq("is_active", True)
+        .execute()
+    )
+    if not repo_res.data:
+        return {"ok": False, "message": "Repository not found"}
+
+    repo = repo_res.data[0]
+
+    # Verify HMAC
+    secret = repo.get("webhook_secret", "")
+    if secret:
+        expected_sig = "sha256=" + hmac.new(
+            secret.encode("utf-8"),
+            body,
+            hashlib.sha256,
+        ).hexdigest()
+        if not hmac.compare_digest(expected_sig, x_hub_signature_256 or ""):
+            logger.warning("HMAC verification failed for repo %s", repo_full_name)
+            raise HTTPException(status_code=401, detail="Invalid signature")
+
+    # Queue incremental sync as background task
+    from services.context_providers.github_provider import github_provider
+
+    background_tasks.add_task(
+        github_provider.sync_incremental,
+        user_id=repo["user_id"],
+        repo_id=repo["id"],
+        resource_id=repo_full_name,
+        workspace_id=repo.get("workspace_id"),
+    )
+
+    logger.info("Queued incremental sync for %s (webhook trigger)", repo_full_name)
+    return {"ok": True, "message": "Sync queued"}

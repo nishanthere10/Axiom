@@ -30,7 +30,11 @@ def retrieve_github_context(state: ResearchState) -> Dict[str, Any]:
         # asyncio.run() or loop.run_until_complete() will crash if called from within a running loop.
         # We safely execute the async retrieve method by running it in a new thread.
         def _run_async_retrieve():
-            return asyncio.run(github_provider.retrieve(search_query, user_id))
+            return asyncio.run(github_provider.retrieve(
+                query=search_query, 
+                user_id=user_id,
+                workspace_id=state.get("workspace_id")
+            ))
             
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
             future = pool.submit(_run_async_retrieve)

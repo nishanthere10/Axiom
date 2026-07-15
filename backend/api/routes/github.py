@@ -6,10 +6,12 @@ import logging
 import asyncio
 
 from core.auth import get_current_user
-from services.db import supabase
+from services.db import supabase, get_supabase
 from services.context_providers.github_provider import github_provider
 from middleware.rate_limit import limiter
 from fastapi import Request
+from core.config import settings
+import secrets as _secrets
 
 router = APIRouter(prefix="/github", tags=["github"])
 logger = logging.getLogger(__name__)
@@ -77,8 +79,58 @@ async def list_repositories(user_id: str = Depends(get_current_user)):
         logger.error(f"Failed to list repositories: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch repositories from GitHub")
 
+async def _register_github_webhook(token: str, owner: str, repo: str, repo_id: str, user_id: str) -> None:
+    """Register a GitHub push webhook and store the webhook_id and secret."""
+    supabase = get_supabase()
+
+    webhook_secret = _secrets.token_hex(32)
+    callback_url = f"{settings.API_BASE_URL}/webhooks/github/push"
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        r = await client.post(
+            f"https://api.github.com/repos/{owner}/{repo}/hooks",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github.v3+json",
+            },
+            json={
+                "name": "web",
+                "active": True,
+                "events": ["push"],
+                "config": {
+                    "url": callback_url,
+                    "content_type": "json",
+                    "secret": webhook_secret,
+                    "insecure_ssl": "0",
+                },
+            },
+        )
+        if r.status_code == 201:
+            webhook_id = str(r.json().get("id", ""))
+            supabase.table("github_repositories").update({
+                "webhook_id":     webhook_id,
+                "webhook_secret": webhook_secret,
+            }).eq("id", repo_id).execute()
+            logger.info("Registered webhook %s for %s/%s", webhook_id, owner, repo)
+        else:
+            logger.warning("Failed to register webhook for %s/%s: %s", owner, repo, r.status_code)
+
+async def _deregister_github_webhook(token: str, owner: str, repo: str, webhook_id: str) -> None:
+    """Deregister a GitHub webhook when a repo is disconnected."""
+    if not webhook_id:
+        return
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        r = await client.delete(
+            f"https://api.github.com/repos/{owner}/{repo}/hooks/{webhook_id}",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github.v3+json"},
+        )
+        if r.status_code in (204, 404):
+            logger.info("Webhook %s deregistered for %s/%s", webhook_id, owner, repo)
+        else:
+            logger.warning("Failed to deregister webhook %s: %s", webhook_id, r.status_code)
+
 @router.post("/repositories/select")
-async def select_repository(req: SelectRepoRequest, user_id: str = Depends(get_current_user)):
+async def select_repository(req: SelectRepoRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user)):
     """
     Mark a repository for sync/usage.
     """
@@ -92,6 +144,21 @@ async def select_repository(req: SelectRepoRequest, user_id: str = Depends(get_c
         "is_active": True
     }, on_conflict="user_id, repository_id").execute()
     
+    # After inserting, try to get the DB ID and register the webhook
+    db_repo_res = supabase.table("github_repositories").select("id").eq("user_id", user_id).eq("repository_id", req.repository_id).execute()
+    if db_repo_res.data:
+        db_id = db_repo_res.data[0]["id"]
+        token = await github_provider.get_token(user_id)
+        if token:
+            background_tasks.add_task(
+                _register_github_webhook,
+                token=token,
+                owner=req.repository_owner,
+                repo=req.repository_name,
+                repo_id=db_id,
+                user_id=user_id
+            )
+
     return {"status": "success"}
 
 @router.get("/repositories/{repository_id}/files")
@@ -160,13 +227,23 @@ async def sync_repo_background(user_id: str, repository_id: str, owner: str, rep
 
     try:
         resource_id = f"{owner}/{repo_name}"
-        success = await github_provider.sync(
-            user_id, 
-            resource_id, 
-            selected_folders=selected_folders,
-            progress_callback=progress_callback,
-            prefetched_paths=prefetched_paths
-        )
+        # Fetch db_repo for repo_id and workspace_id
+        db_repo_res = supabase.table("github_repositories").select("id, workspace_id").eq("user_id", user_id).eq("repository_id", repository_id).execute()
+        if db_repo_res.data:
+            db_repo_id = db_repo_res.data[0]["id"]
+            workspace_id = db_repo_res.data[0].get("workspace_id")
+            
+            result = await github_provider.sync_incremental(
+                user_id=user_id, 
+                repo_id=db_repo_id,
+                resource_id=resource_id,
+                workspace_id=workspace_id,
+                selected_paths=selected_folders,
+                progress_callback=progress_callback
+            )
+            success = result.get("success", False)
+        else:
+            success = False
     except Exception as e:
         logger.error(f"[GITHUB SYNC] Exception during sync: {e}", exc_info=True)
         success = False
@@ -270,3 +347,38 @@ async def get_github_status(user_id: str = Depends(get_current_user)):
         "is_connected": is_connected,
         "active_repositories": active_repos
     }
+
+@router.delete("/repositories/{repository_id}/disconnect")
+async def disconnect_repository(repository_id: str, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user)):
+    """Disconnect a repository and deregister its webhook."""
+    res = supabase.table("github_repositories").select("*").eq("user_id", user_id).eq("repository_id", repository_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Repository not found")
+        
+    repo = res.data[0]
+    token = await github_provider.get_token(user_id)
+    if token and repo.get("webhook_id"):
+        background_tasks.add_task(
+            _deregister_github_webhook,
+            token=token,
+            owner=repo["repository_owner"],
+            repo=repo["repository_name"],
+            webhook_id=repo["webhook_id"]
+        )
+
+    supabase.table("github_repositories").update({"is_active": False}).eq("user_id", user_id).eq("repository_id", repository_id).execute()
+    return {"status": "success"}
+
+@router.get("/workspaces/{workspace_id}/github/profile")
+async def get_github_profile(workspace_id: str, user_id: str = Depends(get_current_user)):
+    """Fetch the active repository profile for a workspace."""
+    repos_res = supabase.table("github_repositories").select("*").eq("workspace_id", workspace_id).eq("is_active", True).execute()
+    if not repos_res.data:
+        return {"profile": None, "repo": None}
+        
+    repo = repos_res.data[0]
+    
+    profile_res = supabase.table("github_repository_profiles").select("*").eq("repository_id", repo["id"]).execute()
+    profile = profile_res.data[0] if profile_res.data else None
+    
+    return {"repo": repo, "profile": profile}
