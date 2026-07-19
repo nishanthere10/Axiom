@@ -104,18 +104,22 @@ async def get_current_user(
     """
     token = credentials.credentials
 
-    # ── Diagnostic header dump ──
-    header = _decode_jwt_header_unsafe(token)
-    unverified = _decode_jwt_payload_unsafe(token)
-    logger.debug(
-        "AUTH AUDIT: token_prefix=%s... len=%d alg=%s kid=%s iss=%s sub=%s",
-        token[:15] if token else "EMPTY",
-        len(token) if token else 0,
-        header.get("alg", "?"),
-        header.get("kid", "?"),
-        unverified.get("iss", "?"),
-        unverified.get("sub", "?"),
-    )
+    # ── Diagnostic header dump (non-fatal; errors here must not crash auth) ──
+    try:
+        header = _decode_jwt_header_unsafe(token)
+        unverified = _decode_jwt_payload_unsafe(token)
+        logger.debug(
+            "AUTH AUDIT: token_prefix=%s... len=%d alg=%s kid=%s iss=%s sub=%s",
+            token[:15] if token else "EMPTY",
+            len(token) if token else 0,
+            header.get("alg", "?"),
+            header.get("kid", "?"),
+            unverified.get("iss", "?"),
+            unverified.get("sub", "?"),
+        )
+    except Exception as e:
+        logger.warning("AUTH: Failed to decode JWT header for diagnostics: %s", e)
+        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
 
     try:
         jwks_client = _get_jwks_client()

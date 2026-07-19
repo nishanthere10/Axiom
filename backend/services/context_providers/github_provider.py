@@ -364,6 +364,8 @@ class GitHubProvider(ContextProvider):
                 continue
             if not should_index(path, size):
                 continue
+            if not path.lower().endswith(".md"):
+                continue
             if selected_paths and not any(path.startswith(p) for p in selected_paths):
                 continue
 

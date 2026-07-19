@@ -70,7 +70,11 @@ def build_decision_graph():
     graph.add_edge("generate_visual_spec", "validate_visual_spec")
     
     # Phase 7: Wait for all post-processing to format the final document
-    graph.add_edge(["build_confidence", "validate_visual_spec", "canonicalize_topic"], "format_document")
+    # NOTE: canonicalize_topic is NOT included here — it runs at START (parallel)
+    # and its output is accumulated to state by tasks.py. Including it in a fan-in
+    # with late-running nodes causes LangGraph to stall waiting for a node that
+    # already completed and was cleared from the pending-node tracker.
+    graph.add_edge(["build_confidence", "validate_visual_spec"], "format_document")
     
     graph.add_edge("format_document", END)
 

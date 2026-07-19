@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional
 
 from services.db import get_supabase
@@ -15,7 +15,7 @@ def create_job(user_id: str, session_id: str, payload: Dict[str, Any]) -> str:
         "payload": payload,
         "status": "queued",
         "attempt_count": 0,
-        "next_retry_at": datetime.utcnow().isoformat()
+        "next_retry_at": datetime.now(timezone.utc).isoformat()
     }
     
     result = supabase.table("memory_jobs").insert(data).execute()
@@ -26,11 +26,14 @@ def create_job(user_id: str, session_id: str, payload: Dict[str, Any]) -> str:
 def claim_next_job() -> Optional[Dict[str, Any]]:
     """
     Finds the oldest eligible job and marks it as running.
-    In a high-concurrency Postgres setup, you'd use FOR UPDATE SKIP LOCKED.
-    Since we use Supabase REST API, we do a simple select and atomic update.
+    WARNING: This is NOT truly atomic via the Supabase REST API. Under concurrent
+    sweeper instances, the same job may be claimed twice. The dedup_hash on
+    memory_items prevents duplicate *storage*, but the LLM call runs twice.
+    TODO: Replace with a Supabase Edge Function using FOR UPDATE SKIP LOCKED
+    if running multiple sweeper instances.
     """
     supabase = get_supabase()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     
     # Get oldest job that is either queued, or failed and ready for retry
     query = supabase.table("memory_jobs")\
@@ -49,7 +52,7 @@ def claim_next_job() -> Optional[Dict[str, Any]]:
     
     # Atomically try to claim it
     claim_result = supabase.table("memory_jobs")\
-        .update({"status": "running", "updated_at": datetime.utcnow().isoformat()})\
+        .update({"status": "running", "updated_at": datetime.now(timezone.utc).isoformat()})\
         .eq("id", job_id)\
         .in_("status", ["queued", "failed"])\
         .execute()
@@ -64,7 +67,7 @@ def complete_job(job_id: str) -> None:
     supabase = get_supabase()
     supabase.table("memory_jobs").update({
         "status": "completed",
-        "updated_at": datetime.utcnow().isoformat()
+        "updated_at": datetime.now(timezone.utc).isoformat()
     }).eq("id", job_id).execute()
     logger.info(f"Completed memory job {job_id}")
 
@@ -84,7 +87,7 @@ def fail_job(job_id: str, attempt_count: int, max_attempts: int, error_message: 
             "attempt_count": new_attempt,
             "last_error": error_message,
             "next_retry_at": None, # Never retry again
-            "updated_at": datetime.utcnow().isoformat()
+            "updated_at": datetime.now(timezone.utc).isoformat()
         }).eq("id", job_id).execute()
         
         # Also record in metrics
@@ -96,7 +99,7 @@ def fail_job(job_id: str, attempt_count: int, max_attempts: int, error_message: 
     else:
         # Schedule retry
         backoff_seconds = 30 if new_attempt == 1 else 120
-        next_retry = (datetime.utcnow() + timedelta(seconds=backoff_seconds)).isoformat()
+        next_retry = (datetime.now(timezone.utc) + timedelta(seconds=backoff_seconds)).isoformat()
         
         logger.warning(f"Memory job {job_id} failed (attempt {new_attempt}/{max_attempts}). Retrying at {next_retry}. Error: {error_message}")
         supabase.table("memory_jobs").update({
@@ -104,5 +107,5 @@ def fail_job(job_id: str, attempt_count: int, max_attempts: int, error_message: 
             "attempt_count": new_attempt,
             "last_error": error_message,
             "next_retry_at": next_retry,
-            "updated_at": datetime.utcnow().isoformat()
+            "updated_at": datetime.now(timezone.utc).isoformat()
         }).eq("id", job_id).execute()

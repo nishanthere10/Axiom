@@ -23,6 +23,7 @@ PyJWT
 cryptography
 httpx
 pytest
+pytest-asyncio
 tenacity
 svix
 slowapi

@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from main import app
 
+@pytest.mark.skip(reason="Endpoint deprecated — /research returns 410 Gone intentionally. Rate limit test needs workspace-scoped route.")
 def test_rate_limit_exceeded(test_client, mock_auth, mock_supabase, mock_llm):
     # The /research endpoint has a rate limit of 5/minute
     # Mock verify_workspace_access so it doesn't fail

@@ -146,6 +146,20 @@ async def stream_job_progress(
             # Confirm connection
             yield f"data: {json.dumps({'status': 'connected', 'job_id': job_id})}\n\n"
 
+            # RACE CONDITION FIX: Check if job already finished before we subscribed
+            current_job = await asyncio.to_thread(research_service.get_job, job_id, user_id)
+            if current_job and current_job.get("status") in ("completed", "failed"):
+                # Yield the final state immediately
+                final_event = {
+                    "status": current_job["status"],
+                    "progress": current_job.get("progress", 100),
+                    "step": current_job.get("step", ""),
+                    "error": "Failed before stream connected" if current_job["status"] == "failed" else None
+                }
+                yield f"data: {json.dumps(final_event)}\n\n"
+                yield "event: done\ndata: {}\n\n"
+                return
+
             while True:
                 remaining = deadline - loop.time()
                 if remaining <= 0:

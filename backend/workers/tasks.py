@@ -1,5 +1,6 @@
 import logging
 from agents.graph.decision_graph import decision_graph
+from agents.callbacks.pipeline_logger import PipelineLogger
 from services import research_service
 from services.event_bus import publish as bus_publish
 
@@ -90,8 +91,12 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
         }
         
         max_progress = 5
+        pipeline_cb = PipelineLogger(job_id=job_id, session_id=session_id)
         with anyio.move_on_after(900) as scope:
-            async for chunk in decision_graph.astream(current_state):
+            async for chunk in decision_graph.astream(
+                current_state,
+                config={"callbacks": [pipeline_cb]},
+            ):
                 for node_name, node_state in chunk.items():
                     # LangGraph stream yields only the updates from the current node.
                     # We must accumulate them to have the full state for saving.
@@ -144,7 +149,13 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
         final_state = current_state
 
         if final_state is None or final_state.get("status") != "complete":
-            raise ValueError("Graph did not complete successfully.")
+            actual_status = final_state.get("status") if final_state else None
+            logger.error(
+                "Research job %s: graph finished but status='%s' (expected 'complete'). "
+                "format_document node may not have run. Check graph fan-in edges.",
+                job_id, actual_status
+            )
+            raise ValueError(f"Graph did not complete successfully. Final status='{actual_status}'")
 
         try:
             from services.db import get_supabase

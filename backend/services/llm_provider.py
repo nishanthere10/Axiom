@@ -40,7 +40,7 @@ def _build_fallbacks() -> List[Dict[str, str]]:
     
     # Priority 1: Gemini
     if settings.GEMINI_API_KEY:
-        fallbacks.append({"model": "gemini/gemini-3.5-flash"})
+        fallbacks.append({"model": "gemini/gemini-1.5-flash"})
         
     # Priority 2: Mistral
     if settings.MISTRAL_API_KEY:
@@ -63,10 +63,9 @@ def generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/
     
     fallbacks = _build_fallbacks()
     
-    # Strip Gemini-incompatible sampling params if routing to a Gemini model,
-    # or always strip them from kwargs since fallbacks can land on Gemini.
-    # We encode sampling intent in the system prompt instead.
-    if model.startswith("gemini/") or any("gemini" in f.get("model", "") for f in fallbacks):
+    # Only strip Gemini-incompatible params if the PRIMARY model is Gemini.
+    # For fallback routing, litellm.drop_params=True (set above) handles provider-specific param stripping.
+    if model.startswith("gemini/"):
         kwargs = {k: v for k, v in kwargs.items() if k not in _GEMINI_INCOMPATIBLE_PARAMS}
     
     try:
@@ -112,7 +111,10 @@ def generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/
             emit_provider_event(primary_provider, "failure", 0)
         except Exception:
             pass
-        raise e
+        
+        raise RuntimeError(
+            "LLM generation failed across all fallback providers due to rate limits or API errors."
+        )
 
 _instructor_client = None
 _async_instructor_client = None

@@ -1,11 +1,13 @@
 """
 Integration tests for the /research endpoints.
-Validates end-to-end flow: submit → poll → document retrieval.
+NOTE: These endpoints are intentionally deprecated (return 410 Gone).
+      The workspace-scoped routes /workspaces/{id}/research are the live equivalents.
+      Tests are kept for documentation but skipped to prevent false failures.
 """
 import pytest
-from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
+pytestmark = pytest.mark.skip(reason="Endpoint deprecated \u2014 /research returns 410 Gone intentionally. Use /workspaces/{id}/research instead.")
 
 # ─── Test: Submit Research ────────────────────────────────────────────────
 

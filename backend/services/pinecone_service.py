@@ -88,11 +88,12 @@ def search_memories(query: str, user_id: str, workspace_id: Optional[str] = None
     try:
         logger.debug("Querying pinecone index...")
         filter_dict = {"user_id": {"$eq": user_id}}
-        filter_dict = {"user_id": {"$eq": user_id}}
+        if workspace_id:
+            filter_dict["workspace_id"] = {"$eq": workspace_id}
 
         results = index.query(
             vector=embedding,
-            top_k=top_k * 2,
+            top_k=top_k,
             include_metadata=True,
             filter=filter_dict
         )
@@ -106,12 +107,7 @@ def search_memories(query: str, user_id: str, workspace_id: Optional[str] = None
             match_workspace = metadata.get("workspace_id")
             
             if score >= threshold:
-                if workspace_id:
-                    if not match_workspace or match_workspace == workspace_id:
-                        valid_matches.append(match_dict)
-                else:
-                    if not match_workspace:
-                        valid_matches.append(match_dict)
+                valid_matches.append(match_dict)
 
         # Sort by score descending so best evidence is first
         valid_matches.sort(key=lambda m: m.get("score", 0.0), reverse=True)

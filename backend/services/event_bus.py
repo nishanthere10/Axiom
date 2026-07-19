@@ -1,7 +1,12 @@
 """
 In-memory event bus for SSE streaming.
+
+WARNING: This is an IN-PROCESS event bus. It does NOT work across multiple
+uvicorn workers or multiple deployment instances. If you scale to >1 instance,
+replace with Redis Pub/Sub or a similar cross-process message broker.
+
 The background research task publishes progress events; SSE endpoints subscribe.
-Uses asyncio.Queue per job_id — zero external dependencies.
+Uses asyncio.Queue per job_id — zero external dependencies (single-instance only).
 
 Lifecycle:
   - Background task calls publish() after each LangGraph node.

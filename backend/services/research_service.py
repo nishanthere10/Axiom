@@ -1,6 +1,9 @@
 from services.db import supabase
+import logging
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
+logger = logging.getLogger(__name__)
 
 # Shared retry policy for ALL Supabase/PostgREST network calls
 _SUPABASE_RETRY = dict(
@@ -55,7 +58,7 @@ def update_session_status(session_id: str, status: str) -> None:
 @retry(**_SUPABASE_RETRY)
 def save_document(session_id: str, question: str, state: dict, user_id: str, warnings: list = None) -> dict:
     """Save the final decision document to Supabase."""
-    from datetime import datetime
+    from datetime import datetime, timezone
     confidence = state.get("confidence", {})
     evidence = state.get("evidence", [])
     visuals = state.get("visuals", [])
@@ -73,16 +76,39 @@ def save_document(session_id: str, question: str, state: dict, user_id: str, war
         "visuals": visuals,
         "memory_context": state.get("memory_context", {}),
         "warnings": warnings or [],
-        "evidence_generated_at": datetime.utcnow().isoformat() if evidence else None,
+        "evidence_generated_at": datetime.now(timezone.utc).isoformat() if evidence else None,
         "version": 1,
         "user_id": user_id,
     }
-    # Retrieve the workspace_id from the session and stamp the document
-    session = supabase.table("research_sessions").select("workspace_id").eq("id", session_id).execute()
-    if session.data and session.data[0].get("workspace_id"):
-        payload["workspace_id"] = session.data[0]["workspace_id"]
+    # Retrieve the workspace_id and project_id from the session to stamp the document and decision record
+    session = supabase.table("research_sessions").select("workspace_id, project_id").eq("id", session_id).execute()
+    workspace_id = None
+    project_id = None
+    if session.data:
+        workspace_id = session.data[0].get("workspace_id")
+        project_id = session.data[0].get("project_id")
+
+    if workspace_id:
+        payload["workspace_id"] = workspace_id
 
     response = supabase.table("research_reports").insert(payload).execute()
+    
+    # Auto-create the decision record
+    if workspace_id:
+        try:
+            decision_title = question[:80] + ("..." if len(question) > 80 else "")
+            supabase.table("decision_records").insert({
+                "workspace_id": workspace_id,
+                "project_id": project_id,
+                "research_session_id": session_id,
+                "title": decision_title,
+                "status": "PROPOSED",
+                "created_by": user_id,
+            }).execute()
+        except Exception as e:
+            # We don't want to fail the whole background task if this fails, but it shouldn't
+            logger.warning("Failed to auto-create decision_record for session %s: %s", session_id, e)
+
     return response.data[0]
 
 
@@ -141,8 +167,8 @@ def get_recent_sessions(user_id: str, limit: int = 10, offset: int = 0, workspac
 @retry(**_SUPABASE_RETRY)
 def recover_stale_jobs() -> None:
     """Find running jobs older than 15 mins and mark failed."""
-    from datetime import datetime, timedelta
-    cutoff = (datetime.utcnow() - timedelta(minutes=15)).isoformat()
+    from datetime import datetime, timedelta, timezone
+    cutoff = (datetime.now(timezone.utc) - timedelta(minutes=15)).isoformat()
     try:
         supabase.table("research_jobs").update(
             {"status": "failed", "step": "timeout"}

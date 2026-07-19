@@ -108,7 +108,10 @@ def mock_instructor():
 
 @pytest.fixture
 def mock_pinecone():
-    with patch("services.pinecone_service.index", None):
+    # Patch get_pinecone_index to return None — this is what all callers check.
+    # The module has no top-level `index` variable; it uses PineconeManager._index
+    # accessed via get_pinecone_index().
+    with patch("services.pinecone_service.get_pinecone_index", return_value=None):
         yield
 
 
@@ -139,9 +142,15 @@ def mock_auth():
 def test_client(mock_supabase, mock_llm, mock_pinecone, mock_embedding, mock_tavily, mock_auth):
     """FastAPI TestClient with all external dependencies mocked."""
     from main import app
-    from core.auth import get_current_user
+    from core.auth import get_current_user, verify_workspace_access, verify_workspace_path
     
     app.dependency_overrides[get_current_user] = lambda: "test_user_123"
+    # verify_workspace_access reads the x-workspace-id header and does a DB lookup.
+    # Override it to skip the DB check in all tests.
+    app.dependency_overrides[verify_workspace_access] = lambda: None
+    # verify_workspace_path is used by workspace-scoped routes (path parameter).
+    # Return a fake workspace_id so workspace routes don't 403.
+    app.dependency_overrides[verify_workspace_path] = lambda: "test_workspace_id"
     
     with TestClient(app) as client:
         yield client

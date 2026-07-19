@@ -2,7 +2,7 @@ import logging
 import uuid
 from typing import Dict, Any, Optional
 import asyncio
-from services.db import supabase
+from services.db import get_supabase
 from services.llm_provider import generate_chat_completion
 from api.schemas.memory import MemoryItemCreate
 from services.memory_service import create_memory_item
@@ -16,6 +16,7 @@ async def generate_and_store_decision_memory(decision_record_id: str, user_id: s
     """
     try:
         # Fetch decision record
+        supabase = get_supabase()
         res = supabase.table("decision_records").select("*").eq("id", decision_record_id).eq("created_by", user_id).execute()
         
         if not res.data:
@@ -65,7 +66,8 @@ async def generate_and_store_decision_memory(decision_record_id: str, user_id: s
                 "title": record.get("title"),
                 "question": question,
                 "summary": summary,
-                "memory_type": "decision"
+                "memory_type": "decision",
+                "decision_status": record.get("status", "PROPOSED"),
             },
             scope="permanent", # Since it's approved, it's permanent
             user_id=user_id,

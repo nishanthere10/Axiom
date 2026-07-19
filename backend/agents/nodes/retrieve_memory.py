@@ -55,11 +55,18 @@ def retrieve_memory(state: Dict[str, Any]) -> Dict[str, Any]:
             try:
                 from services.db import get_supabase
                 supabase = get_supabase()
-                memory_ids = [m.get("id") for m in memories if m.get("id")]
-                if memory_ids:
+                # Pinecone returns vector IDs, not Supabase UUIDs.
+                # The Supabase ID is stored in metadata.source_id for decision memories,
+                # or we can match by the dedup_hash/summary.
+                source_ids = [
+                    m.get("metadata", {}).get("source_id")
+                    for m in memories
+                    if m.get("metadata", {}).get("source_id")
+                ]
+                if source_ids:
                     supabase.table("memory_items").update(
                         {"last_used_at": datetime.utcnow().isoformat()}
-                    ).in_("id", memory_ids).execute()
+                    ).in_("source_id", source_ids).eq("user_id", user_id).execute()
             except Exception as e:
                 logger.warning("Failed to update last_used_at: %s", e)
         threading.Thread(target=_update_last_used, daemon=True).start()

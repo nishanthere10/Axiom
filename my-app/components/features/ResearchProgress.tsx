@@ -41,6 +41,8 @@ export default function ResearchProgress({
 
   const startPollingFallback = useCallback(async () => {
     if (pollingRef.current) return;
+    if (!workspaceId || workspaceId === "undefined") return;
+    
     pollingRef.current = setInterval(async () => {
       try {
         const token = await getToken();
@@ -67,7 +69,7 @@ export default function ResearchProgress({
   }, [jobId, workspaceId, getToken, onComplete, onFailed]);
 
   useEffect(() => {
-    if (!jobId) return;
+    if (!jobId || !workspaceId || workspaceId === "undefined") return;
     let cancelled = false;
 
     async function startSSE() {
