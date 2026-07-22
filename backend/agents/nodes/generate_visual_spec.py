@@ -1,6 +1,6 @@
 import logging
 from typing import Any, Dict
-from services.llm_provider import get_instructor_client
+from services.llm_provider import get_async_instructor_client
 from api.schemas.visuals import VisualSpecResponse
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ def _fmt_evidence(e: dict) -> str:
     return " ".join(parts)
 
 
-def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
+async def generate_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     Generates 1-3 decision-support visual specifications using structured output.
     State is trimmed before LLM call to stay within Groq TPM limits.
@@ -91,8 +91,8 @@ ARCHITECTURE_DIAGRAM: 6-12 nodes, full data path (client→storage, cache, async
 SUMMARY_CARD: 5-8 highlights — at least 2 metrics (real numbers), 2 tradeoffs, 1 warning, 1 recommendation."""
 
     try:
-        client = get_instructor_client()
-        response: VisualSpecResponse = client.chat.completions.create(
+        client = get_async_instructor_client()
+        response: VisualSpecResponse = await client.chat.completions.create(
             model=_VISUAL_MODEL,
             response_model=VisualSpecResponse,
             max_retries=2,

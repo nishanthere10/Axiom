@@ -58,15 +58,16 @@ function ResearchPageInner() {
   }, [searchParams, pageState]);
 
   const fetchDoc = useCallback(async (id: string) => {
+    if (!workspaceId) return;
     try {
       const token = await getToken() ?? "";
-      const data = await getSessionDocument(id, token);
+      const data = await getSessionDocument(workspaceId, id, token);
       setDoc(data.document);
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Failed to load document.");
       setPageState("failed");
     }
-  }, []);
+  }, [getToken, workspaceId]);
 
   useEffect(() => {
     if (pageState === "done" && sessionId) {
@@ -209,7 +210,7 @@ function ResearchPageInner() {
                 This usually takes under 20 seconds.
               </p>
             </div>
-            <ResearchProgress jobId={jobId} onComplete={handleComplete} onFailed={handleFailed} />
+            <ResearchProgress jobId={jobId} workspaceId={workspaceId || ""} onComplete={handleComplete} onFailed={handleFailed} />
           </motion.div>
         )}
 

@@ -17,6 +17,7 @@ STEP_LABELS = {
     "context_relevance_scorer":    "Filtering relevant context…",
     "generate_queries":            "Building research queries…",
     "collect_and_score_evidence":  "Searching and scoring evidence…",
+    "assemble_context":            "Assembling engineering context…",
     "generate_decision":           "Generating recommendation…",
     "build_confidence":            "Scoring confidence…",
     "generate_visual_spec":        "Creating diagrams…",
@@ -35,6 +36,7 @@ NODE_PROGRESS = {
     "context_relevance_scorer":    34,
     "generate_queries":            35,
     "collect_and_score_evidence":  58,
+    "assemble_context":            65,
     "generate_decision":           72,
     "build_confidence":            80,
     "generate_visual_spec":        86,
@@ -86,6 +88,7 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
             "retrieved_memories": [],
             "memory_context": {},
             "github_context": [],
+            "engineered_context": {},
             "warnings": [],
             "status": "starting"
         }

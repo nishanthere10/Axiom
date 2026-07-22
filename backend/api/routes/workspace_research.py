@@ -8,6 +8,7 @@ from fastapi.responses import StreamingResponse
 from api.schemas.research import (
     ResearchRequest, ResearchResponse, JobStatusResponse,
     SessionDocumentResponse, SessionHistoryResponse,
+    RegenerateVisualsRequest, RegenerateVisualsResponse,
 )
 from services import research_service
 from services.cache_service import cache
@@ -70,14 +71,21 @@ def get_session_document(workspace_id: str, session_id: str, user_id: str = Depe
     """GET /workspaces/{id}/research/sessions/{session_id}"""
     cache_key = f"doc_{user_id}_{session_id}"
     cached_doc = cache.get(cache_key)
-    if cached_doc:
+    # Only serve from cache if the document has visuals — a cache miss on visuals
+    # means the document was cached before the visual spec node finished writing.
+    if cached_doc and cached_doc.get("visuals"):
         return SessionDocumentResponse(document=cached_doc)
+    elif cached_doc:
+        # Stale cache entry (no visuals) — bust it and re-fetch from DB
+        cache.delete(cache_key)
 
     document = research_service.get_document_by_session(session_id, user_id=user_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found.")
 
-    cache.set(cache_key, document)
+    # Only cache once visuals are present to avoid poisoning subsequent reads
+    if document.get("visuals"):
+        cache.set(cache_key, document)
     return SessionDocumentResponse(document=document)
 
 
@@ -94,6 +102,62 @@ def get_research_history(
         limit=limit, offset=offset, user_id=user_id, workspace_id=workspace_id
     )
     return SessionHistoryResponse(sessions=sessions)
+
+
+@router.post("/regenerate-visuals", response_model=RegenerateVisualsResponse)
+async def regenerate_visuals_in_workspace(
+    workspace_id: str,
+    body: RegenerateVisualsRequest,
+    user_id: str = Depends(get_current_user),
+    _ws: str = Depends(verify_workspace_path),
+):
+    """POST /workspaces/{id}/research/regenerate-visuals
+    Regenerates only the visuals for an existing session and updates the database.
+    """
+    import anyio
+    from agents.nodes.generate_visual_spec import generate_visual_spec
+    from agents.nodes.validate_visual_spec import validate_visual_spec
+    from services.db import get_supabase
+    from datetime import datetime
+
+    document = await anyio.to_thread.run_sync(
+        research_service.get_document_by_session, body.session_id, user_id
+    )
+    if not document:
+        raise HTTPException(status_code=404, detail="Session document not found.")
+
+    # Reconstruct minimal state needed by the visual spec node
+    initial_state = {
+        "question":       document.get("question", ""),
+        "summary":        document.get("executive_summary", ""),
+        "recommendation": document.get("recommendation_context", ""),
+        "tradeoffs":      document.get("tradeoffs", ""),
+        "alternatives":   document.get("alternatives", ""),
+        "confidence":     document.get("confidence", {}),
+        "evidence":       document.get("evidence", []),
+        "visual_specs":   [],
+        "visuals":        [],
+    }
+
+    state_after_gen = await generate_visual_spec(initial_state)
+    initial_state.update(state_after_gen)
+
+    # validate_visual_spec is synchronous
+    state_after_val = await anyio.to_thread.run_sync(validate_visual_spec, initial_state)
+    visuals = state_after_val.get("visuals", [])
+
+    # Persist updated visuals and bust the document cache
+    supabase = get_supabase()
+    await anyio.to_thread.run_sync(
+        lambda: supabase.table("research_reports").update({
+            "visuals": visuals,
+            "visuals_updated_at": datetime.utcnow().isoformat(),
+        }).eq("session_id", body.session_id).execute()
+    )
+    cache.delete(f"doc_{user_id}_{body.session_id}")
+
+    logger.info("Regenerated %d visuals for session %s", len(visuals), body.session_id)
+    return RegenerateVisualsResponse(visuals=visuals)
 
 
 @router.post("/jobs/{job_id}/stream-ticket")

@@ -92,6 +92,15 @@ def save_document(session_id: str, question: str, state: dict, user_id: str, war
         payload["workspace_id"] = workspace_id
 
     response = supabase.table("research_reports").insert(payload).execute()
+
+    # Immediately bust the in-memory document cache so the next GET always reads
+    # the freshly-written row (with visuals) rather than an empty-visuals entry
+    # that may have been cached before the pipeline finished.
+    try:
+        from services.cache_service import cache as _cache
+        _cache.delete(f"doc_{user_id}_{session_id}")
+    except Exception:
+        pass
     
     # Auto-create the decision record
     if workspace_id:

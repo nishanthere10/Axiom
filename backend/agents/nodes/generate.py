@@ -2,12 +2,12 @@ import json
 import logging
 from core.config import settings
 from agents.state.research_state import ResearchState
-from services.llm_provider import generate_chat_completion
+from services.llm_provider import async_generate_chat_completion
 
 logger = logging.getLogger(__name__)
 
 
-def generate_decision(state: ResearchState) -> dict:
+async def generate_decision(state: ResearchState) -> dict:
     """
     Node 2: Generates the full engineering decision — recommendation context,
     tradeoffs, and alternatives — using the question and executive summary.
@@ -30,43 +30,49 @@ def generate_decision(state: ResearchState) -> dict:
         injected_mem, injected_git, dropped
     )
     
-    # Extract ALL memory context fields
-    preferences = memory_context.get("preferences", [])
-    historical_patterns = memory_context.get("historical_patterns", [])
-    related_decisions = memory_context.get("related_decisions", [])
-    consistency_warnings = memory_context.get("consistency_warnings", [])
+    eng_ctx = state.get("engineered_context", {})
+    if eng_ctx:
+        memory_text = eng_ctx.get("memory_text", "No memory context.")
+        evidence_text = eng_ctx.get("evidence_text", "No external evidence provided.")
+        github_text = eng_ctx.get("github_text", "No repository context provided.")
+    else:
+        # Extract ALL memory context fields
+        preferences = memory_context.get("preferences", [])
+        historical_patterns = memory_context.get("historical_patterns", [])
+        related_decisions = memory_context.get("related_decisions", [])
+        consistency_warnings = memory_context.get("consistency_warnings", [])
 
-    memory_text = ""
-    if preferences:
-        memory_text += "\n**USER PREFERENCES (from memory):**\n" + "\n".join(f"- {p['value']}: {p['reason']}" for p in preferences)
-    if historical_patterns:
-        memory_text += "\n**HISTORICAL PATTERNS:**\n" + "\n".join(f"- {h}" for h in historical_patterns)
-    if related_decisions:
-        memory_text += "\n**RELATED PAST DECISIONS (Summary):**\n" + "\n".join(f"- {d}" for d in related_decisions)
-    if consistency_warnings:
-        memory_text += "\n**⚠️ CONSISTENCY WARNINGS:**\n" + "\n".join(f"- {w}" for w in consistency_warnings)
-        
-    if memories:
-        memory_text += "\n**RELEVANT PAST DECISIONS (Raw Context):**\n" + "\n".join(
-            f"- [{m.get('metadata', {}).get('memory_type', 'unknown')}] {m.get('metadata', {}).get('summary', '')}"
-            for m in memories
+        memory_text = ""
+        if preferences:
+            memory_text += "\n**USER PREFERENCES (from memory):**\n" + "\n".join(f"- {p['value']}: {p['reason']}" for p in preferences)
+        if historical_patterns:
+            memory_text += "\n**HISTORICAL PATTERNS:**\n" + "\n".join(f"- {h}" for h in historical_patterns)
+        if related_decisions:
+            memory_text += "\n**RELATED PAST DECISIONS (Summary):**\n" + "\n".join(f"- {d}" for d in related_decisions)
+        if consistency_warnings:
+            memory_text += "\n**⚠️ CONSISTENCY WARNINGS:**\n" + "\n".join(f"- {w}" for w in consistency_warnings)
+            
+        if memories:
+            memory_text += "\n**RELEVANT PAST DECISIONS (Raw Context):**\n" + "\n".join(
+                f"- [{m.get('metadata', {}).get('memory_type', 'unknown')}] {m.get('metadata', {}).get('summary', '')}"
+                for m in memories
+            )
+
+        # Format evidence for the prompt with rich formatting and sorted by trust_score
+        evidence_text = "\n\n".join(
+            f"[Source {i+1}] ({e.get('claim_type','unknown').upper()} | trust:{e.get('trust_score',0):.2f} | {e.get('source_year','?')})\n"
+            f"  Title: {e.get('title')}\n"
+            f"  Claim: {e.get('claim')}\n"
+            f"  Metrics: {e.get('metrics') or 'none'}\n"
+            f"  URL: {e.get('url')}"
+            for i, e in enumerate(sorted(evidence, key=lambda x: x.get('trust_score', 0), reverse=True))
         )
 
-    # Format evidence for the prompt with rich formatting and sorted by trust_score
-    evidence_text = "\n\n".join(
-        f"[Source {i+1}] ({e.get('claim_type','unknown').upper()} | trust:{e.get('trust_score',0):.2f} | {e.get('source_year','?')})\n"
-        f"  Title: {e.get('title')}\n"
-        f"  Claim: {e.get('claim')}\n"
-        f"  Metrics: {e.get('metrics') or 'none'}\n"
-        f"  URL: {e.get('url')}"
-        for i, e in enumerate(sorted(evidence, key=lambda x: x.get('trust_score', 0), reverse=True))
-    )
-
-    # Format repository context
-    github_text = "\n\n".join(
-        f"[Source: {chunk.get('file_path', 'unknown')} | {chunk.get('repository', 'unknown')}]\n{chunk.get('raw_snippet') or chunk.get('content', '')}"
-        for chunk in github_context
-    )
+        # Format repository context
+        github_text = "\n\n".join(
+            f"[Source: {chunk.get('file_path', 'unknown')} | {chunk.get('repository', 'unknown')}]\n{chunk.get('raw_snippet') or chunk.get('content', '')}"
+            for chunk in github_context
+        )
 
     prompt = f"""You are a distinguished Principal Software Engineer. Based on the technical question, analysis, and the provided EVIDENCE, MEMORY, and REPOSITORY CONTEXT, generate a highly scannable, expert-level decision document. 
 Do not use huge text blocks. Use bullet points and bold text to make it readable at a glance. Prioritize context-rich quality over quantity.
@@ -107,7 +113,7 @@ Return only valid JSON. Ensure all strings correctly escape quotes and newlines 
         return str(val)
 
     # Critical node — let exceptions propagate to fail the pipeline
-    response = generate_chat_completion(
+    response = await async_generate_chat_completion(
         messages=[
             {"role": "system", "content": "You are an elite Principal Engineer. You write context-rich, highly scannable technical docs. Rely heavily on bullet points and bold text for at-a-glance readability. Zero fluff. Return only valid JSON."},
             {"role": "user", "content": prompt},

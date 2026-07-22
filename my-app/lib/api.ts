@@ -95,13 +95,13 @@ export async function submitResearch(question: string, forceRefresh: boolean = f
 }
 
 /** Poll the status of a background research job. */
-export async function getJobStatus(jobId: string, token: string, getToken?: () => Promise<string | null>): Promise<JobStatusResponse> {
-  return apiFetch<JobStatusResponse>(`/research/jobs/${jobId}`, token, { getToken });
+export async function getJobStatus(workspaceId: string, jobId: string, token: string, getToken?: () => Promise<string | null>): Promise<JobStatusResponse> {
+  return apiFetch<JobStatusResponse>(`/workspaces/${workspaceId}/research/jobs/${jobId}`, token, { getToken });
 }
 
 /** Fetch the completed decision document for a session. */
-export async function getSessionDocument(sessionId: string, token: string, getToken?: () => Promise<string | null>): Promise<SessionDocumentResponse> {
-  return apiFetch<SessionDocumentResponse>(`/research/sessions/${sessionId}`, token, { getToken });
+export async function getSessionDocument(workspaceId: string, sessionId: string, token: string, getToken?: () => Promise<string | null>): Promise<SessionDocumentResponse> {
+  return apiFetch<SessionDocumentResponse>(`/workspaces/${workspaceId}/research/sessions/${sessionId}`, token, { getToken });
 }
 
 /** Fetch all saved comparisons. */

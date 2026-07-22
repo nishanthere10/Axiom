@@ -9,6 +9,10 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+class LLMProviderError(Exception):
+    """Raised when all LLM providers fail to generate a response."""
+    pass
+
 # Pre-configure environment variables for litellm based on our settings
 os.environ["GROQ_API_KEY"] = settings.GROQ_API_KEY
 if settings.GEMINI_API_KEY:
@@ -32,6 +36,16 @@ litellm.drop_params = True
 # Sampling params that Gemini does not accept and will throw deprecation warnings for
 _GEMINI_INCOMPATIBLE_PARAMS = {"temperature", "top_p", "top_k", "presence_penalty", "frequency_penalty"}
 
+def _is_valid_key(key: Optional[str]) -> bool:
+    if not key or not key.strip():
+        return False
+    # Exclude common template placeholder strings
+    lower_key = key.lower()
+    if "your" in lower_key or "sk-" in lower_key and len(key) < 10:
+        if "your_api_key" in lower_key or "your-api-key" in lower_key or "..." in lower_key:
+            return False
+    return True
+
 def _build_fallbacks() -> List[Dict[str, str]]:
     """Builds a dynamic list of fallback models based on available API keys."""
     fallbacks = [
@@ -39,17 +53,20 @@ def _build_fallbacks() -> List[Dict[str, str]]:
     ]
     
     # Priority 1: Gemini
-    if settings.GEMINI_API_KEY:
+    if _is_valid_key(settings.GEMINI_API_KEY):
         fallbacks.append({"model": "gemini/gemini-1.5-flash"})
         
     # Priority 2: Mistral
-    if settings.MISTRAL_API_KEY:
+    if _is_valid_key(settings.MISTRAL_API_KEY):
         fallbacks.append({"model": "mistral/mistral-large-latest"})
         
     # Priority 3: NVIDIA
-    if settings.NVIDIA_API_KEY:
+    if _is_valid_key(settings.NVIDIA_API_KEY):
         # Example nvidia model, replace with your preferred model
-        fallbacks.append({"model": "nvidia_nim/meta/llama3-70b-instruct"})
+        fallbacks.append({
+            "model": "nvidia_nim/meta/llama3-70b-instruct",
+            "api_base": "https://integrate.api.nvidia.com/v1"
+        })
         
     return fallbacks
 
@@ -69,7 +86,8 @@ def generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/
         kwargs = {k: v for k, v in kwargs.items() if k not in _GEMINI_INCOMPATIBLE_PARAMS}
     
     try:
-        logger.debug("Requesting LLM completion (Primary: %s)", model)
+        api_base = kwargs.get('api_base', 'default')
+        logger.debug("Requesting LLM completion | Primary Model: %s | api_base: %s | fallbacks: %s", model, api_base, [f['model'] for f in fallbacks])
         
         import time
         start_time = time.time()
@@ -112,9 +130,59 @@ def generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/
         except Exception:
             pass
         
-        raise RuntimeError(
-            "LLM generation failed across all fallback providers due to rate limits or API errors."
+        raise LLMProviderError(
+            f"LLM generation failed across all fallback providers. Last error: {e}"
         )
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+async def async_generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/llama-3.3-70b-versatile", **kwargs) -> Any:
+    """
+    Async version of unified LLM chat completion with automatic fallback routing.
+    """
+    fallbacks = _build_fallbacks()
+    if model.startswith("gemini/"):
+        kwargs = {k: v for k, v in kwargs.items() if k not in _GEMINI_INCOMPATIBLE_PARAMS}
+    
+    try:
+        api_base = kwargs.get('api_base', 'default')
+        logger.debug("Requesting Async LLM completion | Primary Model: %s | api_base: %s | fallbacks: %s", model, api_base, [f['model'] for f in fallbacks])
+        import time
+        start_time = time.time()
+        
+        response = await acompletion(
+            model=model,
+            messages=messages,
+            fallbacks=fallbacks,
+            **kwargs
+        )
+        latency_ms = int((time.time() - start_time) * 1000)
+        
+        try:
+            from services.metrics_service import emit_provider_event
+            def get_provider(m: str):
+                return m.split("/")[0] if m and "/" in m else str(m)
+            actual_model = getattr(response, "model", model)
+            actual_provider = get_provider(actual_model)
+            primary_provider = get_provider(model)
+            if actual_model != model:
+                emit_provider_event(primary_provider, "failure", latency_ms)
+                emit_provider_event(actual_provider, "fallback", latency_ms)
+                emit_provider_event(actual_provider, "success", latency_ms)
+            else:
+                emit_provider_event(actual_provider, "success", latency_ms)
+        except Exception as e:
+            logger.warning(f"Failed to emit provider metrics: {e}")
+            
+        return response
+    except Exception as e:
+        logger.error("Async LLM generation failed: %s", e, exc_info=True)
+        try:
+            from services.metrics_service import emit_provider_event
+            primary_provider = model.split("/")[0] if "/" in model else model
+            emit_provider_event(primary_provider, "failure", 0)
+        except Exception:
+            pass
+        raise LLMProviderError(f"LLM generation failed across all fallback providers. Last error: {e}")
 
 _instructor_client = None
 _async_instructor_client = None

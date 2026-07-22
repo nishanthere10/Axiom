@@ -4,7 +4,8 @@ import { useState } from "react";
 import { RefreshCw } from "lucide-react";
 import Loader from "@/components/loader";
 import { useAuth } from "@clerk/nextjs";
-import { submitResearch, getJobStatus } from "@/lib/api";
+import { submitWorkspaceResearch, getJobStatus } from "@/lib/api";
+import { useParams } from "next/navigation";
 
 const INITIAL_POLL_MS = 1000;
 const MAX_POLL_MS = 8000;
@@ -18,23 +19,29 @@ export default function RefreshEvidence({
   onRefresh: (sessionId: string) => void;
 }) {
   const { getToken } = useAuth();
+  const params = useParams();
+  const workspaceId = params?.id as string | undefined;
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleRefresh = async () => {
+    if (!workspaceId) {
+      setError("Workspace context missing.");
+      return;
+    }
     try {
       setIsRefreshing(true);
       setError(null);
 
       const token = (await getToken()) ?? "";
-      const res = await submitResearch(question, true, token);
+      const res = await submitWorkspaceResearch(workspaceId, question, true, token);
       const { session_id, job_id } = res;
 
       let polls = 0;
       let currentDelay = INITIAL_POLL_MS;
       while (polls < MAX_POLLS) {
         await new Promise(r => setTimeout(r, currentDelay));
-        const job = await getJobStatus(job_id, token);
+        const job = await getJobStatus(workspaceId, job_id, token);
         if (job.status === "completed") { onRefresh(session_id); return; }
         if (job.status === "failed")    { setError("Evidence refresh failed. Please try again."); return; }
         polls++;

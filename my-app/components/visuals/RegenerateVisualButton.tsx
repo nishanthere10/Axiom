@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useAuth } from "@clerk/nextjs";
+import { useParams } from "next/navigation";
 import { VisualSpec } from "@/lib/visuals";
+import { API_BASE_URL } from "@/lib/api";
 
 interface Props {
   sessionId: string;
@@ -11,21 +13,33 @@ interface Props {
 
 export default function RegenerateVisualButton({ sessionId, onRegenerated }: Props) {
   const { getToken } = useAuth();
+  const params = useParams();
+  const workspaceId = params?.id as string | undefined;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleRegenerate = async () => {
+    if (!workspaceId) {
+      setError("Workspace context missing — cannot regenerate.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const token = await getToken() ?? "";
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "production" ? "https://atlas-1sr4.onrender.com" : "http://127.0.0.1:8000")}/research/regenerate-visuals`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ session_id: sessionId })
-      });
+      const res = await fetch(
+        `${API_BASE_URL}/workspaces/${workspaceId}/research/regenerate-visuals`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify({ session_id: sessionId }),
+        }
+      );
       
-      if (!res.ok) throw new Error("Failed to regenerate visuals");
+      if (!res.ok) throw new Error(`Failed to regenerate visuals (${res.status})`);
       
       const data = await res.json();
       onRegenerated(data.visuals);

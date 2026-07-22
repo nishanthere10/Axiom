@@ -4,6 +4,7 @@ from agents.nodes.decompose import decompose_question
 from agents.nodes.canonicalize_topic import canonicalize_topic
 from agents.nodes.generate_queries import generate_queries
 from agents.nodes.collect_and_score_evidence import collect_and_score_evidence
+from agents.nodes.assemble_context import assemble_context
 from agents.nodes.generate import generate_decision
 from agents.nodes.confidence import build_confidence
 from agents.nodes.generate_visual_spec import generate_visual_spec
@@ -30,6 +31,7 @@ def build_decision_graph():
     graph.add_node("canonicalize_topic", canonicalize_topic)
     graph.add_node("generate_queries", generate_queries)
     graph.add_node("collect_and_score_evidence", collect_and_score_evidence)
+    graph.add_node("assemble_context", assemble_context)
     graph.add_node("generate_decision", generate_decision)
     graph.add_node("build_confidence", build_confidence)
     graph.add_node("generate_visual_spec", generate_visual_spec)
@@ -59,8 +61,9 @@ def build_decision_graph():
         "context_relevance_scorer"
     ], "collect_and_score_evidence")
     
-    # Phase 4: Decision generation
-    graph.add_edge("collect_and_score_evidence", "generate_decision")
+    # Phase 4: Context assembly & decision generation
+    graph.add_edge("collect_and_score_evidence", "assemble_context")
+    graph.add_edge("assemble_context", "generate_decision")
     
     # Phase 5: Parallel post-decision processing
     graph.add_edge("generate_decision", "build_confidence")

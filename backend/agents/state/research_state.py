@@ -30,6 +30,7 @@ class ResearchState(TypedDict):
     
     scored_memories: list[dict]
     scored_github: list[dict]
+    engineered_context: dict
     injected_memory_count: int
     injected_github_count: int
     dropped_context_count: int
