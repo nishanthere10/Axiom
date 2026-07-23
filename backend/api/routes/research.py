@@ -14,6 +14,12 @@ from workers.tasks import run_research_background_task
 from core.auth import get_current_user, verify_workspace_access
 from middleware.rate_limit import limiter
 
+"""
+DEPRECATED: These routes are now overridden by the deprecated_router in main.py
+and return 410 Gone. This file should be deleted after Phase 4 rollout is confirmed.
+See workspace_research.py for the replacement implementation.
+"""
+
 router = APIRouter()
 
 
@@ -86,7 +92,6 @@ def get_session_document(session_id: str, response: Response, user_id: str = Dep
     if not document:
         raise HTTPException(status_code=404, detail="Document not found.")
 
-    cache_key = f"doc_{user_id}_{session_id}"
     cache.set(cache_key, document)
     return SessionDocumentResponse(document=document)
 

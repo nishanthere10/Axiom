@@ -19,7 +19,8 @@ async def check_postgres() -> bool:
 
 async def check_pinecone() -> bool:
     try:
-        from services.pinecone_service import index
+        from services.pinecone_service import get_pinecone_index
+        index = get_pinecone_index()
         if not index:
             logger.warning("Pinecone health check failed: index not initialized")
             return False

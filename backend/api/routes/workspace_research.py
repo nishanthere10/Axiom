@@ -202,7 +202,7 @@ async def stream_job_progress(
     async def event_generator():
         queue = subscribe(job_id)
         MAX_STREAM_SECONDS = 600   # 10-minute hard cap
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         deadline = loop.time() + MAX_STREAM_SECONDS
         heartbeat_interval = 15
 

@@ -13,6 +13,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
   APPROVED:    { label: "Approved",    color: "bg-green-500/10 text-green-500 border-green-500/20",       icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
   IMPLEMENTED: { label: "Implemented", color: "bg-blue-500/10 text-blue-500 border-blue-500/20",          icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
   REJECTED:    { label: "Rejected",    color: "bg-red-500/10 text-red-500 border-red-500/20",             icon: <XCircle className="w-3.5 h-3.5" /> },
+  SUPERSEDED:  { label: "Superseded",  color: "bg-purple-500/10 text-purple-400 border-purple-500/20",    icon: <Archive className="w-3.5 h-3.5" /> },
   ARCHIVED:    { label: "Archived",    color: "bg-gray-500/10 text-gray-400 border-gray-500/20",          icon: <Archive className="w-3.5 h-3.5" /> },
 };
 
@@ -137,14 +138,26 @@ export default function DecisionDetailPage() {
           </button>
         ))}
         {currentStatus !== "REJECTED" && (
-          <button onClick={() => initiateStatusChange("REJECTED")}
-            className={cn("px-3 py-1 rounded-full text-xs border font-medium hover:opacity-80", STATUS_CONFIG.REJECTED.color)}>
+          <button
+            onClick={() => initiateStatusChange("REJECTED")}
+            className="px-3 py-1 rounded-full text-xs border border-red-500/20 text-red-500 bg-red-500/10 font-medium hover:opacity-80 transition-opacity"
+          >
             Reject
           </button>
         )}
+        {currentStatus !== "SUPERSEDED" && (
+          <button
+            onClick={() => initiateStatusChange("SUPERSEDED")}
+            className="px-3 py-1 rounded-full text-xs border border-purple-500/20 text-purple-400 bg-purple-500/10 font-medium hover:opacity-80 transition-opacity"
+          >
+            Supersede
+          </button>
+        )}
         {currentStatus !== "ARCHIVED" && (
-          <button onClick={() => initiateStatusChange("ARCHIVED")}
-            className={cn("px-3 py-1 rounded-full text-xs border font-medium hover:opacity-80", STATUS_CONFIG.ARCHIVED.color)}>
+          <button
+            onClick={() => initiateStatusChange("ARCHIVED")}
+            className="px-3 py-1 rounded-full text-xs border border-gray-500/20 text-gray-400 bg-gray-500/10 font-medium hover:opacity-80 transition-opacity"
+          >
             Archive
           </button>
         )}

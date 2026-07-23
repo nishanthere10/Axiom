@@ -69,6 +69,24 @@ def upsert_memory(memory_id: str, summary: str, metadata: Dict[str, Any], worksp
         logger.error("Error upserting to Pinecone: %s", e, exc_info=True)
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+def update_memory_metadata(memory_id: str, metadata_updates: Dict[str, Any]):
+    """Updates metadata fields for an existing memory in Pinecone."""
+    logger.debug("update_memory_metadata called for memory_id=%s", memory_id)
+    index = get_pinecone_index()
+    if not index:
+        logger.warning("Pinecone index not initialized, skipping metadata update.")
+        return
+        
+    try:
+        clean_updates = {k: v for k, v in metadata_updates.items() if v is not None}
+        if clean_updates:
+            index.update(id=memory_id, set_metadata=clean_updates)
+            logger.debug("Successfully updated metadata for %s in Pinecone.", memory_id)
+    except Exception as e:
+        logger.error("Error updating metadata in Pinecone for %s: %s", memory_id, e, exc_info=True)
+
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def search_memories(query: str, user_id: str, workspace_id: Optional[str] = None, top_k: int = 15, threshold: float = 0.70, max_results: int = 5) -> List[Dict[str, Any]]:
     """Searches Pinecone for relevant memories above a similarity threshold.
     Fetches top_k candidates, filters by threshold, sorts by score desc, returns at most max_results.

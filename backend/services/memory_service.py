@@ -26,7 +26,7 @@ def create_memory_item(data: MemoryItemCreate) -> Optional[Dict[str, Any]]:
             .execute()
         )
         if existing.data:
-            logger.info("Skipping duplicate memory (hash=%s...)", dedup_hash[:12])
+            logger.info("Skipping duplicate memory (exact hash=%s...)", dedup_hash[:12])
             # Update last_used_at on the existing memory instead
             supabase.table("memory_items").update(
                 {"last_used_at": datetime.utcnow().isoformat()}
@@ -37,7 +37,32 @@ def create_memory_item(data: MemoryItemCreate) -> Optional[Dict[str, Any]]:
             existing_memory["_dedup_skipped"] = True
             return existing_memory
     except Exception as e:
-        logger.warning("Error checking for memory dedup: %s", e)
+        logger.warning("Error checking for exact memory dedup hash: %s", e)
+
+    # 2. Semantic vector deduplication check (threshold > 0.90)
+    try:
+        from services.pinecone_service import search_memories
+        similar_memories = search_memories(
+            query=data.summary,
+            user_id=data.user_id,
+            workspace_id=data.workspace_id,
+            top_k=5,
+            threshold=0.90,
+            max_results=1
+        )
+        if similar_memories:
+            dup_id = similar_memories[0].get("id") or similar_memories[0].get("metadata", {}).get("memory_id")
+            if dup_id:
+                logger.info("Skipping duplicate memory via semantic vector match (id=%s)", dup_id)
+                try:
+                    supabase.table("memory_items").update(
+                        {"last_used_at": datetime.utcnow().isoformat()}
+                    ).eq("id", dup_id).execute()
+                except Exception:
+                    pass
+                return {"id": dup_id, "_dedup_skipped": True}
+    except Exception as e:
+        logger.warning("Error checking for semantic memory dedup: %s", e)
     
     # Calculate expiration for temporary memories
     expires_at = data.expires_at

@@ -19,6 +19,7 @@ from middleware.rate_limit import limiter
 from middleware.logging_middleware import StructlogMiddleware
 from slowapi.errors import RateLimitExceeded
 from core.errors import AtlasError
+from core.auth import get_current_user
 from services.health_service import run_all_checks
 from workers.memory_sweeper import run_memory_sweeper
 import asyncio
@@ -119,8 +120,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "x-workspace-id", "x-request-id"],
 )
 
 from fastapi import APIRouter
@@ -165,8 +166,17 @@ app.include_router(ws_search_router, prefix="/workspaces/{workspace_id}/search",
 async def health_check():
     """
     GET /health
-    Returns detailed health status for all dependencies.
-    Publicly accessible for system status banners and load balancers.
+    Public status check for load balancers and status pages.
+    Returns only top-level status to avoid leaking infrastructure details.
+    """
+    result = await run_all_checks()
+    return {"status": result["status"]}
+
+@app.get("/health/internal", tags=["system"])
+async def health_check_internal(user_id: str = Depends(get_current_user)):
+    """
+    GET /health/internal
+    Detailed health status for all dependencies. Requires authentication.
     """
     return await run_all_checks()
 

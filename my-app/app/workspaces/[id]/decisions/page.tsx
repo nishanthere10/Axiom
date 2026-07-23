@@ -13,6 +13,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   APPROVED:    { label: "Approved",    color: "bg-green-500/10 text-green-500 border-green-500/20" },
   IMPLEMENTED: { label: "Implemented", color: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
   REJECTED:    { label: "Rejected",    color: "bg-red-500/10 text-red-500 border-red-500/20" },
+  SUPERSEDED:  { label: "Superseded",  color: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
   ARCHIVED:    { label: "Archived",    color: "bg-gray-500/10 text-gray-400 border-gray-500/20" },
 };
 

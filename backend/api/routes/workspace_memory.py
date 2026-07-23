@@ -5,7 +5,7 @@ Memory items are curate-able: engineers can browse, edit summaries, and delete i
 """
 import logging
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query
 from pydantic import BaseModel
 from core.auth import get_current_user, verify_workspace_path
 from services.db import get_supabase
@@ -25,8 +25,8 @@ def list_workspace_memories(
     memory_type: str = "",    # decision | comparison | evidence | preference | research
     scope: str = "",           # permanent | temporary
     q: str = "",               # text search
-    limit: int = 20,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     user_id: str = Depends(get_current_user),
     _ws: str = Depends(verify_workspace_path),
 ):
@@ -53,20 +53,19 @@ def list_workspace_memories(
 
     res = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
 
-    # Type breakdown (separate count query — keep main query paginated)
-    breakdown_res = (
+    # Use count=exact to get total without fetching all rows
+    count_res = (
         supabase.table("memory_items")
-        .select("memory_type")
+        .select("memory_type", count="exact")
         .eq("workspace_id", workspace_id)
         .eq("is_active", True)
         .execute()
     )
     by_type: dict[str, int] = {}
-    total = 0
-    for row in (breakdown_res.data or []):
+    total = count_res.count or 0
+    for row in (count_res.data or []):
         t = row.get("memory_type", "unknown")
         by_type[t] = by_type.get(t, 0) + 1
-        total += 1
 
     return {
         "memories": res.data or [],

@@ -4,23 +4,10 @@ from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from api.schemas.decision import DecisionRecordCreate, DecisionRecordUpdate, DecisionRecordResponse, DecisionListResponse
 from core.auth import get_current_user, verify_workspace_path
 from services.db import supabase
-from services.decision_memory_service import generate_and_store_decision_memory
+from services.decision_memory_service import sync_decision_memory_status
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-def _deactivate_decision_memory(decision_id: str, user_id: str):
-    """Soft-deletes memories linked to a rejected decision."""
-    try:
-        from services.db import get_supabase
-        supabase = get_supabase()
-        supabase.table("memory_items").update(
-            {"is_active": False}
-        ).eq("source_id", decision_id).eq("source_type", "decision_record").eq("user_id", user_id).execute()
-        logger.info("Deactivated memories for rejected decision %s", decision_id)
-    except Exception as e:
-        logger.warning("Failed to deactivate memories for decision %s: %s", decision_id, e)
-
 
 @router.post("", response_model=DecisionRecordResponse, status_code=201)
 def create_decision_in_workspace(
@@ -204,10 +191,7 @@ def update_decision_in_workspace(
     if not res.data:
         raise HTTPException(status_code=404, detail="Decision not found or unauthorized")
 
-    if body.status in ["APPROVED", "IMPLEMENTED"]:
-        background_tasks.add_task(generate_and_store_decision_memory, decision_id, user_id)
-    elif body.status == "REJECTED":
-        background_tasks.add_task(_deactivate_decision_memory, decision_id, user_id)
+    background_tasks.add_task(sync_decision_memory_status, decision_id, body.status, user_id)
 
     return _get_decision_with_report(decision_id)
 

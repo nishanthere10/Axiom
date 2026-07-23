@@ -94,6 +94,7 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
         }
         
         max_progress = 5
+        _last_written_progress = 0
         pipeline_cb = PipelineLogger(job_id=job_id, session_id=session_id)
         with anyio.move_on_after(900) as scope:
             async for chunk in decision_graph.astream(
@@ -134,14 +135,16 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
                         "meta":     meta,
                     })
 
-                    # Also update Supabase for polling fallback
-                    await anyio.to_thread.run_sync(
-                        research_service.update_job_status,
-                        job_id,
-                        "running",
-                        max_progress,
-                        step_label,
-                    )
+                    # Also update Supabase for polling fallback (throttled to >=10 point jumps)
+                    if max_progress - _last_written_progress >= 10:
+                        _last_written_progress = max_progress
+                        await anyio.to_thread.run_sync(
+                            research_service.update_job_status,
+                            job_id,
+                            "running",
+                            max_progress,
+                            step_label,
+                        )
 
         if scope.cancel_called:
             logger.error("Research job %s timed out", job_id)
@@ -151,7 +154,7 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
                 
         final_state = current_state
 
-        if final_state is None or final_state.get("status") != "complete":
+        if final_state is None or final_state.get("status") not in {"complete", "completed"}:
             actual_status = final_state.get("status") if final_state else None
             logger.error(
                 "Research job %s: graph finished but status='%s' (expected 'complete'). "

@@ -144,17 +144,24 @@ async def github_push_webhook(
 
     repo = repo_res.data[0]
 
-    # Verify HMAC
-    secret = repo.get("webhook_secret", "")
-    if secret:
-        expected_sig = "sha256=" + hmac.new(
-            secret.encode("utf-8"),
-            body,
-            hashlib.sha256,
-        ).hexdigest()
-        if not hmac.compare_digest(expected_sig, x_hub_signature_256 or ""):
-            logger.warning("HMAC verification failed for repo %s", repo_full_name)
-            raise HTTPException(status_code=401, detail="Invalid signature")
+    # Verify HMAC — secret is mandatory; reject if not configured
+    secret = repo.get("webhook_secret") or ""
+    if not secret:
+        logger.warning(
+            "Rejecting webhook for %s: no webhook_secret configured in repo record",
+            repo_full_name,
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="Webhook not configured — missing webhook_secret for this repository",
+        )
+
+    # hmac.new is a valid alias for hmac.HMAC in Python stdlib
+    mac = hmac.new(secret.encode("utf-8"), body, hashlib.sha256)
+    expected_sig = "sha256=" + mac.hexdigest()
+    if not hmac.compare_digest(expected_sig, x_hub_signature_256 or ""):
+        logger.warning("HMAC verification failed for repo %s", repo_full_name)
+        raise HTTPException(status_code=401, detail="Invalid signature")
 
     # Queue incremental sync as background task
     from services.context_providers.github_provider import github_provider

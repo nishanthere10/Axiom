@@ -119,7 +119,9 @@ async def get_current_user(
         )
     except Exception as e:
         logger.warning("AUTH: Failed to decode JWT header for diagnostics: %s", e)
-        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+        # Diagnostic block — never raise here, let real verification below handle it
+        header = {}
+        unverified = {}
 
     try:
         jwks_client = _get_jwks_client()
@@ -200,6 +202,8 @@ async def verify_workspace_access(
     """
     if not workspace_id:
         # Fallback for two-phase rollout: allow requests without workspace_id
+        # We only log for now because compare.py still relies on this behavior.
+        logger.warning("AUTH AUDIT: Deprecated fallback used — missing x-workspace-id header for user=%s", user_id)
         return None
         
     try:

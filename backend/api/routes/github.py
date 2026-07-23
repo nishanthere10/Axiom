@@ -12,9 +12,13 @@ from middleware.rate_limit import limiter
 from fastapi import Request
 from core.config import settings
 import secrets as _secrets
+from cachetools import TTLCache
 
 router = APIRouter(prefix="/github", tags=["github"])
 logger = logging.getLogger(__name__)
+
+# Cache for list_repositories to prevent rate limiting (60s TTL)
+repo_cache = TTLCache(maxsize=128, ttl=60)
 
 class SelectRepoRequest(BaseModel):
     repository_id: str
@@ -45,6 +49,10 @@ async def list_repositories(user_id: str = Depends(get_current_user)):
     """
     List repositories accessible by the user's GitHub token.
     """
+    cache_key = f"repos_{user_id}"
+    if cache_key in repo_cache:
+        return repo_cache[cache_key]
+
     token = await github_provider.get_token(user_id)
     if not token:
         raise HTTPException(status_code=401, detail="GitHub not connected")
@@ -74,7 +82,10 @@ async def list_repositories(user_id: str = Depends(get_current_user)):
                     "private": repo["private"],
                     "selected": str(repo["id"]) in selected_ids
                 })
-            return {"repositories": formatted_repos}
+            
+            result = {"repositories": formatted_repos}
+            repo_cache[cache_key] = result
+            return result
     except Exception as e:
         logger.error(f"Failed to list repositories: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch repositories from GitHub")

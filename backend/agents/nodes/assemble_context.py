@@ -33,7 +33,11 @@ def assemble_context(state: ResearchState) -> Dict[str, Any]:
 
     memory_text = ""
     if preferences:
-        memory_text += "\n**USER PREFERENCES (from memory):**\n" + "\n".join(f"- {p['value']}: {p['reason']}" for p in preferences)
+        memory_text += "\n**USER PREFERENCES (from memory):**\n" + "\n".join(
+            f"- {p.get('value', '')}: {p.get('reason', '')}"
+            for p in preferences
+            if isinstance(p, dict)
+        )
     if historical_patterns:
         memory_text += "\n**HISTORICAL PATTERNS:**\n" + "\n".join(f"- {h}" for h in historical_patterns)
     if related_decisions:
@@ -57,11 +61,27 @@ def assemble_context(state: ResearchState) -> Dict[str, Any]:
         for i, e in enumerate(sorted(evidence, key=lambda x: x.get('trust_score', 0), reverse=True))
     )
 
-    # 3. Format repository context
-    github_text = "\n\n".join(
-        f"[Source: {chunk.get('file_path', 'unknown')} | {chunk.get('repository', 'unknown')}]\n{chunk.get('raw_snippet') or chunk.get('content', '')}"
-        for chunk in github_context
-    )
+    # 3. Format repository context (architecture blueprint + code snippets)
+    arch_chunks = [c for c in github_context if c.get("file_path") == "__architecture_summary__"]
+    code_chunks = [c for c in github_context if c.get("file_path") != "__architecture_summary__"]
+
+    github_text_parts = []
+    if arch_chunks:
+        github_text_parts.append("**REPOSITORY ARCHITECTURE & TECH STACK BLUEPRINT:**")
+        for arch in arch_chunks:
+            tech_stack = ", ".join(arch.get("tech_stack", [])) if arch.get("tech_stack") else ""
+            stack_str = f" (Tech Stack: {tech_stack})" if tech_stack else ""
+            github_text_parts.append(f"Repo: {arch.get('repository')}{stack_str}\n{arch.get('content')}")
+
+    if code_chunks:
+        github_text_parts.append("**REPOSITORY CODE & DOCUMENTATION SNIPPETS:**")
+        for chunk in code_chunks:
+            github_text_parts.append(
+                f"[Source: {chunk.get('file_path', 'unknown')} | {chunk.get('repository', 'unknown')}]\n"
+                f"{chunk.get('raw_snippet') or chunk.get('content', '')}"
+            )
+
+    github_text = "\n\n".join(github_text_parts)
 
     context_obj = EngineeredContext(
         memory_text=memory_text,
