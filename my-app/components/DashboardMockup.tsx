@@ -4,7 +4,7 @@ import { CheckCircle2, Copy, ShieldCheck, TerminalSquare } from "lucide-react";
 
 export default function DashboardMockup() {
   return (
-    <div className="w-full max-w-6xl mx-auto mt-16 rounded-2xl border border-white/10 bg-background/80 backdrop-blur-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-1000 fill-mode-both">
+    <div className="w-full max-w-6xl mx-auto mt-16 min-h-[648px] rounded-2xl border border-white/10 bg-background/80 backdrop-blur-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-1000 fill-mode-both">
       {/* Window Header */}
       <div className="h-12 border-b border-white/10 flex items-center px-4 bg-surface/50">
         <div className="flex items-center gap-2">

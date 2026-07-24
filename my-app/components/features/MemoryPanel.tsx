@@ -4,9 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import { Brain, Search, Download, Trash2, Edit2, Check, X, FileText, Settings2, Database, Zap } from "lucide-react";
+import { Brain, Search, Download, Trash2, Edit2, Check, X, FileText, Settings2, Database, Zap, ArrowRight } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import Link from "next/link";
 
 interface MemoryItem {
   id: string;
@@ -32,6 +34,9 @@ export default function MemoryPanel() {
   
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loadMemories = useCallback(async (query = "", type = "") => {
     if (!workspaceId) return;
@@ -59,15 +64,19 @@ export default function MemoryPanel() {
     return () => clearTimeout(delay);
   }, [q, typeFilter, loadMemories]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Remove this memory? It will no longer influence the AI's context.")) return;
+  const confirmDelete = async () => {
+    if (!deleteTargetId || !workspaceId) return;
+    setDeleting(true);
     try {
       const token = await getToken();
-      await apiFetch(`/workspaces/${workspaceId}/memory/${id}`, token!, { method: "DELETE", getToken });
-      setMemories(prev => prev.filter(m => m.id !== id));
-      setStats(prev => ({ ...prev, total: prev.total - 1 }));
+      await apiFetch(`/workspaces/${workspaceId}/memory/${deleteTargetId}`, token!, { method: "DELETE", getToken });
+      setMemories(prev => prev.filter(m => m.id !== deleteTargetId));
+      setStats(prev => ({ ...prev, total: Math.max(0, prev.total - 1) }));
+      setDeleteTargetId(null);
     } catch (e) {
       console.error(e);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -190,12 +199,26 @@ export default function MemoryPanel() {
             <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
           </div>
         ) : memories.length === 0 ? (
-          <div className="text-center py-16 border border-dashed border-border rounded-xl">
-            <Brain className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-            <h3 className="text-base font-medium text-foreground">No memories found</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Try adjusting your search or filters.
+          <div className="text-center py-16 px-4 border border-dashed border-border rounded-xl bg-surface/10 space-y-3">
+            <Brain className="w-12 h-12 text-muted-foreground/30 mx-auto" />
+            <h3 className="text-base font-medium text-foreground">
+              {q || typeFilter ? "No matching memories found" : "Your memory vault is empty"}
+            </h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+              {q || typeFilter
+                ? "Try clearing your search query or changing the filter type."
+                : "Run a research session — Atlas will automatically extract and remember key architectural decisions, team preferences, and evidence."}
             </p>
+            {!q && !typeFilter && workspaceId && (
+              <div className="pt-2">
+                <Link
+                  href={`/workspaces/${workspaceId}/research`}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-sm"
+                >
+                  Start Research Session <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            )}
           </div>
         ) : (
           memories.map((m) => (
@@ -229,7 +252,7 @@ export default function MemoryPanel() {
                     <button onClick={() => { setEditingId(m.id); setEditText(m.summary); }} className="p-1.5 text-muted-foreground hover:text-foreground rounded-md hover:bg-surface">
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDelete(m.id)} className="p-1.5 text-muted-foreground hover:text-destructive rounded-md hover:bg-destructive/10">
+                    <button onClick={() => setDeleteTargetId(m.id)} className="p-1.5 text-muted-foreground hover:text-destructive rounded-md hover:bg-destructive/10">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -258,6 +281,16 @@ export default function MemoryPanel() {
           ))
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={!!deleteTargetId}
+        onClose={() => setDeleteTargetId(null)}
+        onConfirm={confirmDelete}
+        title="Delete Memory Node?"
+        description="Are you sure you want to remove this memory node? It will no longer influence future research context graphs."
+        confirmText="Delete Memory"
+        isLoading={deleting}
+      />
     </div>
   );
 }

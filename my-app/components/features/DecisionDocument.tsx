@@ -9,12 +9,15 @@ import RegenerateVisualButton from "../visuals/RegenerateVisualButton";
 import MarkdownRenderer from "../ui/MarkdownRenderer";
 import MemoryUsed from "../memory/MemoryUsed";
 
-export const ConfidenceBar = memo(function ConfidenceBar({ label, value }: { label: string; value: number }) {
+export const ConfidenceBar = memo(function ConfidenceBar({ label, value, inverse = false }: { label: string; value: number; inverse?: boolean }) {
   const pct = Math.round(value * 100);
-  const fillColor =
-    pct >= 75 ? "bg-success"
-    : pct >= 45 ? "bg-amber-500"
-    : "bg-destructive";
+  const fillColor = inverse
+    ? pct >= 75 ? "bg-destructive"
+      : pct >= 45 ? "bg-amber-500"
+      : "bg-success"
+    : pct >= 75 ? "bg-success"
+      : pct >= 45 ? "bg-amber-500"
+      : "bg-destructive";
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-xs">
@@ -57,11 +60,25 @@ export default function DecisionDocument({ doc, sessionId, setDoc }: Props) {
   return (
     <motion.div
       id="decision-document"
-      className="w-full space-y-8"
+      className="w-full space-y-8 relative"
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
+      {/* Sticky section jump-nav */}
+      <div className="sticky top-0 z-30 flex items-center gap-3 overflow-x-auto py-2 bg-background/90 backdrop-blur-md border-b border-border/40 text-xs font-mono text-muted-foreground hide-scrollbar">
+        <span className="text-[10px] uppercase font-bold text-muted-foreground/60 shrink-0">Jump to:</span>
+        <a href="#sec-summary" className="hover:text-primary transition-colors shrink-0">Summary</a>
+        <span className="text-border">·</span>
+        <a href="#sec-rec" className="hover:text-primary transition-colors shrink-0">Recommendation</a>
+        <span className="text-border">·</span>
+        <a href="#sec-visuals" className="hover:text-primary transition-colors shrink-0">Visuals</a>
+        <span className="text-border">·</span>
+        <a href="#sec-tradeoffs" className="hover:text-primary transition-colors shrink-0">Tradeoffs</a>
+        <span className="text-border">·</span>
+        <a href="#sec-alternatives" className="hover:text-primary transition-colors shrink-0">Alternatives</a>
+      </div>
+
       {/* Header */}
       <div className="border-b border-border pb-5 space-y-1">
         <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
@@ -69,13 +86,15 @@ export default function DecisionDocument({ doc, sessionId, setDoc }: Props) {
           <span className="text-border">·</span>
           <span>v{doc.version}</span>
           <span className="text-border">·</span>
-          <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+          <span suppressHydrationWarning>{new Date(doc.created_at).toLocaleDateString()}</span>
         </div>
         <h2 className="text-xl font-semibold text-foreground leading-snug mt-2">{doc.question}</h2>
       </div>
 
       {/* Executive Summary */}
-      <Section title="Executive Summary" content={doc.executive_summary} />
+      <div id="sec-summary">
+        <Section title="Executive Summary" content={doc.executive_summary} />
+      </div>
 
       {/* Memory Influence Transparency */}
       {doc.memory_context && (
@@ -83,32 +102,40 @@ export default function DecisionDocument({ doc, sessionId, setDoc }: Props) {
       )}
 
       {/* Recommendation */}
-      <Section title="Recommendation" content={doc.recommendation_context} />
+      <div id="sec-rec">
+        <Section title="Recommendation" content={doc.recommendation_context} />
+      </div>
 
       {/* Visuals Section */}
-      {doc.visuals && doc.visuals.length > 0 && (
-        <div className="space-y-4 border-t border-border/50 pt-6 mt-6">
-          <VisualRenderer visuals={doc.visuals} />
-          <RegenerateVisualButton 
-            sessionId={sessionId} 
-            onRegenerated={(newVisuals) => setDoc({ ...doc, visuals: newVisuals, visuals_generated_at: new Date().toISOString() })}
-          />
-        </div>
-      )}
-      {(!doc.visuals || doc.visuals.length === 0) && (
-        <div className="pt-2">
-           <RegenerateVisualButton 
-            sessionId={sessionId} 
-            onRegenerated={(newVisuals) => setDoc({ ...doc, visuals: newVisuals, visuals_generated_at: new Date().toISOString() })}
-          />
-        </div>
-      )}
+      <div id="sec-visuals">
+        {doc.visuals && doc.visuals.length > 0 && (
+          <div className="space-y-4 border-t border-border/50 pt-6 mt-6">
+            <VisualRenderer visuals={doc.visuals} />
+            <RegenerateVisualButton 
+              sessionId={sessionId} 
+              onRegenerated={(newVisuals) => setDoc({ ...doc, visuals: newVisuals, visuals_generated_at: new Date().toISOString() })}
+            />
+          </div>
+        )}
+        {(!doc.visuals || doc.visuals.length === 0) && (
+          <div className="pt-2">
+             <RegenerateVisualButton 
+              sessionId={sessionId} 
+              onRegenerated={(newVisuals) => setDoc({ ...doc, visuals: newVisuals, visuals_generated_at: new Date().toISOString() })}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Tradeoffs */}
-      <Section title="Tradeoffs" content={doc.tradeoffs} />
+      <div id="sec-tradeoffs">
+        <Section title="Tradeoffs" content={doc.tradeoffs} />
+      </div>
 
       {/* Alternatives */}
-      <Section title="Alternatives" content={doc.alternatives} />
+      <div id="sec-alternatives">
+        <Section title="Alternatives" content={doc.alternatives} />
+      </div>
     </motion.div>
   );
 }
@@ -128,7 +155,7 @@ export function AuxiliaryDocumentData({ doc, sessionId, onRefresh }: { doc: Deci
         </h3>
         <ConfidenceBar label="Evidence Coverage"   value={doc.confidence.evidence_coverage} />
         <ConfidenceBar label="Source Quality"       value={doc.confidence.source_quality} />
-        <ConfidenceBar label="Contradiction Risk"   value={doc.confidence.contradiction_risk} />
+        <ConfidenceBar label="Contradiction Risk"   value={doc.confidence.contradiction_risk} inverse />
         <ConfidenceBar label="Decision Confidence"  value={doc.confidence.decision_confidence} />
       </div>
 
@@ -143,7 +170,7 @@ export function AuxiliaryDocumentData({ doc, sessionId, onRefresh }: { doc: Deci
       <RefreshEvidence question={doc.question} onRefresh={onRefresh} />
 
       {/* Footer */}
-      <p className="text-xs text-muted-foreground font-mono border-t border-border/50 pt-3">
+      <p className="text-xs text-muted-foreground font-mono border-t border-border/50 pt-3" suppressHydrationWarning>
         Generated {new Date(doc.created_at).toLocaleString()}
         {doc.evidence_generated_at && (
           <><br />Evidence refreshed {new Date(doc.evidence_generated_at).toLocaleString()}</>

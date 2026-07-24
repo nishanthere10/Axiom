@@ -1,7 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, Clock } from "lucide-react";
 
 const ALL_STEPS = [
   { node: "decompose_question",         label: "Understanding your question" },
@@ -34,14 +35,25 @@ interface Props {
 
 export default function ResearchProgressUI({ progress, currentStep, completedNodes }: Props) {
   const completedSet = new Set(completedNodes.map((n) => n.node));
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <div className="w-full max-w-lg mx-auto space-y-6">
       {/* Progress bar */}
       <div className="space-y-2">
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>{currentStep}</span>
-          <span className="font-mono">{progress}%</span>
+        <div className="flex justify-between items-center text-xs text-muted-foreground">
+          <span className="font-medium text-foreground/90">{currentStep}</span>
+          <div className="flex items-center gap-3 font-mono">
+            <span className="flex items-center gap-1 text-muted-foreground/70">
+              <Clock className="w-3 h-3" /> {elapsed}s
+            </span>
+            <span className="text-primary font-bold">{progress}%</span>
+          </div>
         </div>
         <div className="h-1.5 w-full bg-surface rounded-full overflow-hidden">
           <div
@@ -56,7 +68,7 @@ export default function ResearchProgressUI({ progress, currentStep, completedNod
         {ALL_STEPS.map((step, idx) => {
           const completed = completedSet.has(step.node);
           const completedData = completedNodes.find((n) => n.node === step.node);
-          // Determine if this is the "current" step (first not-yet-completed step after last done)
+          // Determine if this is the "current" step
           const lastCompletedIdx = Math.max(
             ...completedNodes.map((n) => ALL_STEPS.findIndex((s) => s.node === n.node)),
             -1
@@ -78,20 +90,20 @@ export default function ResearchProgressUI({ progress, currentStep, completedNod
                   ) : isCurrent ? (
                     <Loader2 className="w-4 h-4 animate-spin text-primary" />
                   ) : (
-                    <span className="w-2 h-2 rounded-full bg-border" />
+                    <span className="w-2 h-2 rounded-full bg-border animate-pulse" />
                   )}
                 </span>
                 <span>{step.label}</span>
 
-                {/* Inline memory count badge */}
+                {/* Inline metadata badge */}
                 {completed && completedData?.meta?.memories_found !== undefined && (
-                  <span className="ml-auto text-xs text-muted-foreground font-mono">
-                    {completedData.meta.memories_found} memories
+                  <span className="ml-auto text-xs text-muted-foreground font-mono bg-surface/50 px-1.5 py-0.5 rounded border border-border/40">
+                    {completedData.meta.memories_found} surfaced
                   </span>
                 )}
                 {completed && completedData?.meta?.github_chunks !== undefined && (
-                  <span className="ml-auto text-xs text-muted-foreground font-mono">
-                    {completedData.meta.github_chunks} docs
+                  <span className="ml-auto text-xs text-muted-foreground font-mono bg-surface/50 px-1.5 py-0.5 rounded border border-border/40">
+                    {completedData.meta.github_chunks} indexed
                   </span>
                 )}
               </div>
@@ -100,7 +112,7 @@ export default function ResearchProgressUI({ progress, currentStep, completedNod
               {completed && completedData?.meta?.memory_summaries && completedData.meta.memory_summaries.length > 0 && (
                 <div className="pl-7 space-y-0.5">
                   {completedData.meta.memory_summaries.map((s, i) => (
-                    <p key={i} className="text-xs text-muted-foreground line-clamp-1">· {s}</p>
+                    <p key={i} className="text-xs text-muted-foreground/80 line-clamp-1 font-mono">· {s}</p>
                   ))}
                 </div>
               )}

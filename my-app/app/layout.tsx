@@ -19,8 +19,18 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Atlas Research",
-  description: "AI-powered research workspace for software engineers.",
+  title: "Atlas Research — AI Architectural Decision Engine",
+  description: "Generate comprehensive decision documents, compare architectural tradeoffs, and build persistent engineering memory with AI.",
+  openGraph: {
+    title: "Atlas Research — AI Architectural Decision Engine",
+    description: "AI-powered research workspace for software engineers.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Atlas Research",
+    description: "AI-powered research workspace for software engineers.",
+  },
 };
 
 import Navbar from "@/components/ui/Navbar";

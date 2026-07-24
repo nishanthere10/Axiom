@@ -7,6 +7,8 @@ import { apiFetch } from "@/lib/api";
 import { Plus, Trash2, Edit2, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { formatDistanceToNow } from "date-fns";
 
 export default function WorkspacesPage() {
   const { workspaces, isLoading, refreshWorkspaces, activeWorkspaceId, setActiveWorkspaceId } = useWorkspace();
@@ -17,6 +19,9 @@ export default function WorkspacesPage() {
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,25 +54,29 @@ export default function WorkspacesPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this workspace?")) return;
+  const confirmDelete = async () => {
+    if (!deleteTargetId) return;
+    setDeleting(true);
     try {
       const token = await getToken();
       if (!token) return;
       
-      await apiFetch(`/workspaces/${id}`, token, {
+      await apiFetch(`/workspaces/${deleteTargetId}`, token, {
         method: "DELETE",
         getToken
       });
       
-      if (activeWorkspaceId === id) {
+      if (activeWorkspaceId === deleteTargetId) {
         setActiveWorkspaceId(null);
       }
       
       await refreshWorkspaces();
+      setDeleteTargetId(null);
     } catch (err) {
       console.error(err);
       alert("Failed to delete workspace");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -109,9 +118,15 @@ export default function WorkspacesPage() {
                   </span>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground mb-6 line-clamp-2 leading-relaxed">
+              <p className="text-sm text-muted-foreground mb-4 line-clamp-2 leading-relaxed">
                 {ws.description || "No description provided."}
               </p>
+
+              {ws.created_at && (
+                <p className="text-[11px] text-muted-foreground/60 font-mono mb-4" suppressHydrationWarning>
+                  Created {formatDistanceToNow(new Date(ws.created_at), { addSuffix: true })}
+                </p>
+              )}
               
               <div className="flex items-center gap-2 mt-auto pt-2">
                 {activeWorkspaceId !== ws.id ? (
@@ -136,7 +151,7 @@ export default function WorkspacesPage() {
 
                 <div className="flex-1" />
                 <button 
-                  onClick={() => handleDelete(ws.id)}
+                  onClick={() => setDeleteTargetId(ws.id)}
                   disabled={workspaces.length === 1}
                   className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-colors disabled:opacity-50 disabled:pointer-events-none"
                   title={workspaces.length === 1 ? "Cannot delete the last workspace" : "Delete workspace"}
@@ -146,6 +161,16 @@ export default function WorkspacesPage() {
               </div>
             </div>
           ))}
+
+          <ConfirmDialog
+            isOpen={!!deleteTargetId}
+            onClose={() => setDeleteTargetId(null)}
+            onConfirm={confirmDelete}
+            title="Delete Workspace?"
+            description="Are you sure you want to delete this workspace? All associated research history and settings will be permanently removed."
+            confirmText="Delete Workspace"
+            isLoading={deleting}
+          />
 
           {!isCreating ? (
             <button 

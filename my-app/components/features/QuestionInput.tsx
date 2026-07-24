@@ -183,8 +183,9 @@ export default function QuestionInput({ workspaceId, onSubmitted }: Props) {
             <button
               id="submit-research-btn"
               type="submit"
+              aria-label="Submit research question"
               disabled={isSubmitting || !questionValue?.trim() || !!errors.question}
-              className="flex items-center justify-center p-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:bg-surface-hover disabled:text-muted-foreground transition-all duration-200"
+              className="flex items-center justify-center w-11 h-11 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50 disabled:bg-surface-hover disabled:text-muted-foreground transition-all duration-200"
             >
               {isSubmitting ? (
                 <div className="w-5 h-5 relative flex items-center justify-center overflow-hidden">
@@ -218,7 +219,6 @@ export default function QuestionInput({ workspaceId, onSubmitted }: Props) {
                 type="button"
                 onClick={() => {
                   setValue("question", prompt, { shouldValidate: true });
-                  handleSubmit(onSubmit)();
                 }}
                 className="text-left p-4 rounded-xl bg-surface/30 backdrop-blur-sm border border-border/40 hover:border-primary/30 hover:bg-surface-hover/80 hover:shadow-[0_8px_20px_rgba(0,0,0,0.12)] hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300 group"
               >

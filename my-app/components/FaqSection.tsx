@@ -47,7 +47,7 @@ export default function FaqSection() {
               >
                 <button
                   onClick={() => setOpenIndex(isOpen ? null : idx)}
-                  className="w-full flex items-center justify-between p-6 text-left focus:outline-none"
+                  className="w-full flex items-center justify-between p-6 text-left focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none rounded-xl"
                 >
                   <span className="font-display font-semibold text-lg text-foreground">{faq.question}</span>
                   <ChevronDown className={cn(

@@ -53,25 +53,9 @@ export default function Footer() {
             
             {/* Social Media Icons */}
             <div className="flex items-center gap-4 pt-2">
-              <a href="https://github.com" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-surface/50 border border-white/5 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-surface hover:border-white/20 transition-all">
+              <a href="https://github.com/nishanthere10/Atlas-Research" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-surface/50 border border-white/5 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-surface hover:border-white/20 transition-all">
                 <GithubIcon className="w-5 h-5" />
                 <span className="sr-only">GitHub</span>
-              </a>
-              <a href="https://twitter.com" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-surface/50 border border-white/5 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-surface hover:border-white/20 transition-all">
-                <TwitterIcon className="w-4 h-4" />
-                <span className="sr-only">Twitter</span>
-              </a>
-              <a href="https://youtube.com" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-surface/50 border border-white/5 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-surface hover:border-white/20 transition-all">
-                <YoutubeIcon className="w-5 h-5" />
-                <span className="sr-only">YouTube</span>
-              </a>
-              <a href="https://instagram.com" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-surface/50 border border-white/5 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-surface hover:border-white/20 transition-all">
-                <InstagramIcon className="w-4 h-4" />
-                <span className="sr-only">Instagram</span>
-              </a>
-              <a href="https://linkedin.com" target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-surface/50 border border-white/5 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-surface hover:border-white/20 transition-all">
-                <LinkedinIcon className="w-4 h-4" />
-                <span className="sr-only">LinkedIn</span>
               </a>
             </div>
           </div>
@@ -80,42 +64,35 @@ export default function Footer() {
           <div className="space-y-4">
             <h4 className="font-display font-semibold text-foreground tracking-tight">Product</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="/research" className="hover:text-primary transition-colors">Workspace</Link></li>
-              <li><Link href="/research-documents" className="hover:text-primary transition-colors">Generated Docs</Link></li>
-              <li><Link href="/compare" className="hover:text-primary transition-colors">Compare Architectures</Link></li>
-              <li><Link href="/pricing" className="hover:text-primary transition-colors">Pricing</Link></li>
-              <li><Link href="/changelog" className="hover:text-primary transition-colors">Changelog</Link></li>
+              <li><Link href="/workspaces" className="hover:text-primary transition-colors">Workspaces</Link></li>
+              <li><Link href="/research" className="hover:text-primary transition-colors">Research Engine</Link></li>
+              <li><Link href="/compare" className="hover:text-primary transition-colors">Compare Tool</Link></li>
             </ul>
           </div>
 
-          {/* Links: Resources */}
+          {/* Links: Platform */}
           <div className="space-y-4">
-            <h4 className="font-display font-semibold text-foreground tracking-tight">Resources</h4>
+            <h4 className="font-display font-semibold text-foreground tracking-tight">Features</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="/docs" className="hover:text-primary transition-colors">Documentation</Link></li>
-              <li><Link href="/api" className="hover:text-primary transition-colors">API Reference</Link></li>
-              <li><Link href="/blog" className="hover:text-primary transition-colors">Blog</Link></li>
-              <li><Link href="/community" className="hover:text-primary transition-colors">Community</Link></li>
-              <li><Link href="/oss" className="hover:text-primary transition-colors">Open Source</Link></li>
+              <li className="flex items-center gap-2"><span>Decision Graph</span> <span className="text-[10px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">v1.0</span></li>
+              <li className="flex items-center gap-2"><span>Codebase Context</span> <span className="text-[10px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">v1.0</span></li>
+              <li className="flex items-center gap-2"><span>Memory Vault</span> <span className="text-[10px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">v1.0</span></li>
             </ul>
           </div>
 
-          {/* Links: Company */}
+          {/* Links: Open Source */}
           <div className="space-y-4">
-            <h4 className="font-display font-semibold text-foreground tracking-tight">Company</h4>
+            <h4 className="font-display font-semibold text-foreground tracking-tight">Project</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="/about" className="hover:text-primary transition-colors">About</Link></li>
-              <li><Link href="/careers" className="hover:text-primary transition-colors">Careers</Link></li>
-              <li><Link href="/legal/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/legal/terms" className="hover:text-primary transition-colors">Terms of Service</Link></li>
-              <li><Link href="/contact" className="hover:text-primary transition-colors">Contact Us</Link></li>
+              <li><a href="https://github.com/nishanthere10/Atlas-Research" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">GitHub Repository</a></li>
+              <li><a href="https://github.com/nishanthere10/Atlas-Research/blob/main/README.md" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">Documentation</a></li>
             </ul>
           </div>
         </div>
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <p>&copy; {currentYear} Atlas Research Inc. All rights reserved.</p>
+          <p>&copy; {currentYear} Atlas Research. All rights reserved.</p>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2 w-2">
@@ -124,7 +101,6 @@ export default function Footer() {
               </span>
               All systems operational
             </div>
-            <Link href="/status" className="hover:text-foreground transition-colors">Status Page</Link>
           </div>
         </div>
       </div>

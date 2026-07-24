@@ -24,8 +24,9 @@ All components must use these CSS custom properties. **Do not use hardcoded hex 
 
 ## 3. Typography
 
-- **Primary UI Font**: Inter (configured via `next/font/google`). Used for all standard text, headings, and UI elements.
-- **Monospace Font**: JetBrains Mono. Used strictly for code snippets, IDs, technical terms, and structured matrix keys.
+- **Primary UI Font**: Geist Sans (configured via `next/font/google`). Used for standard body text, buttons, and UI controls.
+- **Display Headings Font**: Plus Jakarta Sans (configured via `next/font/google`). Used for high-impact page headings and hero titles.
+- **Monospace Font**: Geist Mono. Used strictly for code snippets, IDs, technical terms, and structured matrix keys.
 
 ## 4. Spacing & Border Radius
 

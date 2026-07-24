@@ -15,7 +15,7 @@ precision highp float;
 
 uniform float uTime;
 uniform float uAmplitude;
-uniform vec3 uColorStops[3];
+uniform vec3 uColorStops[5];
 uniform vec2 uResolution;
 uniform float uBlend;
 
@@ -72,7 +72,7 @@ struct ColorStop {
 
 #define COLOR_RAMP(colors, factor, finalColor) {              \
   int index = 0;                                            \
-  for (int i = 0; i < 2; i++) {                               \
+  for (int i = 0; i < 4; i++) {                               \
      ColorStop currentColor = colors[i];                    \
      bool isInBetween = currentColor.position <= factor;    \
      index = int(mix(float(index), float(i), float(isInBetween))); \
@@ -87,20 +87,22 @@ struct ColorStop {
 void main() {
   vec2 uv = gl_FragCoord.xy / uResolution;
   
-  ColorStop colors[3];
+  ColorStop colors[5];
   colors[0] = ColorStop(uColorStops[0], 0.0);
-  colors[1] = ColorStop(uColorStops[1], 0.5);
-  colors[2] = ColorStop(uColorStops[2], 1.0);
+  colors[1] = ColorStop(uColorStops[1], 0.25);
+  colors[2] = ColorStop(uColorStops[2], 0.5);
+  colors[3] = ColorStop(uColorStops[3], 0.75);
+  colors[4] = ColorStop(uColorStops[4], 1.0);
   
   vec3 rampColor;
   COLOR_RAMP(colors, uv.x, rampColor);
   
-  float height = snoise(vec2(uv.x * 2.0 + uTime * 0.1, uTime * 0.25)) * 0.5 * uAmplitude;
+  float height = snoise(vec2(uv.x * 4.0 + uTime * 0.2, uTime * 0.45)) * 0.6 * uAmplitude;
   height = exp(height);
   height = (uv.y * 2.0 - height + 0.2);
-  float intensity = 0.6 * height;
+  float intensity = 0.9 * height;
   
-  float midPoint = 0.20;
+  float midPoint = 0.10;
   float auroraAlpha = smoothstep(midPoint - uBlend * 0.5, midPoint + uBlend * 0.5, intensity);
   
   vec3 auroraColor = intensity * rampColor;
@@ -110,7 +112,7 @@ void main() {
 `;
 
 export default function Aurora(props) {
-  const { colorStops = ['#5227FF', '#7cff67', '#5227FF'], amplitude = 1.0, blend = 0.5 } = props;
+  const { colorStops = ['#ff0055', '#8b5cf6', '#2563eb', '#00f2fe', '#4facfe'], amplitude = 1.0, blend = 0.5 } = props;
   const propsRef = useRef(props);
   propsRef.current = props;
 
@@ -119,6 +121,9 @@ export default function Aurora(props) {
   useEffect(() => {
     const ctn = ctnDom.current;
     if (!ctn) return;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return;
 
     const renderer = new Renderer({
       alpha: true,
@@ -130,6 +135,8 @@ export default function Aurora(props) {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.canvas.style.backgroundColor = 'transparent';
+    gl.canvas.setAttribute('aria-hidden', 'true');
+    gl.canvas.setAttribute('role', 'presentation');
 
     let program;
 
@@ -217,5 +224,9 @@ export default function Aurora(props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [amplitude]);
 
-  return <div ref={ctnDom} className="w-full h-full" />;
+  return (
+    <div ref={ctnDom} className="w-full h-full relative" aria-hidden="true">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#020617] via-[#1e3a8a]/20 to-[#020617] -z-10 pointer-events-none" />
+    </div>
+  );
 }

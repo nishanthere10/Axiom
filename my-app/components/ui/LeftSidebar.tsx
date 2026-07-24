@@ -95,7 +95,7 @@ export default function LeftSidebar({
           <button
             onClick={toggleCollapse}
             className={cn(
-              "p-1.5 rounded-md hover:bg-surface-hover text-muted-foreground hover:text-foreground transition-colors shrink-0",
+              "p-1.5 rounded-md hover:bg-surface-hover text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none transition-colors shrink-0",
               isCollapsed && "mx-auto"
             )}
             aria-label="Toggle Sidebar"
@@ -111,7 +111,7 @@ export default function LeftSidebar({
             <button
               onClick={() => setSearchOpen(true)}
               className={cn(
-                "w-full flex items-center px-2.5 py-1.5 text-xs text-muted-foreground bg-surface border border-border/50 rounded-md hover:bg-surface-hover hover:text-foreground transition-colors",
+                "w-full flex items-center px-2.5 py-1.5 text-xs text-muted-foreground bg-surface border border-border/50 rounded-md hover:bg-surface-hover hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none transition-colors",
                 isCollapsed ? "justify-center" : "justify-between"
               )}
             >
@@ -142,7 +142,7 @@ export default function LeftSidebar({
               disabled={item.disabled}
               onClick={() => !item.disabled && router.push(href)}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-sm font-medium",
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-sm font-medium focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none",
                 active
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-surface-hover hover:text-foreground",
@@ -181,7 +181,7 @@ export default function LeftSidebar({
             <button
               onClick={() => activeWorkspaceId && router.push(`/workspaces/${activeWorkspaceId}/settings`)}
               className={cn(
-                "w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-surface-hover transition-colors text-muted-foreground hover:text-foreground text-xs font-medium",
+                "w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none transition-colors text-muted-foreground hover:text-foreground text-xs font-medium",
                 isCollapsed && "justify-center"
               )}
             >
