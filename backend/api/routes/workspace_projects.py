@@ -113,9 +113,17 @@ def get_project(
     GET /workspaces/{id}/projects/{project_id}
     Returns project detail with linked research sessions and decisions.
     """
+    logger.info("Fetching project project_id=%s workspace_id=%s user_id=%s", project_id, workspace_id, user_id)
     project_res = supabase.table("projects").select("*").eq("id", project_id).eq("workspace_id", workspace_id).execute()
     if not project_res.data:
-        raise HTTPException(status_code=404, detail="Project not found")
+        # Diagnostic check: search by project_id alone
+        by_id_only = supabase.table("projects").select("*").eq("id", project_id).execute()
+        if by_id_only.data:
+            actual_ws = by_id_only.data[0].get("workspace_id")
+            logger.warning("Project %s exists but workspace_id mismatch! Expected: %s, Found in DB: %s", project_id, workspace_id, actual_ws)
+            raise HTTPException(status_code=404, detail=f"Project belongs to workspace {actual_ws}, not current workspace {workspace_id}")
+        logger.warning("Project %s not found in database", project_id)
+        raise HTTPException(status_code=404, detail=f"Project {project_id} not found in database")
     project = project_res.data[0]
 
     # Fetch linked research sessions

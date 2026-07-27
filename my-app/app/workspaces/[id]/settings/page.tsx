@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { BrainCircuit, Settings } from "lucide-react";
 import { useWorkspace } from "@/components/WorkspaceContext";
+import { AccountIDBadge } from "@/components/ui/AccountIDBadge";
 
 // Custom Github SVG icon
 function GithubIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -23,10 +24,12 @@ export default function SettingsPage() {
         <div className="absolute w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[80px] translate-x-1/4 -translate-y-1/4" />
       </div>
 
-      <div className="mb-10 text-center md:text-left">
+      <div className="mb-6 text-center md:text-left">
         <h1 className="text-3xl md:text-4xl font-medium tracking-tight text-foreground">Settings</h1>
         <p className="text-sm text-muted-foreground mt-2">Manage your Atlas preferences, integrations, and memory.</p>
       </div>
+
+      <AccountIDBadge />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Link href={activeWorkspaceId ? `/workspaces/${activeWorkspaceId}/settings/integrations/github` : `/settings/integrations/github`} className="group p-6 rounded-2xl border border-border/60 bg-surface/40 backdrop-blur-sm shadow-sm hover:border-border/80 hover:bg-surface/80 hover:-translate-y-1 hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] transition-all duration-300">
@@ -50,15 +53,27 @@ export default function SettingsPage() {
         </Link>
 
         {activeWorkspaceId && (
-          <Link href={`/workspaces/${activeWorkspaceId}`} className="group p-6 rounded-2xl border border-border/60 bg-surface/40 backdrop-blur-sm shadow-sm hover:border-border/80 hover:bg-surface/80 hover:-translate-y-1 hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] transition-all duration-300">
-            <div className="w-12 h-12 rounded-full bg-surface/50 border border-border/40 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary/10 group-hover:text-primary transition-all duration-300 shadow-sm">
-              <Settings className="w-6 h-6 text-foreground group-hover:text-primary transition-colors" />
-            </div>
-            <h2 className="text-xl font-semibold tracking-tight text-foreground mb-2">Workspace Stats</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              View your active workspace's analytics, team members, and comprehensive operational metrics.
-            </p>
-          </Link>
+          <>
+            <Link href={`/workspaces/${activeWorkspaceId}`} className="group p-6 rounded-2xl border border-border/60 bg-surface/40 backdrop-blur-sm shadow-sm hover:border-border/80 hover:bg-surface/80 hover:-translate-y-1 hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] transition-all duration-300">
+              <div className="w-12 h-12 rounded-full bg-surface/50 border border-border/40 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary/10 group-hover:text-primary transition-all duration-300 shadow-sm">
+                <Settings className="w-6 h-6 text-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <h2 className="text-xl font-semibold tracking-tight text-foreground mb-2">Workspace Stats</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                View your active workspace's analytics, team members, and comprehensive operational metrics.
+              </p>
+            </Link>
+
+            <Link href={`/workspaces/${activeWorkspaceId}/settings/members`} className="group p-6 rounded-2xl border border-border/60 bg-surface/40 backdrop-blur-sm shadow-sm hover:border-border/80 hover:bg-surface/80 hover:-translate-y-1 hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] transition-all duration-300">
+              <div className="w-12 h-12 rounded-full bg-surface/50 border border-border/40 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary/10 group-hover:text-primary transition-all duration-300 shadow-sm">
+                <svg className="w-6 h-6 text-foreground group-hover:text-primary transition-colors" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+              <h2 className="text-xl font-semibold tracking-tight text-foreground mb-2">Team Members</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Invite users, manage roles, and control access to your collaborative workspace.
+              </p>
+            </Link>
+          </>
         )}
       </div>
     </div>

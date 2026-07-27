@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = ""
     SUPABASE_SERVICE_ROLE_KEY: str = ""
 
+    # Redis
+    REDIS_URL: Optional[str] = None
+
     # Clerk
     CLERK_SECRET_KEY: str = ""
     CLERK_WEBHOOK_SECRET: str = ""

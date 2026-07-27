@@ -31,3 +31,4 @@ python-json-logger
 reportlab
 markdown
 structlog
+redis

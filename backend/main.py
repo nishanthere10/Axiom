@@ -14,6 +14,7 @@ from api.routes.admin import router as admin_router
 from api.routes.export import router as export_router
 from api.routes.github import router as github_router
 from api.routes.workspaces import router as workspaces_router
+from api.routes.workspace_members import router as workspace_members_router
 
 from middleware.rate_limit import limiter
 from middleware.logging_middleware import StructlogMiddleware
@@ -55,6 +56,11 @@ async def lifespan(app: FastAPI):
             await t
         except asyncio.CancelledError:
             pass
+            
+    # Shutdown: Close Redis connection
+    from services.event_bus import close as close_event_bus
+    await close_event_bus()
+    
     # Shutdown: Cleanly stop LiteLLM's internal async LoggingWorker if running.
     # Without this, uvicorn logs 'Task was destroyed but it is pending!' on every reload.
     try:
@@ -161,6 +167,7 @@ app.include_router(ws_decisions_router, prefix="/workspaces/{workspace_id}/decis
 app.include_router(ws_projects_router, prefix="/workspaces/{workspace_id}/projects", tags=["workspace-projects"])
 app.include_router(ws_memory_router, prefix="/workspaces/{workspace_id}/memory", tags=["workspace-memory"])
 app.include_router(ws_search_router, prefix="/workspaces/{workspace_id}/search", tags=["workspace-search"])
+app.include_router(workspace_members_router, prefix="/workspaces/{workspace_id}/members", tags=["workspace-members"])
 
 @app.get("/health", tags=["system"])
 async def health_check():

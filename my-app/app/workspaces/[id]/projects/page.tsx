@@ -8,6 +8,8 @@ import { formatDistanceToNow } from "date-fns";
 import { FolderKanban, Plus, FlaskConical, BookMarked } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import { useToast } from "@/components/ui/ToastProvider";
+
 const STATUS_COLORS: Record<string, string> = {
   active:    "bg-green-500/10 text-green-500 border-green-500/20",
   completed: "bg-blue-500/10  text-blue-500  border-blue-500/20",
@@ -18,6 +20,7 @@ export default function ProjectsPage() {
   const params = useParams();
   const router = useRouter();
   const { getToken } = useAuth();
+  const { toast } = useToast();
   const workspaceId = params.id as string;
 
   const [projects, setProjects] = useState<any[]>([]);
@@ -37,8 +40,9 @@ export default function ProjectsPage() {
           token, { getToken }
         );
         setProjects(data.projects || []);
-      } catch (e) {
+      } catch (e: any) {
         console.error("Failed to load projects", e);
+        toast(e?.message || "Failed to load projects", "error");
       } finally {
         setLoading(false);
       }
@@ -61,8 +65,10 @@ export default function ProjectsPage() {
       setShowModal(false);
       setNewName("");
       setNewDesc("");
-    } catch (e) {
+      toast("Project created successfully", "success");
+    } catch (e: any) {
       console.error("Failed to create project", e);
+      toast(e?.message || "Failed to create project", "error");
     } finally {
       setCreating(false);
     }

@@ -7,6 +7,7 @@ import { apiFetch } from "@/lib/api";
 import { formatDistanceToNow, format } from "date-fns";
 import { ChevronLeft, Clock, GitBranch, FileText, CheckCircle2, XCircle, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/ToastProvider";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   PROPOSED:    { label: "Proposed",    color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",    icon: <Clock className="w-3.5 h-3.5" /> },
@@ -25,6 +26,7 @@ export default function DecisionDetailPage() {
   const { getToken } = useAuth();
   const workspaceId = params.id as string;
   const decisionId = params.decision_id as string;
+  const { toast } = useToast();
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -79,8 +81,10 @@ export default function DecisionDetailPage() {
       );
       setData(fresh);
       setShowNoteModal(false);
-    } catch (e) {
+      toast("Decision status updated", "success");
+    } catch (e: any) {
       console.error("Failed to update status", e);
+      toast(e?.message || "Failed to update status", "error");
     } finally {
       setUpdating(false);
     }

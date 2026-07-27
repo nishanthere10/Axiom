@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useWorkspace } from "@/components/WorkspaceContext";
 import { WorkspaceSearchModal } from "@/components/workspaces/WorkspaceSearchModal";
@@ -14,6 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
+  Users,
+  ChevronDown,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -61,8 +63,9 @@ export default function LeftSidebar({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { activeWorkspaceId } = useWorkspace();
+  const { activeWorkspaceId, workspaces, setActiveWorkspaceId } = useWorkspace();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [sharedExpanded, setSharedExpanded] = useState(true);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -81,6 +84,11 @@ export default function LeftSidebar({
     if (item.id === "home") return pathname === href;
     return pathname.startsWith(href);
   };
+
+  const sharedWorkspaces = useMemo(
+    () => workspaces.filter((w) => w.user_role && w.user_role !== "owner"),
+    [workspaces]
+  );
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
@@ -172,6 +180,88 @@ export default function LeftSidebar({
           }
           return btn;
         })}
+
+        {/* Shared Workspaces section */}
+        {sharedWorkspaces.length > 0 && (
+          <div className="pt-2">
+            {!isCollapsed ? (
+              <>
+                <button
+                  onClick={() => setSharedExpanded((v) => !v)}
+                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-surface-hover group"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Users className="w-3 h-3 text-blue-400" />
+                    Shared with Me
+                    <span className="text-[9px] font-bold bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded-full border border-blue-500/20">
+                      {sharedWorkspaces.length}
+                    </span>
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      "w-3 h-3 transition-transform",
+                      sharedExpanded ? "rotate-0" : "-rotate-90"
+                    )}
+                  />
+                </button>
+
+                {sharedExpanded && (
+                  <div className="mt-1 space-y-0.5 pl-1">
+                    {sharedWorkspaces.map((ws) => {
+                      const isActiveWs = ws.id === activeWorkspaceId;
+                      return (
+                        <button
+                          key={ws.id}
+                          onClick={() => {
+                            setActiveWorkspaceId(ws.id);
+                            router.push(`/workspaces/${ws.id}`);
+                          }}
+                          className={cn(
+                            "w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium text-left",
+                            isActiveWs
+                              ? "bg-blue-500/10 text-blue-400"
+                              : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "w-5 h-5 rounded-sm flex items-center justify-center text-[10px] font-bold shrink-0",
+                              isActiveWs ? "bg-blue-500/20 text-blue-400" : "bg-surface text-muted-foreground border border-border/50"
+                            )}
+                          >
+                            {ws.icon || ws.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="truncate text-xs">{ws.name}</span>
+                          <span className="ml-auto text-[9px] font-semibold uppercase tracking-wide text-blue-400/70 shrink-0">
+                            {ws.user_role}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            ) : (
+              // Collapsed: show icon with badge
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => router.push("/workspaces")}
+                    className="w-full flex items-center justify-center px-2 py-2 rounded-md text-blue-400 hover:bg-blue-500/10 transition-colors relative"
+                  >
+                    <Users className="w-4 h-4" />
+                    <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-blue-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                      {sharedWorkspaces.length}
+                    </span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>{sharedWorkspaces.length} Shared Workspace{sharedWorkspaces.length > 1 ? "s" : ""}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Settings footer */}

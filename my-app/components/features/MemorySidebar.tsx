@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api";
 import { Brain, X, ExternalLink, Trash2, Edit2, Check } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/ToastProvider";
 
 interface MemoryItem {
   id: string;
@@ -26,6 +27,7 @@ interface Props {
 
 export function MemorySidebar({ workspaceId, context, isOpen, onClose }: Props) {
   const { getToken } = useAuth();
+  const { toast } = useToast();
   const [memories, setMemories] = useState<MemoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -81,8 +83,10 @@ export function MemorySidebar({ workspaceId, context, isOpen, onClose }: Props) 
         method: "DELETE", getToken
       });
       setMemories(prev => prev.filter(m => m.id !== id));
-    } catch (e) {
+      toast("Memory deleted", "success");
+    } catch (e: any) {
       console.error("Failed to delete memory", e);
+      toast(e?.message || "Failed to delete memory", "error");
     }
   };
 
@@ -97,8 +101,10 @@ export function MemorySidebar({ workspaceId, context, isOpen, onClose }: Props) 
       });
       setMemories(prev => prev.map(m => m.id === id ? { ...m, summary: editText } : m));
       setEditingId(null);
-    } catch (e) {
+      toast("Memory updated", "success");
+    } catch (e: any) {
       console.error("Failed to update memory", e);
+      toast(e?.message || "Failed to update memory", "error");
     }
   };
 

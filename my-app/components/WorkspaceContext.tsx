@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { apiFetch } from "@/lib/api";
 
@@ -9,6 +9,8 @@ type Workspace = {
   name: string;
   description?: string;
   icon?: string;
+  created_at?: string;
+  user_role?: string; // "owner" | "member" | "viewer"
 };
 
 interface WorkspaceContextType {
@@ -27,12 +29,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const { isLoaded, isSignedIn, getToken } = useAuth();
 
-  const refreshWorkspaces = async () => {
-    if (!isSignedIn) return;
+  const getTokenRef = useRef(getToken);
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
+
+  const refreshWorkspaces = useCallback(async () => {
+    if (!isSignedIn) {
+      setIsLoading(false);
+      return;
+    }
     try {
-      const token = await getToken();
-      if (!token) return;
-      const res = await apiFetch<any>("/workspaces", token, { getToken });
+      const token = await getTokenRef.current();
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+      const res = await apiFetch<any>("/workspaces", token, { getToken: getTokenRef.current });
       
       // 🛑 DEFENSIVE GUARD: Ensure the expected data structure exists
       if (!res || !Array.isArray(res.workspaces)) {
@@ -46,7 +59,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (savedId && res.workspaces.some((w: Workspace) => w.id === savedId)) {
         setActiveWorkspaceIdState(savedId);
       } else if (res.workspaces.length > 0) {
-        setActiveWorkspaceId(res.workspaces[0].id);
+        setActiveWorkspaceIdState(res.workspaces[0].id);
+        localStorage.setItem("activeWorkspaceId", res.workspaces[0].id);
       }
       setWorkspaces(res.workspaces);
     } catch (e) {
@@ -55,7 +69,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isSignedIn]);
 
   useEffect(() => {
     if (isLoaded && isSignedIn) {
@@ -65,7 +79,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setWorkspaces([]);
       setActiveWorkspaceIdState(null);
     }
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded, isSignedIn, refreshWorkspaces]);
 
   const setActiveWorkspaceId = (id: string | null) => {
     setActiveWorkspaceIdState(id);

@@ -31,7 +31,7 @@ export default function SavedResearchPage() {
     async function loadSessions() {
       try {
         const token = await getToken() ?? "";
-        const data = await getRecentSessions(token);
+        const data = await getRecentSessions(token, activeWorkspaceId || undefined);
         setSessions(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load saved research documents.");
@@ -41,7 +41,7 @@ export default function SavedResearchPage() {
     }
 
     loadSessions();
-  }, []);
+  }, [activeWorkspaceId, getToken]);
 
   return (
     <>
@@ -71,7 +71,7 @@ export default function SavedResearchPage() {
               onClick={() => {
                 setLoading(true);
                 setError(null);
-                getToken().then(t => getRecentSessions(t ?? "")).then(setSessions).catch(e => setError(e.message)).finally(() => setLoading(false));
+                getToken().then(t => getRecentSessions(t ?? "", activeWorkspaceId || undefined)).then(setSessions).catch(e => setError(e.message)).finally(() => setLoading(false));
               }}
               className="text-xs text-primary hover:underline"
             >

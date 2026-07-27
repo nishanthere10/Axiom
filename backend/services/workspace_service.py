@@ -22,29 +22,59 @@ def create_workspace(user_id: str, name: str, description: Optional[str] = None,
 
 def get_workspaces(user_id: str) -> List[Dict[str, Any]]:
     supabase = get_supabase()
-    response = supabase.table("workspaces").select("*").eq("user_id", user_id).is_("deleted_at", "null").execute()
-    return response.data
+    # Fetch workspace IDs + roles where the user is a member
+    memberships = supabase.table("workspace_members").select("workspace_id, role").eq("user_id", user_id).execute()
+    if not memberships.data:
+        return []
+    
+    role_map = {m["workspace_id"]: m["role"] for m in memberships.data}
+    workspace_ids = list(role_map.keys())
+    
+    # Fetch the workspaces matching those IDs
+    response = supabase.table("workspaces").select("*").in_("id", workspace_ids).is_("deleted_at", "null").execute()
+    
+    # Inject user_role into each workspace dict
+    result = []
+    for ws in response.data:
+        ws["user_role"] = role_map.get(ws["id"], "member")
+        result.append(ws)
+    return result
 
 def get_workspace(workspace_id: str, user_id: str) -> Optional[Dict[str, Any]]:
     supabase = get_supabase()
-    response = supabase.table("workspaces").select("*").eq("id", workspace_id).eq("user_id", user_id).is_("deleted_at", "null").execute()
+    # Check if user is a member
+    member_check = supabase.table("workspace_members").select("id").eq("workspace_id", workspace_id).eq("user_id", user_id).execute()
+    if not member_check.data:
+        return None
+        
+    response = supabase.table("workspaces").select("*").eq("id", workspace_id).is_("deleted_at", "null").execute()
     if not response.data:
         return None
     return response.data[0]
 
 def update_workspace(workspace_id: str, user_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     supabase = get_supabase()
-    response = supabase.table("workspaces").update(updates).eq("id", workspace_id).eq("user_id", user_id).is_("deleted_at", "null").execute()
+    # Check if user has permission
+    member_check = supabase.table("workspace_members").select("role").eq("workspace_id", workspace_id).eq("user_id", user_id).execute()
+    if not member_check.data or member_check.data[0].get("role") == "viewer":
+        return None
+        
+    response = supabase.table("workspaces").update(updates).eq("id", workspace_id).is_("deleted_at", "null").execute()
     if not response.data:
         return None
     return response.data[0]
 
 def delete_workspace(workspace_id: str, user_id: str) -> bool:
     supabase = get_supabase()
+    # Check if user is owner
+    member_check = supabase.table("workspace_members").select("role").eq("workspace_id", workspace_id).eq("user_id", user_id).execute()
+    if not member_check.data or member_check.data[0].get("role") != "owner":
+        return False
+        
     from datetime import datetime
     response = supabase.table("workspaces").update({
         "deleted_at": datetime.utcnow().isoformat()
-    }).eq("id", workspace_id).eq("user_id", user_id).is_("deleted_at", "null").execute()
+    }).eq("id", workspace_id).is_("deleted_at", "null").execute()
     return len(response.data) > 0
 
 async def get_workspace_dashboard(workspace_id: str, user_id: str) -> Dict[str, Any]:
@@ -83,7 +113,7 @@ async def get_workspace_dashboard(workspace_id: str, user_id: str) -> Dict[str, 
         def _q():
             return supabase.table("github_repositories").select(
                 "id, repository_name, repository_owner, last_sync_at, indexed_file_count, total_file_count, github_repository_profiles(tech_stack, architecture_summary)"
-            ).eq("user_id", user_id).eq("is_active", True).order("created_at", desc=True).limit(5).execute()
+            ).eq("workspace_id", workspace_id).eq("is_active", True).order("created_at", desc=True).limit(5).execute()
         try:
             res = await asyncio.to_thread(_q)
             repos = []
@@ -104,9 +134,9 @@ async def get_workspace_dashboard(workspace_id: str, user_id: str) -> Dict[str, 
 
     # Parallel queries for lists
     results = await asyncio.gather(
-        fetch_table("decision_records", filters={"workspace_id": workspace_id, "created_by": user_id}, limit=5),
-        fetch_table("research_sessions", filters={"workspace_id": workspace_id, "user_id": user_id}, limit=5),
-        fetch_table("comparisons", filters={"workspace_id": workspace_id, "user_id": user_id}, limit=5),
+        fetch_table("decision_records", filters={"workspace_id": workspace_id}, limit=5),
+        fetch_table("research_sessions", filters={"workspace_id": workspace_id}, limit=5),
+        fetch_table("comparisons", filters={"workspace_id": workspace_id}, limit=5),
         fetch_repos_with_profiles(),
     )
     
@@ -137,7 +167,7 @@ async def get_workspace_dashboard(workspace_id: str, user_id: str) -> Dict[str, 
             
     async def fetch_decisions_by_status():
         def _fetch():
-            return supabase.table("decision_records").select("status").eq("workspace_id", workspace_id).eq("created_by", user_id).execute()
+            return supabase.table("decision_records").select("status").eq("workspace_id", workspace_id).execute()
         try:
             res = await asyncio.to_thread(_fetch)
             return res.data
@@ -145,13 +175,13 @@ async def get_workspace_dashboard(workspace_id: str, user_id: str) -> Dict[str, 
             return []
 
     counts = await asyncio.gather(
-        fetch_count("research_sessions", {"workspace_id": workspace_id, "user_id": user_id}),
-        fetch_count("comparisons", {"workspace_id": workspace_id, "user_id": user_id}),
-        fetch_count("github_repositories", {"user_id": user_id, "is_active": True}),
+        fetch_count("research_sessions", {"workspace_id": workspace_id}),
+        fetch_count("comparisons", {"workspace_id": workspace_id}),
+        fetch_count("github_repositories", {"workspace_id": workspace_id, "is_active": True}),
         fetch_decisions_by_status(),
-        fetch_count("memory_items", {"user_id": user_id, "scope": "global"}),
-        fetch_count("memory_items", {"user_id": user_id, "scope": f"workspace:{workspace_id}"}),
-        fetch_count("memory_items", {"user_id": user_id, "is_pinned": True})
+        fetch_count("memory_items", {"scope": "global"}),
+        fetch_count("memory_items", {"scope": f"workspace:{workspace_id}"}),
+        fetch_count("memory_items", {"workspace_id": workspace_id, "is_pinned": True})
     )
     
     total_research = counts[0]

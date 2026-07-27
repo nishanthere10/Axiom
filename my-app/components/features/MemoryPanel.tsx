@@ -9,6 +9,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import Link from "next/link";
+import { useToast } from "@/components/ui/ToastProvider";
 
 interface MemoryItem {
   id: string;
@@ -24,6 +25,7 @@ export default function MemoryPanel() {
   const params = useParams();
   const workspaceId = params?.id as string;
   const { getToken } = useAuth();
+  const { toast } = useToast();
   
   const [memories, setMemories] = useState<MemoryItem[]>([]);
   const [stats, setStats] = useState<{total: number, by_type: Record<string, number>}>({total: 0, by_type: {}});
@@ -73,8 +75,10 @@ export default function MemoryPanel() {
       setMemories(prev => prev.filter(m => m.id !== deleteTargetId));
       setStats(prev => ({ ...prev, total: Math.max(0, prev.total - 1) }));
       setDeleteTargetId(null);
-    } catch (e) {
+      toast("Memory deleted", "success");
+    } catch (e: any) {
       console.error(e);
+      toast(e?.message || "Failed to delete memory", "error");
     } finally {
       setDeleting(false);
     }
@@ -90,8 +94,10 @@ export default function MemoryPanel() {
       });
       setMemories(prev => prev.map(m => m.id === id ? { ...m, summary: editText } : m));
       setEditingId(null);
-    } catch (e) {
+      toast("Memory updated", "success");
+    } catch (e: any) {
       console.error(e);
+      toast(e?.message || "Failed to update memory", "error");
     }
   };
 
@@ -105,12 +111,13 @@ export default function MemoryPanel() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `atlas_memory_${workspaceId.substring(0,8)}.json`;
-      document.body.appendChild(a);
+      a.download = `workspace-${workspaceId}-memory.json`;
       a.click();
       a.remove();
-    } catch (e) {
+      toast("Memories exported successfully", "success");
+    } catch (e: any) {
       console.error("Export failed", e);
+      toast(e?.message || "Failed to export memories", "error");
     }
   };
 

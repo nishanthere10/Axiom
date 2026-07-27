@@ -48,9 +48,14 @@ export interface Comparison {
 
 import { apiFetch } from "@/lib/api";
 
-export async function getRecentSessions(token: string): Promise<{ id: string; question: string; created_at: string }[]> {
-  const data = await apiFetch<{ sessions: any[] }>("/research/history", token, { cache: "no-store" });
-  return data.sessions;
+export async function getRecentSessions(token: string, workspaceId?: string): Promise<{ id: string; question: string; created_at: string }[]> {
+  let wsId = workspaceId;
+  if (!wsId && typeof window !== "undefined") {
+    wsId = localStorage.getItem("activeWorkspaceId") || undefined;
+  }
+  const endpoint = wsId ? `/workspaces/${wsId}/research/history` : "/research/history";
+  const data = await apiFetch<{ sessions: any[] }>(endpoint, token, { cache: "no-store" });
+  return data.sessions || [];
 }
 
 export async function getSuggestions(sessionId: string, token: string): Promise<SuggestionItem[]> {

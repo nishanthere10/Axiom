@@ -8,6 +8,8 @@ import { formatDistanceToNow } from "date-fns";
 import { ChevronLeft, FlaskConical, BookMarked, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import { useToast } from "@/components/ui/ToastProvider";
+
 const DECISION_STATUS_COLORS: Record<string, string> = {
   PROPOSED:    "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
   APPROVED:    "bg-green-500/10  text-green-500  border-green-500/20",
@@ -20,11 +22,13 @@ export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { getToken } = useAuth();
+  const { toast } = useToast();
   const workspaceId = params.id as string;
   const projectId = params.project_id as string;
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -36,8 +40,11 @@ export default function ProjectDetailPage() {
           token, { getToken }
         );
         setData(result);
-      } catch (e) {
+      } catch (e: any) {
         console.error("Failed to load project", e);
+        const msg = e?.message || "Failed to load project details.";
+        setErrorMsg(msg);
+        toast(msg, "error");
       } finally {
         setLoading(false);
       }
@@ -51,7 +58,19 @@ export default function ProjectDetailPage() {
     </div>
   );
 
-  if (!data) return <div className="p-6 text-muted-foreground">Project not found.</div>;
+  if (errorMsg || !data) return (
+    <div className="p-6 space-y-4">
+      <button
+        onClick={() => router.push(`/workspaces/${workspaceId}/projects`)}
+        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ChevronLeft className="w-4 h-4" /> Back to Projects
+      </button>
+      <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+        {errorMsg || "Project not found."}
+      </div>
+    </div>
+  );
 
   const { project, research, decisions } = data;
 

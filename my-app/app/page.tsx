@@ -1,28 +1,33 @@
 import Link from "next/link";
 import { ArrowRight, Box, ShieldCheck, Zap, Layers, RefreshCcw, FileText, GitBranch, Network, Scale } from "lucide-react";
 import Footer from "@/components/ui/Footer";
-import Aurora from "@/components/Aurora";
 import HeroCards from "@/components/HeroCards";
 import DashboardMockup from "@/components/DashboardMockup";
 import FaqSection from "@/components/FaqSection";
 import LandingLoaderWrapper from "@/components/LandingLoaderWrapper";
+import { ShaderGradientBg } from "@/components/ui/shader-gradient-bg";
 
 export default function Home() {
   return (
     <LandingLoaderWrapper>
       <main className="h-full w-full overflow-y-auto bg-background selection:bg-primary/30 relative font-sans">
-      {/* Interactive WebGL Background — raised opacity, brighter color stops */}
-      <div className="absolute inset-0 z-0 pointer-events-none opacity-85 h-[120vh]">
-        <Aurora 
-          colorStops={["#ff0055", "#8b5cf6", "#2563eb", "#00f2fe", "#4facfe"]} 
-          amplitude={2.5}
-          blend={0.85}
-          speed={1.5}
+      {/* ── Standalone Top-Level Shader Gradient Background (like Aurora) ── */}
+      <div className="absolute top-0 left-0 right-0 z-0 pointer-events-none h-[110vh] overflow-hidden">
+        <ShaderGradientBg
+          className="w-full h-full"
+          color1="#5227FF"
+          color2="#FF0080"
+          color3="#00C8FF"
+          type="waterPlane"
+          uSpeed={0.15}
+          uDensity={1.3}
+          uStrength={0.6}
+          grain="off"
         />
       </div>
       
-      {/* Lighter overlay so aurora bleeds through more */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background pointer-events-none z-10 h-[120vh]" />
+      {/* Subtle fade to blend background into the page body */}
+      <div className="absolute top-0 left-0 right-0 h-[110vh] bg-gradient-to-b from-transparent via-background/20 to-background pointer-events-none z-10" />
 
       <div className="flex flex-col min-h-full relative z-20">
         

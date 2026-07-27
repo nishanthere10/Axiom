@@ -20,6 +20,7 @@ class WorkspaceResponse(BaseModel):
     icon: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    user_role: Optional[str] = None  # "owner" | "member" | "viewer" — set when listing workspaces
     
 class WorkspaceListResponse(BaseModel):
     workspaces: List[WorkspaceResponse]
