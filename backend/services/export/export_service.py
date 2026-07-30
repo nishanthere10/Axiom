@@ -81,17 +81,17 @@ def _map_comparison_to_export(comp: dict) -> ExportDocument:
         sections=sections
     )
 
-def generate_export(session_type: str, session_id: str, format_type: str, user_id: str) -> tuple[bytes, str]:
+def generate_export(session_type: str, session_id: str, format_type: str, user_id: str, workspace_id: str | None = None) -> tuple[bytes, str]:
     """
     Returns (file_bytes, content_type)
     """
     if session_type == "research":
-        raw_doc = get_document_by_session(session_id, user_id)
+        raw_doc = get_document_by_session(session_id, user_id, workspace_id)
         if not raw_doc:
             raise HTTPException(status_code=404, detail="Research session not found or unauthorized")
         export_doc = _map_research_to_export(raw_doc)
     elif session_type == "comparison":
-        raw_comp = get_comparison(session_id, user_id)
+        raw_comp = get_comparison(session_id, user_id, workspace_id)
         if not raw_comp:
             raise HTTPException(status_code=404, detail="Comparison session not found or unauthorized")
         export_doc = _map_comparison_to_export(raw_comp)

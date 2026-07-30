@@ -25,6 +25,9 @@ export default function WorkspaceSelector() {
   const safeWorkspaces = workspaces || [];
   const activeWorkspace = safeWorkspaces.find(w => w.id === activeWorkspaceId);
 
+  const myWorkspaces = safeWorkspaces.filter(w => !w.is_shared && !w.has_team_members && (!w.user_role || w.user_role === "owner"));
+  const sharedWorkspaces = safeWorkspaces.filter(w => w.is_shared || w.has_team_members || (w.user_role && w.user_role !== "owner"));
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger 
@@ -37,26 +40,57 @@ export default function WorkspaceSelector() {
         <ChevronDown size={14} className="text-text-secondary transition-transform duration-200 group-data-[state=open]:rotate-180" />
       </DropdownMenuTrigger>
       
-      <DropdownMenuContent align="start" className="w-56 max-h-64 overflow-y-auto rounded-xl bg-surface/90 backdrop-blur-md border border-border/60 shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
-        <DropdownMenuLabel className="px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-          Workspaces
-        </DropdownMenuLabel>
-        
-        {safeWorkspaces.map((ws) => (
-          <DropdownMenuItem
-            key={ws.id}
-            onClick={() => {
-              setActiveWorkspaceId(ws.id);
-              router.push(`/workspaces/${ws.id}`);
-            }}
-            className={`w-full cursor-pointer px-3 py-2 text-sm flex items-center justify-between hover:bg-surface-hover focus:bg-surface-hover transition-colors ${
-              activeWorkspaceId === ws.id ? "bg-primary/10 text-primary font-medium" : "text-foreground"
-            }`}
-          >
-            <span className="truncate">{ws.name}</span>
-            {activeWorkspaceId === ws.id && <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>}
-          </DropdownMenuItem>
-        ))}
+      <DropdownMenuContent align="start" className="w-56 max-h-72 overflow-y-auto rounded-xl bg-surface/90 backdrop-blur-md border border-border/60 shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+        {myWorkspaces.length > 0 && (
+          <>
+            <DropdownMenuLabel className="px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              My Workspaces
+            </DropdownMenuLabel>
+            {myWorkspaces.map((ws) => (
+              <DropdownMenuItem
+                key={ws.id}
+                onClick={() => {
+                  setActiveWorkspaceId(ws.id);
+                  router.push(`/workspaces/${ws.id}`);
+                }}
+                className={`w-full cursor-pointer px-3 py-2 text-sm flex items-center justify-between hover:bg-surface-hover focus:bg-surface-hover transition-colors ${
+                  activeWorkspaceId === ws.id ? "bg-primary/10 text-primary font-medium" : "text-foreground"
+                }`}
+              >
+                <span className="truncate">{ws.name}</span>
+                {activeWorkspaceId === ws.id && <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>}
+              </DropdownMenuItem>
+            ))}
+          </>
+        )}
+
+        {sharedWorkspaces.length > 0 && (
+          <>
+            {myWorkspaces.length > 0 && <DropdownMenuSeparator className="bg-border/50" />}
+            <DropdownMenuLabel className="px-3 py-2 text-[10px] font-bold text-blue-400 uppercase tracking-widest flex items-center justify-between">
+              <span>Shared with Me</span>
+              <span className="text-[9px] bg-blue-500/10 px-1.5 py-0.5 rounded-full border border-blue-500/20">{sharedWorkspaces.length}</span>
+            </DropdownMenuLabel>
+            {sharedWorkspaces.map((ws) => (
+              <DropdownMenuItem
+                key={ws.id}
+                onClick={() => {
+                  setActiveWorkspaceId(ws.id);
+                  router.push(`/workspaces/${ws.id}`);
+                }}
+                className={`w-full cursor-pointer px-3 py-2 text-sm flex items-center justify-between hover:bg-surface-hover focus:bg-surface-hover transition-colors ${
+                  activeWorkspaceId === ws.id ? "bg-blue-500/10 text-blue-400 font-medium" : "text-foreground"
+                }`}
+              >
+                <div className="flex items-center gap-2 truncate">
+                  <span className="truncate">{ws.name}</span>
+                  <span className="text-[9px] uppercase font-semibold text-blue-400/70 bg-blue-500/10 px-1 py-0.2 rounded shrink-0">{ws.user_role}</span>
+                </div>
+                {activeWorkspaceId === ws.id && <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]"></span>}
+              </DropdownMenuItem>
+            ))}
+          </>
+        )}
 
         <DropdownMenuSeparator className="bg-border/50" />
         

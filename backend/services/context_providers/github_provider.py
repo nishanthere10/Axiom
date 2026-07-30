@@ -542,12 +542,11 @@ class GitHubProvider(ContextProvider):
             if not query_embedding:
                 return []
 
-            filter_dict: Dict[str, Any] = {
-                "user_id": {"$eq": user_id},
-                "provider": {"$eq": "github"}
-            }
+            filter_dict: Dict[str, Any] = {"provider": {"$eq": "github"}}
             if workspace_id:
                 filter_dict["workspace_id"] = {"$eq": workspace_id}
+            else:
+                filter_dict["user_id"] = {"$eq": user_id}
             if scope:
                 filter_dict["repository"] = {"$eq": scope}
 

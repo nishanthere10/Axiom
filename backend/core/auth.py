@@ -243,3 +243,59 @@ async def verify_workspace_path(
         logger.error("Workspace path verification error: %s", e)
         raise HTTPException(status_code=500, detail="Error verifying workspace access")
 
+
+async def verify_workspace_owner_access(
+    workspace_id: str | None = Header(default=None, alias="x-workspace-id"),
+    user_id: str = Depends(get_current_user)
+) -> str | None:
+    """
+    Verifies that the current user has OWNER role in the specified workspace from header.
+    Raises 403 Forbidden if the user is a member/viewer or not in the workspace.
+    """
+    if not workspace_id:
+        return None
+    try:
+        supabase = get_supabase()
+        response = supabase.table("workspace_members").select("role").eq("workspace_id", workspace_id).eq("user_id", user_id).limit(1).execute()
+        if not response.data:
+            logger.warning("AUTH REJECT: user_id=%s attempted to access workspace_id=%s without permission", user_id, workspace_id)
+            raise HTTPException(status_code=403, detail="Forbidden: You do not have access to this workspace")
+        role = response.data[0].get("role")
+        if role != "owner":
+            logger.warning("AUTH REJECT: user_id=%s (role=%s) attempted owner-only action in workspace_id=%s", user_id, role, workspace_id)
+            raise HTTPException(status_code=403, detail="Forbidden: Only workspace owners can perform research in this workspace")
+        return workspace_id
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Workspace owner access verification error: %s", e)
+        raise HTTPException(status_code=500, detail="Error verifying workspace owner access")
+
+
+async def verify_workspace_owner_path(
+    workspace_id: str,
+    user_id: str = Depends(get_current_user)
+) -> str:
+    """
+    Verifies that the current user has OWNER role in the workspace_id provided in URL path.
+    Raises 403 Forbidden if the user is a member/viewer or not in the workspace.
+    """
+    if not workspace_id:
+        raise HTTPException(status_code=400, detail="workspace_id is required")
+    try:
+        supabase = get_supabase()
+        response = supabase.table("workspace_members").select("role").eq("workspace_id", workspace_id).eq("user_id", user_id).limit(1).execute()
+        if not response.data:
+            logger.warning("AUTH REJECT: user_id=%s attempted to access workspace_id=%s without permission", user_id, workspace_id)
+            raise HTTPException(status_code=403, detail="Forbidden: You do not have access to this workspace")
+        role = response.data[0].get("role")
+        if role != "owner":
+            logger.warning("AUTH REJECT: user_id=%s (role=%s) attempted owner-only action in workspace_id=%s", user_id, role, workspace_id)
+            raise HTTPException(status_code=403, detail="Forbidden: Only workspace owners can perform research in this workspace")
+        return workspace_id
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Workspace owner path verification error: %s", e)
+        raise HTTPException(status_code=500, detail="Error verifying workspace owner access")
+

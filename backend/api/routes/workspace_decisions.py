@@ -187,7 +187,7 @@ def update_decision_in_workspace(
         # Non-fatal — proceed with the update
 
     # Update the decision
-    res = supabase.table("decision_records").update(payload).eq("id", decision_id).eq("created_by", user_id).execute()
+    res = supabase.table("decision_records").update(payload).eq("id", decision_id).eq("workspace_id", workspace_id).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Decision not found or unauthorized")
 

@@ -170,7 +170,7 @@ def update_project(
     if not payload:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    res = supabase.table("projects").update(payload).eq("id", project_id).eq("workspace_id", workspace_id).eq("created_by", user_id).execute()
+    res = supabase.table("projects").update(payload).eq("id", project_id).eq("workspace_id", workspace_id).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Project not found or unauthorized")
     return res.data[0]
@@ -188,7 +188,7 @@ def delete_project(
     Soft delete: sets status = 'archived'.
     Linked research_sessions and decision_records have project_id SET NULL (via FK ON DELETE SET NULL).
     """
-    res = supabase.table("projects").update({"status": "archived"}).eq("id", project_id).eq("workspace_id", workspace_id).eq("created_by", user_id).execute()
+    res = supabase.table("projects").update({"status": "archived"}).eq("id", project_id).eq("workspace_id", workspace_id).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Project not found or unauthorized")
     return None
@@ -203,7 +203,7 @@ def assign_research_to_project(
     _ws: str = Depends(verify_workspace_path),
 ):
     """POST /workspaces/{id}/projects/{project_id}/research/{session_id} — Assign an existing session to a project."""
-    res = supabase.table("research_sessions").update({"project_id": project_id}).eq("id", session_id).eq("user_id", user_id).execute()
+    res = supabase.table("research_sessions").update({"project_id": project_id}).eq("id", session_id).eq("workspace_id", workspace_id).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Research session not found or unauthorized")
     return {"success": True}
@@ -218,7 +218,7 @@ def assign_decision_to_project(
     _ws: str = Depends(verify_workspace_path),
 ):
     """POST /workspaces/{id}/projects/{project_id}/decisions/{decision_id} — Assign an existing decision to a project."""
-    res = supabase.table("decision_records").update({"project_id": project_id}).eq("id", decision_id).eq("created_by", user_id).execute()
+    res = supabase.table("decision_records").update({"project_id": project_id}).eq("id", decision_id).eq("workspace_id", workspace_id).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Decision not found or unauthorized")
     return {"success": True}

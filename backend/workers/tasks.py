@@ -57,7 +57,7 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
     1. Mark job as running.
     2. Stream the graph, updating progress after each node.
     3. On success: save document, mark session + job complete.
-    4. On failure: mark job failed and re-raise (triggers retry if eligible).
+    4. On failure: mark job failed and persist error details.
     """
     try:
         import time
@@ -273,14 +273,40 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
         return {"session_id": session_id, "job_id": job_id, "status": "completed"}
 
     except Exception as exc:
-        logger.error("Research background task failed: %s", exc, exc_info=True)
-        await anyio.to_thread.run_sync(research_service.update_job_status, job_id, "failed", 0, "error")
-        await anyio.to_thread.run_sync(research_service.update_session_status, session_id, "failed")
-        # Publish failure event so the frontend can show an error state
-        await bus_publish(job_id, {
-            "status":   "failed",
-            "progress": 0,
-            "step":     "Research failed",
-            "error":    str(exc)[:200],
-        })
-        raise
+        # 🔐 FIX 4.1: Enhanced error handling - persist error details to DB and SSE
+        error_message = str(exc)[:200]
+        logger.error("Research background task failed for job %s: %s", job_id, exc, exc_info=True)
+        
+        # Write error details to DB so frontend can display them
+        try:
+            await anyio.to_thread.run_sync(
+                research_service.update_job_status,
+                job_id,
+                "failed",
+                0,
+                f"Error: {error_message}"  # Persist error in step field for UI display
+            )
+        except Exception as db_err:
+            logger.error("Failed to update job status in DB: %s", db_err)
+        
+        # Update session status
+        try:
+            await anyio.to_thread.run_sync(research_service.update_session_status, session_id, "failed")
+        except Exception as session_err:
+            logger.error("Failed to update session status: %s", session_err)
+        
+        # Publish detailed failure event to SSE so active streams see the error
+        try:
+            await bus_publish(job_id, {
+                "status":   "failed",
+                "progress": 0,
+                "step":     "Research failed",
+                "error":    error_message,
+                "error_type": type(exc).__name__,
+            })
+        except Exception as sse_err:
+            logger.error("Failed to publish failure event to SSE: %s", sse_err)
+        
+        # DON'T re-raise — FastAPI BackgroundTasks swallows exceptions anyway
+        # Return error dict instead for internal tracking
+        return {"session_id": session_id, "job_id": job_id, "status": "failed", "error": error_message}

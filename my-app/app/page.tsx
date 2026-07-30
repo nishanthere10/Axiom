@@ -5,24 +5,19 @@ import HeroCards from "@/components/HeroCards";
 import DashboardMockup from "@/components/DashboardMockup";
 import FaqSection from "@/components/FaqSection";
 import LandingLoaderWrapper from "@/components/LandingLoaderWrapper";
-import { ShaderGradientBg } from "@/components/ui/shader-gradient-bg";
+import Aurora from "@/components/Aurora";
 
 export default function Home() {
   return (
     <LandingLoaderWrapper>
       <main className="h-full w-full overflow-y-auto bg-background selection:bg-primary/30 relative font-sans">
-      {/* ── Standalone Top-Level Shader Gradient Background (like Aurora) ── */}
-      <div className="absolute top-0 left-0 right-0 z-0 pointer-events-none h-[110vh] overflow-hidden">
-        <ShaderGradientBg
-          className="w-full h-full"
-          color1="#5227FF"
-          color2="#FF0080"
-          color3="#00C8FF"
-          type="waterPlane"
-          uSpeed={0.15}
-          uDensity={1.3}
-          uStrength={0.6}
-          grain="off"
+      {/* ── Ultra-fast, lightweight 5-color WebGL Aurora Background ── */}
+      <div className="absolute top-0 left-0 right-0 z-0 pointer-events-none h-[110vh] overflow-hidden opacity-90">
+        <Aurora 
+          colorStops={["#020617", "#1e3a8a", "#2563eb", "#38bdf8", "#00f2fe"]} 
+          amplitude={1.6}
+          blend={0.85}
+          speed={0.5}
         />
       </div>
       

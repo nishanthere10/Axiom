@@ -29,6 +29,21 @@ def issue_ticket(user_id: str, job_id: str) -> str:
     return token
 
 
+def peek_ticket(token: str) -> Optional[Tuple[str, str]]:
+    """
+    🔐 FIX 1.2: Validate ticket WITHOUT consuming it.
+    Returns (user_id, job_id) on success, None if invalid or expired.
+    Does NOT remove the ticket — use consume_ticket() after verification.
+    """
+    entry = _tickets.get(token)
+    if entry is None:
+        return None
+    user_id, job_id, expires_at = entry
+    if time.monotonic() > expires_at:
+        return None
+    return user_id, job_id
+
+
 def consume_ticket(token: str) -> Optional[Tuple[str, str]]:
     """
     Validate and consume a ticket.

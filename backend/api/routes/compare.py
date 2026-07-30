@@ -9,7 +9,7 @@ from api.schemas.compare import (
 from services.cache_service import cache
 from services import compare_service
 from agents.graph.comparison_graph import comparison_graph
-from core.auth import get_current_user, verify_workspace_access
+from core.auth import get_current_user, verify_workspace_access, verify_workspace_owner_access
 from middleware.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ router = APIRouter()
 
 @router.post("", response_model=CompareResponse)
 @limiter.limit("5/minute")
-def submit_comparison(request: Request, body: CompareRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user), workspace_id: str | None = Depends(verify_workspace_access)):
+def submit_comparison(request: Request, body: CompareRequest, background_tasks: BackgroundTasks, user_id: str = Depends(get_current_user), workspace_id: str | None = Depends(verify_workspace_owner_access)):
     if body.session_a == body.session_b:
         raise HTTPException(status_code=400, detail="Cannot compare a session with itself.")
         
@@ -32,6 +32,7 @@ def submit_comparison(request: Request, body: CompareRequest, background_tasks: 
         "session_a_id": body.session_a,
         "session_b_id": body.session_b,
         "user_id": user_id,
+        "workspace_id": workspace_id,
         "status": "starting"
     }
     
@@ -96,12 +97,12 @@ def get_comparison_history(limit: int = 10, offset: int = 0, user_id: str = Depe
 
 @router.get("/{comparison_id}", response_model=GetComparisonResponse)
 def get_comparison(comparison_id: str, user_id: str = Depends(get_current_user), workspace_id: str | None = Depends(verify_workspace_access)):
-    cache_key = f"comp_{user_id}_{comparison_id}"
+    cache_key = f"comp_ws_{workspace_id}_{comparison_id}" if workspace_id else f"comp_{user_id}_{comparison_id}"
     cached_comp = cache.get(cache_key)
     if cached_comp:
         return GetComparisonResponse(comparison=cached_comp)
 
-    comp = compare_service.get_comparison(comparison_id, user_id=user_id)
+    comp = compare_service.get_comparison(comparison_id, user_id=user_id, workspace_id=workspace_id)
     if not comp:
         raise HTTPException(status_code=404, detail="Comparison not found.")
         
@@ -109,6 +110,6 @@ def get_comparison(comparison_id: str, user_id: str = Depends(get_current_user),
     return GetComparisonResponse(comparison=comp)
 
 @router.post("/save", response_model=SaveCompareResponse)
-def save_comparison(body: SaveCompareRequest, user_id: str = Depends(get_current_user)):
-    success = compare_service.save_comparison(body.comparison_id, user_id=user_id)
+def save_comparison(body: SaveCompareRequest, user_id: str = Depends(get_current_user), workspace_id: str | None = Depends(verify_workspace_access)):
+    success = compare_service.save_comparison(body.comparison_id, user_id=user_id, workspace_id=workspace_id)
     return SaveCompareResponse(saved=success)

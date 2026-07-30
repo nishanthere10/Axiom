@@ -134,10 +134,25 @@ def update_memory(
     if not body.summary or len(body.summary.strip()) < 5:
         raise HTTPException(status_code=400, detail="summary must be at least 5 characters")
 
+    supabase = get_supabase()
+    
+    # 🔐 FIX 1.1: Verify workspace ownership BEFORE update to prevent cross-workspace access
+    ownership_check = (
+        supabase.table("memory_items")
+        .select("workspace_id")
+        .eq("id", memory_id)
+        .eq("is_active", True)
+        .execute()
+    )
+    if not ownership_check.data:
+        raise HTTPException(status_code=404, detail="Memory not found")
+    
+    if ownership_check.data[0]["workspace_id"] != workspace_id:
+        raise HTTPException(status_code=403, detail="Memory not in this workspace")
+
     import hashlib
     new_hash = hashlib.sha256(body.summary.strip().lower().encode()).hexdigest()
 
-    supabase = get_supabase()
     res = (
         supabase.table("memory_items")
         .update({"summary": body.summary, "dedup_hash": new_hash})

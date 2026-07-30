@@ -69,14 +69,6 @@ export function ShaderGradientBg({
     return () => observer.disconnect()
   }, [])
 
-  // Honour OS reduced-motion preference
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setPrefersReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-    }
-  }, [])
-
   return (
     <div ref={containerRef} className={cn('relative w-full', className)}>
       {/* ── WebGL Canvas (lazy, client-only, only while in view) ── */}
@@ -91,6 +83,8 @@ export function ShaderGradientBg({
           }}
         >
           <ShaderGradientCanvas
+            dpr={[1, 1.5]}
+            gl={{ powerPreference: 'high-performance', antialias: false, alpha: true, stencil: false, depth: false }}
             style={{
               position: 'absolute',
               top: 0,
@@ -105,7 +99,7 @@ export function ShaderGradientBg({
             ) : (
               <ShaderGradient
                 type={type}
-                animate={prefersReducedMotion ? 'off' : 'on'}
+                animate="on"
                 uSpeed={uSpeed}
                 uStrength={uStrength}
                 uDensity={uDensity}

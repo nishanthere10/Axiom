@@ -42,13 +42,17 @@ def store_memory(state: Dict[str, Any]) -> Dict[str, Any]:
                 metadata["created_at"] = pg_memory["created_at"]
                 metadata["scope"] = memory_create.scope
                 metadata["user_id"] = memory_create.user_id  # CRITICAL: search_memories filters by this
+                workspace_id = memory_create.workspace_id or state.get("workspace_id")
+                if workspace_id:
+                    metadata["workspace_id"] = workspace_id
                 
                 upsert_memory(
                     memory_id=memory_id,
                     # Use richer embed_text if create_memory built one (question + summary + constraints).
                     # Falls back to summary for backward compat with memories created before this change.
                     summary=metadata.pop("embed_text", None) or memory_create.summary,
-                    metadata=metadata
+                    metadata=metadata,
+                    workspace_id=workspace_id
                 )
             else:
                 logger.warning("Postgres insert failed, skipping Pinecone.")

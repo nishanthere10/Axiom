@@ -8,6 +8,7 @@ class ComparisonState(TypedDict):
     session_a_id: str
     session_b_id: str
     user_id: str
+    workspace_id: Optional[str]
     
     document_a: Optional[Dict[str, Any]]
     document_b: Optional[Dict[str, Any]]

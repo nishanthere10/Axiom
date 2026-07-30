@@ -54,8 +54,13 @@ def create_comparison(
         return created
     return {}
 
-def get_comparison(comparison_id: str, user_id: str) -> Optional[Dict[str, Any]]:
-    res = supabase.table("comparisons").select("*").eq("id", comparison_id).eq("user_id", user_id).execute()
+def get_comparison(comparison_id: str, user_id: str, workspace_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    query = supabase.table("comparisons").select("*").eq("id", comparison_id)
+    if workspace_id:
+        query = query.eq("workspace_id", workspace_id)
+    else:
+        query = query.eq("user_id", user_id)
+    res = query.execute()
     if not res.data:
         return None
     comp = res.data[0]
@@ -66,25 +71,60 @@ def get_comparison(comparison_id: str, user_id: str) -> Optional[Dict[str, Any]]
         pass
     return comp
 
-def save_comparison(comparison_id: str, user_id: str) -> bool:
-    res = supabase.table("comparisons").update({"saved": True}).eq("id", comparison_id).eq("user_id", user_id).execute()
+def save_comparison(comparison_id: str, user_id: str, workspace_id: Optional[str] = None) -> bool:
+    query = supabase.table("comparisons").update({"saved": True}).eq("id", comparison_id)
+    if workspace_id:
+        query = query.eq("workspace_id", workspace_id)
+    else:
+        query = query.eq("user_id", user_id)
+    res = query.execute()
     return bool(res.data)
 
 def get_saved_comparisons(user_id: str = "anonymous", workspace_id: Optional[str] = None) -> list[Dict[str, Any]]:
     # We query the comparisons table where saved is True and join with research_reports to get original session IDs
     query = (supabase.table("comparisons")
         .select("id, summary, created_at, doc_a:research_reports!session_a(session_id), doc_b:research_reports!session_b(session_id)") \
-        .eq("saved", True) \
-        .eq("user_id", user_id))
+        .eq("saved", True))
         
     if workspace_id:
         query = query.eq("workspace_id", workspace_id)
+    else:
+        query = query.eq("user_id", user_id)
         
     res = query.order("created_at", desc=True).execute()
     
     if not res.data:
         return []
     
+    formatted = []
+    for row in res.data:
+        session_a = row.get("doc_a", {}).get("session_id", "") if row.get("doc_a") else ""
+        session_b = row.get("doc_b", {}).get("session_id", "") if row.get("doc_b") else ""
+        
+        formatted.append({
+            "id": row.get("id"),
+            "session_a": session_a,
+            "session_b": session_b,
+            "summary": row.get("summary") or "Decision Comparison",
+            "created_at": row.get("created_at")
+        })
+        
+    return formatted
+
+def get_recent_comparisons(limit: int = 10, offset: int = 0, user_id: str = "anonymous", workspace_id: Optional[str] = None) -> list[Dict[str, Any]]:
+    query = (supabase.table("comparisons")
+        .select("id, summary, created_at, doc_a:research_reports!session_a(session_id), doc_b:research_reports!session_b(session_id)"))
+        
+    if workspace_id:
+        query = query.eq("workspace_id", workspace_id)
+    else:
+        query = query.eq("user_id", user_id)
+        
+    res = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+    
+    if not res.data:
+        return []
+        
     formatted = []
     for row in res.data:
         session_a = row.get("doc_a", {}).get("session_id", "") if row.get("doc_a") else ""

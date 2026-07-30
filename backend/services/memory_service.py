@@ -14,17 +14,14 @@ def create_memory_item(data: MemoryItemCreate) -> Optional[Dict[str, Any]]:
     # Compute dedup hash
     dedup_hash = hashlib.sha256(data.summary.strip().lower().encode()).hexdigest()
 
-    # Check for existing active memory with same hash in this workspace
+    # Check for existing active memory with same hash in this workspace (or user if global)
     try:
-        existing = (
-            supabase.table("memory_items")
-            .select("id")
-            .eq("user_id", data.user_id)
-            .eq("workspace_id", data.workspace_id)
-            .eq("dedup_hash", dedup_hash)
-            .eq("is_active", True)
-            .execute()
-        )
+        query = supabase.table("memory_items").select("id").eq("dedup_hash", dedup_hash).eq("is_active", True)
+        if data.workspace_id:
+            query = query.eq("workspace_id", data.workspace_id)
+        else:
+            query = query.eq("user_id", data.user_id)
+        existing = query.execute()
         if existing.data:
             logger.info("Skipping duplicate memory (exact hash=%s...)", dedup_hash[:12])
             # Update last_used_at on the existing memory instead
@@ -40,6 +37,7 @@ def create_memory_item(data: MemoryItemCreate) -> Optional[Dict[str, Any]]:
         logger.warning("Error checking for exact memory dedup hash: %s", e)
 
     # 2. Semantic vector deduplication check (threshold > 0.90)
+    # 🔐 FIX 3.2: Add exact text comparison tiebreaker to prevent embedding collision
     try:
         from services.pinecone_service import search_memories
         similar_memories = search_memories(
@@ -48,19 +46,30 @@ def create_memory_item(data: MemoryItemCreate) -> Optional[Dict[str, Any]]:
             workspace_id=data.workspace_id,
             top_k=5,
             threshold=0.90,
-            max_results=1
+            max_results=5  # Fetch top 5 to compare text
         )
         if similar_memories:
-            dup_id = similar_memories[0].get("id") or similar_memories[0].get("metadata", {}).get("memory_id")
-            if dup_id:
-                logger.info("Skipping duplicate memory via semantic vector match (id=%s)", dup_id)
+            # Check exact text match to avoid false positive from embedding collision
+            normalized_summary = data.summary.strip().lower()
+            for candidate in similar_memories:
+                dup_id = candidate.get("id") or candidate.get("metadata", {}).get("memory_id")
+                if not dup_id:
+                    continue
+                    
+                # Fetch candidate text from DB
                 try:
-                    supabase.table("memory_items").update(
-                        {"last_used_at": datetime.utcnow().isoformat()}
-                    ).eq("id", dup_id).execute()
+                    existing = supabase.table("memory_items").select("summary").eq("id", dup_id).execute()
+                    if existing.data:
+                        existing_text = existing.data[0].get("summary", "").strip().lower()
+                        # Exact text match = true duplicate
+                        if existing_text == normalized_summary:
+                            logger.info("Skipping duplicate memory via semantic+text match (id=%s)", dup_id)
+                            supabase.table("memory_items").update(
+                                {"last_used_at": datetime.utcnow().isoformat()}
+                            ).eq("id", dup_id).execute()
+                            return {"id": dup_id, "_dedup_skipped": True}
                 except Exception:
                     pass
-                return {"id": dup_id, "_dedup_skipped": True}
     except Exception as e:
         logger.warning("Error checking for semantic memory dedup: %s", e)
     
@@ -93,16 +102,16 @@ def create_memory_item(data: MemoryItemCreate) -> Optional[Dict[str, Any]]:
     return None
 
 def get_active_memories(user_id: str, workspace_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
-    """Retrieves all active memories for the user, including GLOBAL and matching WORKSPACE."""
+    """Retrieves all active memories for the workspace (or user if global)."""
     now = datetime.utcnow().isoformat()
     try:
-        query = supabase.table("memory_items").select("*").eq("is_active", True).eq("user_id", user_id)
+        query = supabase.table("memory_items").select("*").eq("is_active", True)
         if workspace_id:
-            # We want GLOBAL memories OR WORKSPACE memories matching workspace_id
-            query = query.or_(f"visibility.eq.GLOBAL,workspace_id.eq.{workspace_id}")
+            # Strictly isolate to workspace_id
+            query = query.eq("workspace_id", workspace_id)
         else:
-            # Only GLOBAL memories if no workspace is active
-            query = query.eq("visibility", "GLOBAL")
+            # Only user's GLOBAL memories if no workspace is active
+            query = query.eq("user_id", user_id).eq("visibility", "GLOBAL")
             
         response = query.order("created_at", desc=True).limit(limit).execute()
         

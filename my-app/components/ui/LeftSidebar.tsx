@@ -66,6 +66,7 @@ export default function LeftSidebar({
   const { activeWorkspaceId, workspaces, setActiveWorkspaceId } = useWorkspace();
   const [searchOpen, setSearchOpen] = useState(false);
   const [sharedExpanded, setSharedExpanded] = useState(true);
+  const [myExpanded, setMyExpanded] = useState(true);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -85,8 +86,13 @@ export default function LeftSidebar({
     return pathname.startsWith(href);
   };
 
+  const myWorkspaces = useMemo(
+    () => workspaces.filter((w) => !w.is_shared && !w.has_team_members && (!w.user_role || w.user_role === "owner")),
+    [workspaces]
+  );
+
   const sharedWorkspaces = useMemo(
-    () => workspaces.filter((w) => w.user_role && w.user_role !== "owner"),
+    () => workspaces.filter((w) => w.is_shared || w.has_team_members || (w.user_role && w.user_role !== "owner")),
     [workspaces]
   );
 
@@ -181,6 +187,88 @@ export default function LeftSidebar({
           return btn;
         })}
 
+        {/* My Workspaces section */}
+        {myWorkspaces.length > 0 && (
+          <div className="pt-2">
+            {!isCollapsed ? (
+              <>
+                <button
+                  onClick={() => setMyExpanded((v) => !v)}
+                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-surface-hover group"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <FolderKanban className="w-3 h-3 text-primary" />
+                    My Workspaces
+                    <span className="text-[9px] font-bold bg-primary/10 text-primary px-1.5 py-0.5 rounded-full border border-primary/20">
+                      {myWorkspaces.length}
+                    </span>
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      "w-3 h-3 transition-transform",
+                      myExpanded ? "rotate-0" : "-rotate-90"
+                    )}
+                  />
+                </button>
+
+                {myExpanded && (
+                  <div className="mt-1 space-y-0.5 pl-1">
+                    {myWorkspaces.map((ws) => {
+                      const isActiveWs = ws.id === activeWorkspaceId;
+                      return (
+                        <button
+                          key={ws.id}
+                          onClick={() => {
+                            setActiveWorkspaceId(ws.id);
+                            router.push(`/workspaces/${ws.id}`);
+                          }}
+                          className={cn(
+                            "w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium text-left",
+                            isActiveWs
+                              ? "bg-primary/10 text-primary"
+                              : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "w-5 h-5 rounded-sm flex items-center justify-center text-[10px] font-bold shrink-0",
+                              isActiveWs ? "bg-primary/20 text-primary" : "bg-surface text-muted-foreground border border-border/50"
+                            )}
+                          >
+                            {ws.icon || ws.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="truncate text-xs">{ws.name}</span>
+                          <span className="ml-auto text-[9px] font-semibold uppercase tracking-wide text-primary/70 shrink-0">
+                            Owner
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            ) : (
+              // Collapsed: show icon with badge
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => router.push("/workspaces")}
+                    className="w-full flex items-center justify-center px-2 py-2 rounded-md text-primary hover:bg-primary/10 transition-colors relative"
+                  >
+                    <FolderKanban className="w-4 h-4" />
+                    <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-primary text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                      {myWorkspaces.length}
+                    </span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>{myWorkspaces.length} My Workspace{myWorkspaces.length > 1 ? "s" : ""}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        )}
+
         {/* Shared Workspaces section */}
         {sharedWorkspaces.length > 0 && (
           <div className="pt-2">
@@ -192,7 +280,7 @@ export default function LeftSidebar({
                 >
                   <span className="flex items-center gap-1.5">
                     <Users className="w-3 h-3 text-blue-400" />
-                    Shared with Me
+                    Shared Workspaces
                     <span className="text-[9px] font-bold bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded-full border border-blue-500/20">
                       {sharedWorkspaces.length}
                     </span>

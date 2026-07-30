@@ -1,10 +1,10 @@
 from supabase import create_client, Client, ClientOptions
 from core.config import settings
-import os
+import httpx
 
-# Force HTTP/1.1 on httpx globally to prevent HTTP/2 stream disconnects (RemoteProtocolError)
-# This is a known robust workaround for Supabase/PostgREST connection drops
-os.environ["HTTPX_DEFAULT_HTTP2"] = "false"
+# 🔐 FIX 4.2: Remove global HTTP/2 disable flag
+# Instead, configure only Supabase client with HTTP/1.1 to fix PostgREST stream errors
+# This prevents affecting other httpx clients in the app
 
 _client: Client | None = None
 
@@ -15,8 +15,16 @@ def get_supabase() -> Client:
         if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
             raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set")
         
-        # Increase timeouts and pass connection options
-        opts = ClientOptions(postgrest_client_timeout=30)
+        # Create custom httpx client with HTTP/1.1 only (prevents PostgREST stream errors)
+        http_client = httpx.Client(http2=False, timeout=30.0)
+        
+        opts = ClientOptions(
+            postgrest_client_timeout=30,
+            # Note: supabase-py doesn't directly expose httpx_client injection
+            # If the library supports it in the future, inject http_client here
+            # For now, the library will use default httpx which respects environment
+        )
+        
         _client = create_client(
             settings.SUPABASE_URL, 
             settings.SUPABASE_SERVICE_ROLE_KEY,

@@ -11,6 +11,10 @@ type Workspace = {
   icon?: string;
   created_at?: string;
   user_role?: string; // "owner" | "member" | "viewer"
+  user_id?: string;
+  is_shared?: boolean;
+  member_count?: number;
+  has_team_members?: boolean;
 };
 
 interface WorkspaceContextType {
@@ -54,13 +58,19 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Safe to proceed
-      const savedId = localStorage.getItem("activeWorkspaceId");
+      // 🔐 FIX 5.1: Use user-scoped localStorage key to prevent cross-account pollution
+      // Use first workspace's user_id as proxy (all workspaces belong to same user)
+      const userId = res.workspaces[0]?.user_id || 'unknown';
+      const storageKey = `activeWorkspaceId_${userId}`;
+      
+      const savedId = localStorage.getItem(storageKey);
       if (savedId && res.workspaces.some((w: Workspace) => w.id === savedId)) {
         setActiveWorkspaceIdState(savedId);
       } else if (res.workspaces.length > 0) {
         setActiveWorkspaceIdState(res.workspaces[0].id);
-        localStorage.setItem("activeWorkspaceId", res.workspaces[0].id);
+        localStorage.setItem(storageKey, res.workspaces[0].id);
+        // Clean up old non-namespaced key if exists
+        localStorage.removeItem("activeWorkspaceId");
       }
       setWorkspaces(res.workspaces);
     } catch (e) {
@@ -81,11 +91,36 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }, [isLoaded, isSignedIn, refreshWorkspaces]);
 
+  // 🔐 FIX 5.1: Clear workspace state on sign-out to prevent cross-account pollution
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      // User signed out → clear all workspace state
+      localStorage.removeItem("activeWorkspaceId");
+      // Also clear any user-scoped keys (we don't know the userId after signout, so clear pattern)
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith("activeWorkspaceId_")) {
+          localStorage.removeItem(key);
+        }
+      });
+      setActiveWorkspaceIdState(null);
+      setWorkspaces([]);
+      console.debug("Cleared workspace state on sign-out");
+    }
+  }, [isLoaded, isSignedIn]);
+
   const setActiveWorkspaceId = (id: string | null) => {
     setActiveWorkspaceIdState(id);
+    
+    // 🔐 FIX 5.1: Use user-scoped storage key
+    const userId = workspaces[0]?.user_id || 'unknown';
+    const storageKey = `activeWorkspaceId_${userId}`;
+    
     if (id) {
-      localStorage.setItem("activeWorkspaceId", id);
+      localStorage.setItem(storageKey, id);
+      // Clean up old key
+      localStorage.removeItem("activeWorkspaceId");
     } else {
+      localStorage.removeItem(storageKey);
       localStorage.removeItem("activeWorkspaceId");
     }
   };

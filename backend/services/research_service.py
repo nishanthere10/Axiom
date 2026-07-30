@@ -3,6 +3,23 @@ import logging
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
+# 🔐 FIX 6.1: Add circuit breaker to prevent cascading Supabase failures
+try:
+    import pybreaker
+    circuit_breaker = pybreaker.CircuitBreaker(
+        fail_max=5,  # Open circuit after 5 failures
+        reset_timeout=60,  # Try again after 60s
+        exclude=[httpx.HTTPStatusError]  # Don't trip on 4xx errors
+    )
+    BREAKER_ENABLED = True
+except ImportError:
+    # pybreaker not installed, create no-op decorator
+    class NoOpBreaker:
+        def __call__(self, func):
+            return func
+    circuit_breaker = NoOpBreaker()
+    BREAKER_ENABLED = False
+
 logger = logging.getLogger(__name__)
 
 # Shared retry policy for ALL Supabase/PostgREST network calls
@@ -14,6 +31,7 @@ _SUPABASE_RETRY = dict(
 )
 
 
+@circuit_breaker
 @retry(**_SUPABASE_RETRY)
 def create_session(question: str, user_id: str, workspace_id: str | None = None, project_id: str | None = None) -> dict:
     """Create a research session row. Returns the created row."""
@@ -30,6 +48,7 @@ def create_session(question: str, user_id: str, workspace_id: str | None = None,
     return response.data[0]
 
 
+@circuit_breaker
 @retry(**_SUPABASE_RETRY)
 def create_job(session_id: str) -> dict:
     """Create a research job row. Returns the created row."""
@@ -41,6 +60,7 @@ def create_job(session_id: str) -> dict:
     return response.data[0]
 
 
+@circuit_breaker
 @retry(**_SUPABASE_RETRY)
 def update_job_status(job_id: str, status: str, progress: int = 0, step: str = "") -> None:
     """Update job status, progress, and current step."""
@@ -49,12 +69,14 @@ def update_job_status(job_id: str, status: str, progress: int = 0, step: str = "
     ).eq("id", job_id).execute()
 
 
+@circuit_breaker
 @retry(**_SUPABASE_RETRY)
 def update_session_status(session_id: str, status: str) -> None:
     """Update session status."""
     supabase.table("research_sessions").update({"status": status}).eq("id", session_id).execute()
 
 
+@circuit_breaker
 @retry(**_SUPABASE_RETRY)
 def save_document(session_id: str, question: str, state: dict, user_id: str, warnings: list = None) -> dict:
     """Save the final decision document to Supabase."""
@@ -80,6 +102,7 @@ def save_document(session_id: str, question: str, state: dict, user_id: str, war
         "version": 1,
         "user_id": user_id,
     }
+    
     # Retrieve the workspace_id and project_id from the session to stamp the document and decision record
     session = supabase.table("research_sessions").select("workspace_id, project_id").eq("id", session_id).execute()
     workspace_id = None
@@ -91,16 +114,19 @@ def save_document(session_id: str, question: str, state: dict, user_id: str, war
     if workspace_id:
         payload["workspace_id"] = workspace_id
 
-    response = supabase.table("research_reports").insert(payload).execute()
-
-    # Immediately bust the in-memory document cache so the next GET always reads
-    # the freshly-written row (with visuals) rather than an empty-visuals entry
-    # that may have been cached before the pipeline finished.
+    # 🔐 FIX 2.2: Bust cache BEFORE DB write (pessimistic invalidation)
+    # This prevents stale reads during the commit window
     try:
         from services.cache_service import cache as _cache
         _cache.delete(f"doc_{user_id}_{session_id}")
-    except Exception:
-        pass
+        if workspace_id:
+            _cache.delete(f"doc_ws_{workspace_id}_{session_id}")
+        logger.debug("Pre-emptively busted cache for session %s", session_id)
+    except Exception as e:
+        logger.warning("Failed to pre-bust cache (non-fatal): %s", e)
+
+    # NOW write to DB — any concurrent read will miss cache and fetch fresh data
+    response = supabase.table("research_reports").insert(payload).execute()
     
     # Auto-create the decision record
     if workspace_id:
@@ -115,55 +141,54 @@ def save_document(session_id: str, question: str, state: dict, user_id: str, war
                 "created_by": user_id,
             }).execute()
         except Exception as e:
-            # We don't want to fail the whole background task if this fails, but it shouldn't
             logger.warning("Failed to auto-create decision_record for session %s: %s", session_id, e)
 
     return response.data[0]
 
 
+@circuit_breaker
 @retry(**_SUPABASE_RETRY)
-def get_job(job_id: str, user_id: str) -> dict | None:
-    """Fetch a job row by ID, joined with session to verify ownership."""
-    response = (
-        supabase.table("research_jobs")
-        .select("*, research_sessions!inner(user_id)")
-        .eq("id", job_id)
-        .eq("research_sessions.user_id", user_id)
-        .execute()
-    )
+def get_job(job_id: str, user_id: str, workspace_id: str | None = None) -> dict | None:
+    """Fetch a job row by ID, joined with session to verify ownership or workspace access."""
+    query = supabase.table("research_jobs").select("*, research_sessions!inner(user_id, workspace_id)").eq("id", job_id)
+    if workspace_id:
+        query = query.eq("research_sessions.workspace_id", workspace_id)
+    else:
+        query = query.eq("research_sessions.user_id", user_id)
+    response = query.execute()
     if response.data:
         return response.data[0]
     return None
 
 
+@circuit_breaker
 @retry(**_SUPABASE_RETRY)
-def get_document_by_session(session_id: str, user_id: str) -> dict | None:
-    """Fetch the decision document for a given session ID, scoped to user."""
-    response = (
-        supabase.table("research_reports")
-        .select("*")
-        .eq("session_id", session_id)
-        .eq("user_id", user_id)
-        .order("created_at", desc=True)
-        .limit(1)
-        .execute()
-    )
+def get_document_by_session(session_id: str, user_id: str, workspace_id: str | None = None) -> dict | None:
+    """Fetch the decision document for a given session ID, scoped to user or workspace."""
+    query = supabase.table("research_reports").select("*").eq("session_id", session_id)
+    if workspace_id:
+        query = query.eq("workspace_id", workspace_id)
+    else:
+        query = query.eq("user_id", user_id)
+    response = query.order("created_at", desc=True).limit(1).execute()
     if response.data:
         return response.data[0]
     return None
 
 
+@circuit_breaker
 @retry(**_SUPABASE_RETRY)
 def get_recent_sessions(user_id: str, limit: int = 10, offset: int = 0, workspace_id: str | None = None) -> list[dict]:
-    """Fetch recent completed research sessions for a specific user and workspace with pagination."""
+    """Fetch recent completed research sessions for a specific workspace (or user if no workspace) with pagination."""
     query = (
         supabase.table("research_sessions")
         .select("id, question, created_at")
         .eq("status", "complete")
-        .eq("user_id", user_id)
     )
     if workspace_id:
         query = query.eq("workspace_id", workspace_id)
+    else:
+        query = query.eq("user_id", user_id)
 
     response = (
         query.order("created_at", desc=True)
@@ -173,6 +198,7 @@ def get_recent_sessions(user_id: str, limit: int = 10, offset: int = 0, workspac
     return response.data or []
 
 
+@circuit_breaker
 @retry(**_SUPABASE_RETRY)
 def recover_stale_jobs() -> None:
     """Find running jobs older than 15 mins and mark failed."""

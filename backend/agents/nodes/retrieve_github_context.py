@@ -12,10 +12,12 @@ def _get_architecture_summaries(user_id: str, workspace_id: str | None = None) -
         supabase = get_supabase()
         query = supabase.table("github_repositories").select(
             "repository_name, repository_owner, github_repository_profiles(architecture_summary, tech_stack)"
-        ).eq("user_id", user_id).eq("is_active", True)
+        ).eq("is_active", True)
         
         if workspace_id:
             query = query.eq("workspace_id", workspace_id)
+        else:
+            query = query.eq("user_id", user_id)
 
         res = query.execute()
         

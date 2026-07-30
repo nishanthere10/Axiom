@@ -81,19 +81,30 @@ def subscribe(job_id: str) -> asyncio.Queue:
 
 def unsubscribe(job_id: str, queue: asyncio.Queue) -> None:
     """Remove a subscriber queue when the client disconnects."""
-    if job_id in _subscribers:
-        try:
-            _subscribers[job_id].remove(queue)
-        except ValueError:
-            pass
-        if not _subscribers[job_id]:
-            _subscribers.pop(job_id, None)
-            _last_activity.pop(job_id, None)
-            # Cancel Redis listener if active
-            task = _redis_listeners.pop(job_id, None)
-            if task:
-                task.cancel()
-    logger.debug("SSE subscriber removed for job_id=%s", job_id)
+    # 🔐 FIX 2.3: Always cleanup even if queue removal fails
+    # This prevents Redis listener leaks when queue already gone
+    if job_id not in _subscribers:
+        logger.debug("unsubscribe called for non-existent job_id=%s", job_id)
+        return
+    
+    # Try to remove queue, but don't fail if already gone
+    try:
+        _subscribers[job_id].remove(queue)
+        logger.debug("SSE subscriber removed for job_id=%s", job_id)
+    except ValueError:
+        logger.warning("Queue already removed for job_id=%s (race condition?)", job_id)
+    
+    # CRITICAL: Cleanup runs regardless of removal success/failure
+    if not _subscribers[job_id]:
+        # Last subscriber gone → clean up all resources
+        _subscribers.pop(job_id, None)
+        _last_activity.pop(job_id, None)
+        
+        # Cancel Redis listener task if exists
+        task = _redis_listeners.pop(job_id, None)
+        if task and not task.done():
+            task.cancel()
+            logger.debug("Cancelled Redis listener for job_id=%s", job_id)
 
 async def publish(job_id: str, event: dict) -> None:
     """Publish an event to all subscribers of a job_id. Non-blocking."""

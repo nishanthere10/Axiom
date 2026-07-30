@@ -65,39 +65,22 @@ float snoise(vec2 v){
   return 130.0 * dot(m, g);
 }
 
-struct ColorStop {
-  vec3 color;
-  float position;
-};
-
-#define COLOR_RAMP(colors, factor, finalColor) {              \
-  int index = 0;                                            \
-  for (int i = 0; i < 4; i++) {                               \
-     ColorStop currentColor = colors[i];                    \
-     bool isInBetween = currentColor.position <= factor;    \
-     index = int(mix(float(index), float(i), float(isInBetween))); \
-  }                                                         \
-  ColorStop currentColor = colors[index];                   \
-  ColorStop nextColor = colors[index + 1];                  \
-  float range = nextColor.position - currentColor.position; \
-  float lerpFactor = (factor - currentColor.position) / range; \
-  finalColor = mix(currentColor.color, nextColor.color, lerpFactor); \
-}
-
 void main() {
   vec2 uv = gl_FragCoord.xy / uResolution;
   
-  ColorStop colors[5];
-  colors[0] = ColorStop(uColorStops[0], 0.0);
-  colors[1] = ColorStop(uColorStops[1], 0.25);
-  colors[2] = ColorStop(uColorStops[2], 0.5);
-  colors[3] = ColorStop(uColorStops[3], 0.75);
-  colors[4] = ColorStop(uColorStops[4], 1.0);
+  float scaled = clamp(uv.x, 0.0, 0.9999) * 4.0;
+  int idx = int(scaled);
+  float lerpFactor = fract(scaled);
   
-  vec3 rampColor;
-  COLOR_RAMP(colors, uv.x, rampColor);
+  vec3 c1, c2;
+  if (idx == 0) { c1 = uColorStops[0]; c2 = uColorStops[1]; }
+  else if (idx == 1) { c1 = uColorStops[1]; c2 = uColorStops[2]; }
+  else if (idx == 2) { c1 = uColorStops[2]; c2 = uColorStops[3]; }
+  else { c1 = uColorStops[3]; c2 = uColorStops[4]; }
   
-  float height = snoise(vec2(uv.x * 4.0 + uTime * 0.2, uTime * 0.45)) * 0.6 * uAmplitude;
+  vec3 rampColor = mix(c1, c2, lerpFactor);
+  
+  float height = snoise(vec2(uv.x * 2.2 + uTime * 0.12, uTime * 0.25)) * 0.6 * uAmplitude;
   height = exp(height);
   height = (uv.y * 2.0 - height + 0.2);
   float intensity = 0.9 * height;
@@ -112,7 +95,7 @@ void main() {
 `;
 
 export default function Aurora(props) {
-  const { colorStops = ['#ff0055', '#8b5cf6', '#2563eb', '#00f2fe', '#4facfe'], amplitude = 1.0, blend = 0.5 } = props;
+  const { colorStops = ['#020617', '#1e3a8a', '#2563eb', '#38bdf8', '#00f2fe'], amplitude = 1.0, blend = 0.5 } = props;
   const propsRef = useRef(props);
   propsRef.current = props;
 
@@ -122,13 +105,13 @@ export default function Aurora(props) {
     const ctn = ctnDom.current;
     if (!ctn) return;
 
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return;
-
+    // Removed prefers-reduced-motion early return so the dynamic WebGL shader always mounts and animates
     const renderer = new Renderer({
       alpha: true,
       premultipliedAlpha: true,
-      antialias: true
+      antialias: false,
+      powerPreference: 'high-performance',
+      dpr: Math.min(window.devicePixelRatio || 1, 1.5)
     });
     const gl = renderer.gl;
     gl.clearColor(0, 0, 0, 0);
@@ -146,7 +129,7 @@ export default function Aurora(props) {
       const height = ctn.offsetHeight;
       renderer.setSize(width, height);
       if (program) {
-        program.uniforms.uResolution.value = [width, height];
+        program.uniforms.uResolution.value = [gl.canvas.width, gl.canvas.height];
       }
     }
     window.addEventListener('resize', resize);
@@ -168,7 +151,7 @@ export default function Aurora(props) {
         uTime: { value: 0 },
         uAmplitude: { value: amplitude },
         uColorStops: { value: colorStopsArray },
-        uResolution: { value: [ctn.offsetWidth, ctn.offsetHeight] },
+        uResolution: { value: [gl.canvas.width || ctn.offsetWidth, gl.canvas.height || ctn.offsetHeight] },
         uBlend: { value: blend }
       }
     });
@@ -178,6 +161,8 @@ export default function Aurora(props) {
 
     let animateId = 0;
     let isVisible = true;
+    let lastColorStops = null;
+    let cachedColorStopsArray = colorStopsArray;
 
     const update = t => {
       if (!isVisible) {
@@ -185,15 +170,21 @@ export default function Aurora(props) {
         return;
       }
       animateId = requestAnimationFrame(update);
-      const { time = t * 0.01, speed = 1.0 } = propsRef.current;
+      const { time = t * 0.01, speed = 1.0, amplitude: currentAmp = 1.0, blend: currentBlend = blend, colorStops: currentStops = colorStops } = propsRef.current;
+      
       program.uniforms.uTime.value = time * speed * 0.1;
-      program.uniforms.uAmplitude.value = propsRef.current.amplitude ?? 1.0;
-      program.uniforms.uBlend.value = propsRef.current.blend ?? blend;
-      const stops = propsRef.current.colorStops ?? colorStops;
-      program.uniforms.uColorStops.value = stops.map(hex => {
-        const c = new Color(hex);
-        return [c.r, c.g, c.b];
-      });
+      program.uniforms.uAmplitude.value = currentAmp;
+      program.uniforms.uBlend.value = currentBlend;
+      
+      if (currentStops !== lastColorStops) {
+        lastColorStops = currentStops;
+        cachedColorStopsArray = currentStops.map(hex => {
+          const c = new Color(hex);
+          return [c.r, c.g, c.b];
+        });
+        program.uniforms.uColorStops.value = cachedColorStopsArray;
+      }
+      
       renderer.render({ scene: mesh });
     };
 
@@ -226,7 +217,7 @@ export default function Aurora(props) {
 
   return (
     <div ref={ctnDom} className="w-full h-full relative" aria-hidden="true">
-      <div className="absolute inset-0 bg-gradient-to-br from-[#020617] via-[#1e3a8a]/20 to-[#020617] -z-10 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-br from-[#020617] via-[#1e3a8a]/30 to-[#38bdf8]/20 -z-10 pointer-events-none" />
     </div>
   );
 }

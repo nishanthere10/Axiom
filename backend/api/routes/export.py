@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Response, Header
 from fastapi.responses import StreamingResponse
 from io import BytesIO
 from core.auth import get_current_user
@@ -11,6 +11,8 @@ async def export_document(
     session_type: str, 
     session_id: str, 
     format_type: str, 
+    workspace_id: str | None = None,
+    x_workspace_id: str | None = Header(default=None, alias="x-workspace-id"),
     user_id: str = Depends(get_current_user)
 ):
     """
@@ -27,7 +29,7 @@ async def export_document(
     import time
     start_time = time.time()
         
-    file_bytes, content_type = generate_export(session_type, session_id, format_type, user_id)
+    file_bytes, content_type = generate_export(session_type, session_id, format_type, user_id, workspace_id or x_workspace_id)
     
     filename = f"atlas-{session_type}-{format_type}-{session_id}"
     if format_type == "pdf":

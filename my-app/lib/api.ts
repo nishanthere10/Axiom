@@ -11,6 +11,19 @@ import {
 const RAW_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || (process.env.NODE_ENV === "production" ? "https://atlas-1sr4.onrender.com" : "http://127.0.0.1:8000");
 export const API_BASE_URL = RAW_API_URL.replace(/\/$/, "");
 
+// 🔐 FIX 1.3: Custom error class for API failures
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public code: string,
+    message: string,
+    public details?: any
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 export async function apiFetch<T>(
   endpoint: string,
   token: string,
@@ -45,14 +58,19 @@ export async function apiFetch<T>(
   try {
     res = await doFetch(token);
   } catch (err: any) {
-    console.error(`Network or CORS error fetching ${url}:`, err);
-    // Gracefully catch network errors and return a safe fallback state
-    return {
-      status: "offline",
-      sessions: [],
-      comparisons: [],
-      error: "Failed to reach the server. Backend may be offline."
-    } as any as T;
+    // 🔐 FIX 1.3: Only return offline fallback for true network errors
+    // Rethrow auth/permission errors to trigger proper error handling
+    if (err.name === 'TypeError' && err.message.includes('fetch')) {
+      console.error(`Network error fetching ${url}:`, err);
+      return {
+        status: "offline",
+        sessions: [],
+        comparisons: [],
+        error: "Network unavailable. Check your connection."
+      } as any as T;
+    }
+    // For other errors, rethrow
+    throw err;
   }
 
   // On 401, silently refresh the Clerk token and retry once
@@ -68,14 +86,22 @@ export async function apiFetch<T>(
   }
 
   if (!res.ok) {
+    let code = "UNKNOWN_ERROR";
     let message = `API error: ${res.status}`;
+    let details = null;
+    
     try {
       const body = await res.json();
-      message = body?.detail ?? message;
+      code = body?.error?.code || body?.code || `HTTP_${res.status}`;
+      message = body?.error?.message || body?.detail || body?.message || message;
+      details = body?.error?.details || body?.details;
     } catch {
-      // ignore parse errors
+      // If JSON parsing fails, use default message
     }
-    throw new Error(message);
+    
+    // 🔐 FIX 1.3: Throw structured error instead of generic Error
+    // This allows components to handle auth errors (401/403) differently
+    throw new ApiError(res.status, code, message, details);
   }
 
   if (res.status === 204) {

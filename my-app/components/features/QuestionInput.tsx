@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@clerk/nextjs";
+import { useWorkspace } from "@/components/WorkspaceContext";
 import { submitResearch, submitWorkspaceResearch, apiFetch } from "@/lib/api";
 import { ResearchResponse } from "@/types";
 import { ArrowRight, Lightbulb, FolderKanban } from "lucide-react";
@@ -58,10 +59,14 @@ const ErrorMessage = ({ message }: { message: string }) => (
 
 export default function QuestionInput({ workspaceId, onSubmitted }: Props) {
   const { getToken } = useAuth();
+  const { workspaces } = useWorkspace();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+
+  const currentWs = workspaces?.find((w) => w.id === workspaceId);
+  const isNotOwner = !!(workspaceId && currentWs && currentWs.user_role && currentWs.user_role !== "owner");
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -148,6 +153,13 @@ export default function QuestionInput({ workspaceId, onSubmitted }: Props) {
         </p>
       </div>
 
+      {isNotOwner && (
+        <div className="mb-4 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs flex items-center gap-2">
+          <span className="font-semibold uppercase tracking-wider text-[10px] bg-amber-500/20 px-1.5 py-0.5 rounded">Read-Only</span>
+          <span>Only workspace owners can perform research in this shared workspace. You have {currentWs?.user_role} access.</span>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {/* Sleek Textarea Wrapper */}
         <div className="relative group rounded-2xl border border-border/60 bg-surface/40 backdrop-blur-sm shadow-sm hover:border-primary/30 hover:bg-surface/80 hover:shadow-[0_0_15px_rgba(59,130,246,0.1)] focus-within:!bg-surface focus-within:shadow-[0_0_20px_rgba(59,130,246,0.15)] focus-within:ring-1 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all duration-500">
@@ -155,8 +167,8 @@ export default function QuestionInput({ workspaceId, onSubmitted }: Props) {
             id="question-input"
             {...register("question")}
             rows={3}
-            placeholder="e.g. Should I use PostgreSQL or MongoDB for a high-write event log system?"
-            disabled={isSubmitting}
+            placeholder={isNotOwner ? "Research is disabled for non-owner members in this workspace." : "e.g. Should I use PostgreSQL or MongoDB for a high-write event log system?"}
+            disabled={isSubmitting || isNotOwner}
             style={{ resize: "none", minHeight: "100px" }}
             className="w-full bg-transparent border-0 ring-0 focus-visible:ring-0 focus-visible:border-0 shadow-none text-foreground text-sm placeholder:text-muted-foreground/70 p-4 pb-14 focus:outline-none disabled:opacity-50 transition-all duration-200 leading-relaxed"
           />
@@ -184,7 +196,7 @@ export default function QuestionInput({ workspaceId, onSubmitted }: Props) {
               id="submit-research-btn"
               type="submit"
               aria-label="Submit research question"
-              disabled={isSubmitting || !questionValue?.trim() || !!errors.question}
+              disabled={isSubmitting || isNotOwner || !questionValue?.trim() || !!errors.question}
               className="flex items-center justify-center w-11 h-11 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50 disabled:bg-surface-hover disabled:text-muted-foreground transition-all duration-200"
             >
               {isSubmitting ? (
@@ -206,7 +218,7 @@ export default function QuestionInput({ workspaceId, onSubmitted }: Props) {
       </form>
 
       {/* Zero State Prompts */}
-      {!isSubmitting && questionValue?.length === 0 && (
+      {!isSubmitting && !isNotOwner && questionValue?.length === 0 && (
         <div className="mt-12 space-y-3">
           <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest px-1">
             <Lightbulb className="w-3.5 h-3.5" />

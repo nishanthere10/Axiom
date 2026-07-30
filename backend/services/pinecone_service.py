@@ -105,9 +105,10 @@ def search_memories(query: str, user_id: str, workspace_id: Optional[str] = None
     
     try:
         logger.debug("Querying pinecone index...")
-        filter_dict = {"user_id": {"$eq": user_id}}
         if workspace_id:
-            filter_dict["workspace_id"] = {"$eq": workspace_id}
+            filter_dict = {"workspace_id": {"$eq": workspace_id}}
+        else:
+            filter_dict = {"user_id": {"$eq": user_id}}
 
         results = index.query(
             vector=embedding,
