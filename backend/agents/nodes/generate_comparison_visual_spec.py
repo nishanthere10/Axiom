@@ -46,6 +46,10 @@ def generate_comparison_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
 
     IMPACT SUMMARY:
     {impact_summary}
+
+    TOOL CALLING INSTRUCTION: You MUST use the provided tool/function to respond.
+    Do NOT output raw text tags like <function=VisualSpecResponse> or any XML/function tags.
+    Only output valid JSON via the tool call API.
     """
     
     try:
@@ -55,7 +59,8 @@ def generate_comparison_visual_spec(state: Dict[str, Any]) -> Dict[str, Any]:
             max_retries=3,
             parallel_tool_calls=False,
             messages=[
-                {"role": "system", "content": prompt}
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": "Generate the visual specifications comparing the two options."},
             ]
         )
         return {"visual_specs": [v.model_dump() for v in response.visuals], "status": "visual_specs_generated"}

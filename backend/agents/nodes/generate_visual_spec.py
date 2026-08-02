@@ -88,7 +88,9 @@ RULES:
 
 DECISION_TREE: 6-10 nodes. label ≤5 words (real tech). node_type: root/decision/outcome/leaf. edge label = quantitative condition.
 ARCHITECTURE_DIAGRAM: 6-12 nodes, full data path (client→storage, cache, async layers). spec = 1-line key metric on node face.
-SUMMARY_CARD: 5-8 highlights — at least 2 metrics (real numbers), 2 tradeoffs, 1 warning, 1 recommendation."""
+SUMMARY_CARD: 5-8 highlights — at least 2 metrics (real numbers), 2 tradeoffs, 1 warning, 1 recommendation.
+
+TOOL CALLING INSTRUCTION: You MUST use the provided tool/function to respond. Do NOT output raw text tags like <function=VisualSpecResponse> or any XML/function tags. Only output valid JSON via the tool call API."""
 
     try:
         client = get_async_instructor_client()
@@ -98,7 +100,10 @@ SUMMARY_CARD: 5-8 highlights — at least 2 metrics (real numbers), 2 tradeoffs,
             max_retries=2,
             max_tokens=_MAX_OUTPUT_TOKENS,
             messages=[
-                {"role": "system", "content": prompt}
+                {"role": "system", "content": prompt},
+                # A user message is REQUIRED by Nvidia NIM (and good practice) — tools cannot
+                # be the first or only message in the conversation.
+                {"role": "user", "content": "Generate the visual specifications for the decision context provided above."},
             ]
         )
         visuals = [v.model_dump() for v in response.visuals]

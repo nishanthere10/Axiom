@@ -25,7 +25,7 @@ export default function DecisionDetailPage() {
   const router = useRouter();
   const { getToken } = useAuth();
   const workspaceId = params.id as string;
-  const decisionId = params.decision_id as string;
+  const decisionId = params.decisionId as string;  // fixed: was params.decision_id
   const { toast } = useToast();
 
   const [data, setData] = useState<any>(null);

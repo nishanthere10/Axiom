@@ -54,7 +54,6 @@ export default function Navbar() {
               <SheetContent side="left" className="bg-surface border-border text-foreground p-6">
                 <SheetHeader className="text-left mb-6">
                   <SheetTitle className="text-base font-semibold flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-primary" />
                     Atlas Research
                   </SheetTitle>
                 </SheetHeader>
@@ -75,6 +74,7 @@ export default function Navbar() {
                       <Link
                         key={href}
                         href={fullHref}
+                        prefetch={href === "/research" ? false : undefined}
                         onClick={() => setMobileOpen(false)}
                         className={cn(
                           "px-4 py-2.5 rounded-lg text-sm font-medium transition-colors",
@@ -108,8 +108,7 @@ export default function Navbar() {
             href="/"
             className="flex items-center gap-2.5 text-base font-semibold text-foreground tracking-tight hover:text-foreground/80 transition-colors"
           >
-            {/* Subtle accent dot */}
-            <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+            {/* Subtle accent dot removed */}
             Atlas Research
           </Link>
 
@@ -129,6 +128,7 @@ export default function Navbar() {
                 <Link
                   key={href}
                   href={fullHref}
+                  prefetch={href === "/research" ? false : undefined}
                   className={cn(
                     "relative px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
                     isActive

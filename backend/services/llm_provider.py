@@ -36,6 +36,18 @@ litellm.drop_params = True
 # Sampling params that Gemini does not accept and will throw deprecation warnings for
 _GEMINI_INCOMPATIBLE_PARAMS = {"temperature", "top_p", "top_k", "presence_penalty", "frequency_penalty"}
 
+# GROQ RATE LIMIT CONFIGURATION
+# Groq has TPM (Tokens Per Minute) and RPM (Requests Per Minute) limits
+# Default: 6000 TPM, 30 RPM for free tier
+# Configure exponential backoff with jitter for 429 RateLimitError
+_GROQ_RATE_LIMIT_CONFIG = {
+    "max_retries": 5,
+    "initial_delay_ms": 1000,  # 1 second
+    "max_delay_ms": 60000,      # 60 seconds
+    "exponential_base": 2.0,
+    "jitter_factor": 0.1  # 10% jitter
+}
+
 def _is_valid_key(key: Optional[str]) -> bool:
     if not key or not key.strip():
         return False
@@ -52,23 +64,47 @@ def _build_fallbacks() -> List[Dict[str, str]]:
         {"model": "groq/llama-3.3-70b-versatile"}
     ]
     
-    # Priority 1: Gemini
+    # Priority 1: Gemini (use correct model string format)
     if _is_valid_key(settings.GEMINI_API_KEY):
         fallbacks.append({"model": "gemini/gemini-1.5-flash"})
         
-    # Priority 2: Mistral
+    # Priority 2: Mistral (use correct latest model)
     if _is_valid_key(settings.MISTRAL_API_KEY):
         fallbacks.append({"model": "mistral/mistral-large-latest"})
         
-    # Priority 3: NVIDIA
+    # Priority 3: NVIDIA NIM (ensure api_base is correctly set)
     if _is_valid_key(settings.NVIDIA_API_KEY):
-        # Example nvidia model, replace with your preferred model
         fallbacks.append({
-            "model": "nvidia_nim/meta/llama3-70b-instruct",
+            "model": "nvidia_nim/meta/llama-3.1-70b-instruct",
             "api_base": "https://integrate.api.nvidia.com/v1"
         })
         
     return fallbacks
+
+def _handle_groq_rate_limit(attempt: int) -> float:
+    """
+    Calculate exponential backoff delay with jitter for Groq rate limiting.
+    
+    Helps handle 429 RateLimitError from Groq's TPM/RPM limits gracefully.
+    Returns delay in seconds.
+    """
+    config = _GROQ_RATE_LIMIT_CONFIG
+    
+    # Calculate exponential delay
+    delay_ms = config["initial_delay_ms"] * (config["exponential_base"] ** attempt)
+    delay_ms = min(delay_ms, config["max_delay_ms"])
+    
+    # Add jitter to prevent thundering herd
+    import random
+    jitter = random.uniform(0, config["jitter_factor"] * delay_ms)
+    total_delay_ms = delay_ms + jitter
+    
+    logger.warning(
+        f"Groq rate limit hit (attempt {attempt + 1}/{config['max_retries']}). "
+        f"Backing off for {total_delay_ms:.0f}ms"
+    )
+    
+    return total_delay_ms / 1000.0
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/llama-3.3-70b-versatile", **kwargs) -> Any:
@@ -76,6 +112,8 @@ def generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/
     Unified LLM chat completion with automatic fallback routing.
     If the primary model (Groq) hits a rate limit or fails, it will seamlessly fall back
     to Gemini, Mistral, or NVIDIA depending on API key availability.
+    
+    SECURITY FIX: Added Groq rate limit handling with exponential backoff.
     """
     
     fallbacks = _build_fallbacks()
@@ -96,6 +134,7 @@ def generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/
             model=model,
             messages=messages,
             fallbacks=fallbacks,
+            num_retries=3,  # LiteLLM built-in retry with backoff (handles Groq 429)
             **kwargs
         )
         latency_ms = int((time.time() - start_time) * 1000)
@@ -122,6 +161,11 @@ def generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/
         logger.debug("Successfully used model: %s", getattr(response, 'model', model))
         return response
     except Exception as e:
+        # Check if this is a Groq rate limit error (429)
+        error_str = str(e).lower()
+        if "groq" in error_str and ("429" in str(e) or "rate" in error_str or "ratelimit" in error_str):
+            logger.warning(f"Groq rate limit encountered: {e}. Retries are handled by @retry decorator.")
+        
         logger.error("LLM generation failed across all providers: %s", e, exc_info=True)
         try:
             from services.metrics_service import emit_provider_event
@@ -138,6 +182,8 @@ def generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/
 async def async_generate_chat_completion(messages: List[Dict[str, str]], model: str = "groq/llama-3.3-70b-versatile", **kwargs) -> Any:
     """
     Async version of unified LLM chat completion with automatic fallback routing.
+    
+    SECURITY FIX: Added Groq rate limit handling.
     """
     fallbacks = _build_fallbacks()
     if model.startswith("gemini/"):
@@ -153,6 +199,7 @@ async def async_generate_chat_completion(messages: List[Dict[str, str]], model: 
             model=model,
             messages=messages,
             fallbacks=fallbacks,
+            num_retries=3,  # LiteLLM built-in retry with backoff (handles Groq 429)
             **kwargs
         )
         latency_ms = int((time.time() - start_time) * 1000)
@@ -175,6 +222,11 @@ async def async_generate_chat_completion(messages: List[Dict[str, str]], model: 
             
         return response
     except Exception as e:
+        # Check if this is a Groq rate limit error (429)
+        error_str = str(e).lower()
+        if "groq" in error_str and ("429" in str(e) or "rate" in error_str or "ratelimit" in error_str):
+            logger.warning(f"Groq rate limit encountered: {e}. Retries are handled by @retry decorator.")
+        
         logger.error("Async LLM generation failed: %s", e, exc_info=True)
         try:
             from services.metrics_service import emit_provider_event

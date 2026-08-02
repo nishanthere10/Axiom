@@ -155,17 +155,7 @@ function ResearchPageInner() {
         />
       )}
 
-      {/* Memory Trigger Button */}
-      {pageState !== "idle" && (
-        <div className="fixed top-20 right-6 z-30 no-print">
-          <button
-            onClick={() => setShowMemory(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-background border border-border shadow-sm rounded-lg hover:bg-surface transition-colors text-foreground"
-          >
-            <Brain className="w-3.5 h-3.5 text-primary" /> Atlas Memory
-          </button>
-        </div>
-      )}
+
 
       <AnimatePresence mode="wait">
         {pageState === "idle" && (

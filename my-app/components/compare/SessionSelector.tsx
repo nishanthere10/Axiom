@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
+import { useParams } from "next/navigation";
 import { getRecentSessions } from "@/lib/compare";
 import { ArrowRight, ChevronDown } from "lucide-react";
 
@@ -12,6 +13,8 @@ interface Props {
 
 export default function SessionSelector({ onCompare, disabled }: Props) {
   const { getToken } = useAuth();
+  const params = useParams();
+  const workspaceId = params?.id as string | undefined;
   const [sessionA, setSessionA] = useState("");
   const [sessionB, setSessionB] = useState("");
   const [recentSessions, setRecentSessions] = useState<{ id: string; question: string; created_at: string }[]>([]);
@@ -21,7 +24,7 @@ export default function SessionSelector({ onCompare, disabled }: Props) {
     async function load() {
       try {
         const token = await getToken() ?? "";
-        const sessions = await getRecentSessions(token);
+        const sessions = await getRecentSessions(token, workspaceId);
         setRecentSessions(sessions);
       } catch (err) {
         console.error(err);
@@ -30,7 +33,7 @@ export default function SessionSelector({ onCompare, disabled }: Props) {
       }
     }
     load();
-  }, []);
+  }, [workspaceId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

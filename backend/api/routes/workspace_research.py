@@ -3,6 +3,7 @@ Workspace-scoped research routes.
 These replace the flat /research routes for workspace contexts.
 The old /research routes remain alive with deprecation headers (see main.py).
 """
+from typing import Dict, Any
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Request
 from fastapi.responses import StreamingResponse
 from api.schemas.research import (
@@ -23,6 +24,69 @@ import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def _sanitize_sse_event(event: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    SECURITY FIX: Sanitize SSE event data to prevent information disclosure.
+    Removes sensitive internal details while preserving user-relevant information.
+    """
+    sanitized = {
+        "status": event.get("status", "unknown"),
+        "progress": event.get("progress", 0),
+        "step": event.get("step", ""),
+        "node": event.get("node", ""),
+    }
+    
+    # Only include safe metadata
+    meta = event.get("meta", {})
+    if isinstance(meta, dict):
+        safe_meta = {}
+        # Allow specific safe fields
+        for key in ["memories_found", "github_chunks"]:
+            if key in meta and isinstance(meta[key], (int, str)):
+                safe_meta[key] = meta[key]
+        
+        # Sanitize memory summaries
+        if "memory_summaries" in meta and isinstance(meta["memory_summaries"], list):
+            safe_meta["memory_summaries"] = [
+                str(summary)[:50] + "..." if len(str(summary)) > 50 else str(summary)
+                for summary in meta["memory_summaries"][:3]  # Limit to 3 items
+            ]
+        
+        if safe_meta:
+            sanitized["meta"] = safe_meta
+    
+    # Sanitize error messages
+    if event.get("status") == "failed":
+        error = event.get("error", "")
+        if error:
+            # Replace internal error details with generic message
+            sanitized["error"] = "Processing failed. Please try again."
+        
+    return sanitized
+
+
+async def verify_workspace_access_by_user_id(user_id: str, workspace_id: str) -> bool:
+    """
+    SECURITY FIX: Additional workspace verification helper for SSE authentication.
+    Provides defense-in-depth by double-checking workspace access.
+    """
+    try:
+        from services.db import get_supabase
+        supabase = get_supabase("api")  # SECURITY FIX: Use API context
+        
+        response = supabase.table("workspace_members")\
+            .select("id")\
+            .eq("workspace_id", workspace_id)\
+            .eq("user_id", user_id)\
+            .limit(1)\
+            .execute()
+            
+        return bool(response.data)
+    except Exception as e:
+        logger.error(f"Workspace verification failed: {e}")
+        return False
 
 
 @router.post("", response_model=ResearchResponse, status_code=202)
@@ -192,9 +256,12 @@ async def stream_job_progress(
     Server-Sent Events stream. Auth via single-use ticket (not Bearer header).
     Terminates when: job completes, job fails, client disconnects, or 10-min timeout.
     Nginx/Render buffering is disabled via X-Accel-Buffering: no header.
+    
+    SECURITY FIX: Proper ticket validation order to prevent race conditions.
     """
-    # 🔐 FIX 1.2: Verify ticket WITHOUT consuming it first
-    # This prevents ticket burn if job verification fails
+    # SECURITY FIX: Complete validation BEFORE consuming ticket
+    
+    # Step 1: Peek ticket without consuming
     identity = peek_ticket(ticket)
     if not identity:
         raise HTTPException(status_code=401, detail="Invalid or expired stream ticket")
@@ -203,42 +270,77 @@ async def stream_job_progress(
     if ticket_job_id != job_id:
         raise HTTPException(status_code=403, detail="Ticket does not match job_id")
     
-    # Verify job exists and user has access BEFORE consuming ticket
-    job_check = await asyncio.to_thread(research_service.get_job, job_id, _ticket_user_id, workspace_id)
-    if not job_check:
-        raise HTTPException(status_code=404, detail="Job not found or access denied")
+    # Step 2: Verify job exists and user has complete access
+    try:
+        job_check = await asyncio.to_thread(
+            research_service.get_job, 
+            job_id, 
+            _ticket_user_id, 
+            workspace_id
+        )
+        if not job_check:
+            raise HTTPException(status_code=404, detail="Job not found or access denied")
+    except Exception as e:
+        logger.warning(f"Job verification failed for job_id={job_id}, user={_ticket_user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Job verification failed")
     
-    # NOW it's safe to consume the ticket
-    consume_ticket(ticket)
+    # Step 3: Verify workspace access separately for defense-in-depth
+    try:
+        from core.auth import verify_workspace_access_by_user_id
+        workspace_check = await verify_workspace_access_by_user_id(_ticket_user_id, workspace_id)
+        if not workspace_check:
+            raise HTTPException(status_code=403, detail="Workspace access denied")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Workspace verification failed for user={_ticket_user_id}, workspace={workspace_id}: {e}")
+        raise HTTPException(status_code=500, detail="Workspace verification failed")
+    
+    # Step 4: NOW safe to consume ticket after all validations pass
+    try:
+        consume_ticket(ticket)
+    except Exception as e:
+        logger.error(f"Failed to consume ticket: {e}")
+        raise HTTPException(status_code=500, detail="Ticket consumption failed")
 
     async def event_generator():
-        # 🔐 FIX 2.1: Subscribe FIRST, then check job status atomically
-        # This prevents race where job completes between subscription and check
-        queue = subscribe(job_id)
-        MAX_STREAM_SECONDS = 600   # 10-minute hard cap
-        loop = asyncio.get_running_loop()
-        deadline = loop.time() + MAX_STREAM_SECONDS
-        heartbeat_interval = 15
-
+        queue = None
         try:
-            # Confirm connection
+            # SECURITY FIX: Subscribe with timeout protection
+            queue = subscribe(job_id)
+            MAX_STREAM_SECONDS = 600   # 10-minute hard cap
+            loop = asyncio.get_running_loop()
+            deadline = loop.time() + MAX_STREAM_SECONDS
+            heartbeat_interval = 15
+
+            # Confirm connection with sanitized data
             yield f"data: {json.dumps({'status': 'connected', 'job_id': job_id})}\n\n"
 
-            # CRITICAL: Check job status AFTER subscribe to catch any completion events
-            # that happened between our check above and now
-            current_job = await asyncio.to_thread(research_service.get_job, job_id, _ticket_user_id, workspace_id)
-            if current_job and current_job.get("status") in ("completed", "failed"):
-                # Yield the final state immediately
-                final_event = {
-                    "status": current_job["status"],
-                    "progress": current_job.get("progress", 100),
+            # Check job status immediately after subscription
+            current_job = await asyncio.to_thread(
+                research_service.get_job, 
+                job_id, 
+                _ticket_user_id, 
+                workspace_id
+            )
+            
+            if current_job:
+                # Always send the current state so late-connecting clients get immediate progress
+                error_msg = None
+                if current_job.get("status") == "failed":
+                    error_msg = "Processing failed"
+                    
+                initial_event = {
+                    "status": current_job.get("status", "running"),
+                    "progress": current_job.get("progress", 0),
                     "step": current_job.get("step", ""),
-                    "error": current_job.get("step") if current_job["status"] == "failed" else None
+                    "error": error_msg
                 }
-                yield f"data: {json.dumps(final_event)}\n\n"
-                yield "event: done\ndata: {}\n\n"
-                unsubscribe(job_id, queue)  # Clean up immediately
-                return
+                yield f"data: {json.dumps(initial_event)}\n\n"
+                
+                if current_job.get("status") in ("completed", "failed"):
+                    yield "event: done\ndata: {}\n\n"
+                    return
 
             while True:
                 remaining = deadline - loop.time()
@@ -251,7 +353,10 @@ async def stream_job_progress(
                         queue.get(),
                         timeout=min(heartbeat_interval, remaining),
                     )
-                    yield f"data: {json.dumps(event)}\n\n"
+                    
+                    # SECURITY FIX: Sanitize event data before sending
+                    sanitized_event = _sanitize_sse_event(event)
+                    yield f"data: {json.dumps(sanitized_event)}\n\n"
 
                     if event.get("status") in ("completed", "failed"):
                         yield "event: done\ndata: {}\n\n"
@@ -263,8 +368,12 @@ async def stream_job_progress(
 
         except asyncio.CancelledError:
             logger.debug("SSE client disconnected for job_id=%s", job_id)
+        except Exception as e:
+            logger.error(f"SSE stream error for job {job_id}: {e}")
+            yield f"data: {json.dumps({'status': 'error', 'message': 'Stream error occurred'})}\n\n"
         finally:
-            unsubscribe(job_id, queue)
+            if queue:
+                unsubscribe(job_id, queue)
 
     return StreamingResponse(
         event_generator(),

@@ -74,9 +74,9 @@ export default function Footer() {
           <div className="space-y-4">
             <h4 className="font-display font-semibold text-foreground tracking-tight">Features</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li className="flex items-center gap-2"><span>Decision Graph</span> <span className="text-[10px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">v1.0</span></li>
-              <li className="flex items-center gap-2"><span>Codebase Context</span> <span className="text-[10px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">v1.0</span></li>
-              <li className="flex items-center gap-2"><span>Memory Vault</span> <span className="text-[10px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">v1.0</span></li>
+              <li className="flex items-center gap-2"><span>Decision Graph</span></li>
+              <li className="flex items-center gap-2"><span>Codebase Context</span></li>
+              <li className="flex items-center gap-2"><span>Memory Vault</span></li>
             </ul>
           </div>
 

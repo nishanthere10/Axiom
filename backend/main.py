@@ -15,6 +15,7 @@ from api.routes.export import router as export_router
 from api.routes.github import router as github_router
 from api.routes.workspaces import router as workspaces_router
 from api.routes.workspace_members import router as workspace_members_router
+from api.routes.circuit_breaker_monitor import router as circuit_breaker_router
 
 from middleware.rate_limit import limiter
 from middleware.logging_middleware import StructlogMiddleware
@@ -27,9 +28,16 @@ import asyncio
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Recover stale jobs
+    # Startup: Initialize services
+    from services.db import supabase_health_check
     from services.research_service import recover_stale_jobs
     import asyncio
+    
+    # Check database connectivity
+    if not supabase_health_check():
+        raise RuntimeError("Failed to connect to Supabase database")
+    
+    # Recover stale jobs
     await asyncio.to_thread(recover_stale_jobs)
 
     # Startup: Start the memory sweeper background task
@@ -48,7 +56,8 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Shutdown: Cancel background tasks
+    # SECURITY FIX: Proper shutdown sequence with connection cleanup
+    # Shutdown: Cancel background tasks first
     sweeper_task.cancel()
     cleanup_task.cancel()
     for t in (sweeper_task, cleanup_task):
@@ -56,10 +65,20 @@ async def lifespan(app: FastAPI):
             await t
         except asyncio.CancelledError:
             pass
+    
+    # Shutdown: Close all database connections
+    from services.db import close_supabase_connections
+    try:
+        close_supabase_connections()
+    except Exception as e:
+        print(f"Warning: Error closing Supabase connections: {e}")
             
     # Shutdown: Close Redis connection
     from services.event_bus import close as close_event_bus
-    await close_event_bus()
+    try:
+        await close_event_bus()
+    except Exception as e:
+        print(f"Warning: Error closing Redis connection: {e}")
     
     # Shutdown: Cleanly stop LiteLLM's internal async LoggingWorker if running.
     # Without this, uvicorn logs 'Task was destroyed but it is pending!' on every reload.
@@ -168,6 +187,7 @@ app.include_router(ws_projects_router, prefix="/workspaces/{workspace_id}/projec
 app.include_router(ws_memory_router, prefix="/workspaces/{workspace_id}/memory", tags=["workspace-memory"])
 app.include_router(ws_search_router, prefix="/workspaces/{workspace_id}/search", tags=["workspace-search"])
 app.include_router(workspace_members_router, prefix="/workspaces/{workspace_id}/members", tags=["workspace-members"])
+app.include_router(circuit_breaker_router, prefix="/circuit-breakers", tags=["monitoring"])
 
 @app.get("/health", tags=["system"])
 async def health_check():

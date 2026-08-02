@@ -88,6 +88,14 @@ class PipelineLogger(AsyncCallbackHandler):
 
     @staticmethod
     def _node_name(serialized: dict) -> str:
+        """
+        Extract node name from serialized callback data.
+        
+        SECURITY FIX: Handles None or malformed serialized dict gracefully
+        to prevent AttributeError when LangChain passes unexpected callback data.
+        """
+        if not serialized or not isinstance(serialized, dict):
+            return "?"
         return (
             serialized.get("name")
             or (serialized.get("id") or ["?"])[-1]

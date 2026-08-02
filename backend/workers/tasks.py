@@ -3,8 +3,115 @@ from agents.graph.decision_graph import decision_graph
 from agents.callbacks.pipeline_logger import PipelineLogger
 from services import research_service
 from services.event_bus import publish as bus_publish
+from services.circuit_breaker import circuit_manager, CircuitOpenError
+import re
+from typing import Dict, Any
+import asyncio
 
 logger = logging.getLogger(__name__)
+
+# SECURITY FIX: Enhanced timeout configuration with circuit breakers
+TIMEOUT_CONFIG = {
+    "research_pipeline": {
+        "total_timeout": 900,      # 15 minutes total
+        "node_timeout": 120,       # 2 minutes per node
+        "llm_timeout": 60,         # 1 minute per LLM call
+        "search_timeout": 30,      # 30 seconds per search
+        "memory_timeout": 15,      # 15 seconds per memory operation
+    },
+    "circuit_breaker": {
+        "failure_threshold": 3,
+        "failure_rate_threshold": 0.6,
+        "recovery_timeout": 300,   # 5 minutes recovery
+    }
+}
+
+async def _execute_with_timeout_and_circuit_breaker(
+    operation_name: str, 
+    operation_func, 
+    timeout: int,
+    *args, 
+    **kwargs
+) -> Any:
+    """
+    SECURITY FIX: Execute operation with circuit breaker and timeout protection.
+    """
+    breaker = circuit_manager.get_breaker(
+        f"task_{operation_name}",
+        failure_threshold=TIMEOUT_CONFIG["circuit_breaker"]["failure_threshold"],
+        failure_rate_threshold=TIMEOUT_CONFIG["circuit_breaker"]["failure_rate_threshold"],
+        recovery_timeout=TIMEOUT_CONFIG["circuit_breaker"]["recovery_timeout"],
+        timeout=timeout
+    )
+    
+    try:
+        return await breaker.call(operation_func, *args, **kwargs)
+    except CircuitOpenError:
+        logger.error(f"Circuit breaker OPEN for {operation_name} - failing fast")
+        raise TimeoutError(f"Service {operation_name} is currently unavailable (circuit breaker open)")
+    except asyncio.TimeoutError:
+        logger.error(f"Operation {operation_name} timed out after {timeout}s")
+        raise TimeoutError(f"Operation {operation_name} timed out")
+
+def _sanitize_error_message(error: Exception, context: str = "operation") -> str:
+    """
+    SECURITY FIX: Sanitize error messages to prevent information disclosure.
+    
+    Removes sensitive information like file paths, credentials, internal details
+    while preserving useful information for debugging and user feedback.
+    """
+    error_str = str(error).lower()
+    error_type = type(error).__name__
+    
+    # Define patterns that indicate sensitive information
+    sensitive_patterns = [
+        r'/[a-z_/]*\.py',  # File paths
+        r'[a-zA-Z0-9_]*password[a-zA-Z0-9_]*',  # Password fields
+        r'[a-zA-Z0-9_]*secret[a-zA-Z0-9_]*',    # Secret fields  
+        r'[a-zA-Z0-9_]*key[a-zA-Z0-9_]*',       # Key fields
+        r'token[a-zA-Z0-9_]*',                   # Token fields
+        r'api[_-]?key',                          # API keys
+        r'bearer [a-zA-Z0-9._-]+',               # Bearer tokens
+        r'postgresql://[^\\s]+',                 # Database URLs
+        r'mongodb://[^\\s]+',                    # MongoDB URLs
+        r'redis://[^\\s]+',                      # Redis URLs
+        r'http[s]?://[^\\s]*:[^\\s]*@',         # URLs with credentials
+    ]
+    
+    # Check if error contains sensitive information
+    contains_sensitive = any(re.search(pattern, error_str) for pattern in sensitive_patterns)
+    
+    if contains_sensitive:
+        # Return generic message for sensitive errors
+        return f"{context.title()} failed due to configuration issue"
+    
+    # Safe error types that can be exposed
+    safe_errors = {
+        'ConnectionError': f'{context.title()} connection failed',
+        'TimeoutError': f'{context.title()} timed out',
+        'HTTPException': f'{context.title()} request failed',
+        'ValidationError': f'{context.title()} validation failed',
+        'PermissionError': f'Permission denied for {context}',
+        'FileNotFoundError': f'Required resource not found for {context}',
+    }
+    
+    if error_type in safe_errors:
+        return safe_errors[error_type]
+    
+    # For other errors, provide generic message
+    return f'{context.title()} encountered an unexpected error'
+
+def _create_safe_error_event(job_id: str, error: Exception, context: str = "research") -> Dict[str, Any]:
+    """
+    SECURITY FIX: Create sanitized error event for SSE streams.
+    """
+    return {
+        "status": "failed",
+        "progress": 0,
+        "step": f"{context.title()} failed",
+        "error": _sanitize_error_message(error, context),
+        # Remove error_type to prevent fingerprinting
+    }
 
 # Human-readable labels shown in the frontend progress UI
 STEP_LABELS = {
@@ -53,20 +160,28 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
     """
     Background task that runs the LangGraph decision pipeline natively via FastAPI.
 
+    SECURITY FIX: Enhanced with circuit breakers, timeouts, and graceful degradation.
+    
     Steps:
     1. Mark job as running.
-    2. Stream the graph, updating progress after each node.
+    2. Stream the graph with timeout protection, updating progress after each node.
     3. On success: save document, mark session + job complete.
     4. On failure: mark job failed and persist error details.
     """
+    circuit_breaker_stats = {}
+    
     try:
         import time
         start_time = time.time()
         
-        # 1. Mark job as running
-        await anyio.to_thread.run_sync(research_service.update_job_status, job_id, "running", 5, "starting")
+        # 1. Mark job as running with timeout protection
+        await _execute_with_timeout_and_circuit_breaker(
+            "update_job_status",
+            lambda: anyio.to_thread.run_sync(research_service.update_job_status, job_id, "running", 5, "starting"),
+            TIMEOUT_CONFIG["research_pipeline"]["memory_timeout"]
+        )
 
-        # 2. Stream the graph — get state updates after each node
+        # 2. Stream the graph with enhanced timeout protection
         current_state = {
             "question": question, 
             "user_id": user_id,
@@ -96,61 +211,98 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
         max_progress = 5
         _last_written_progress = 0
         pipeline_cb = PipelineLogger(job_id=job_id, session_id=session_id)
-        with anyio.move_on_after(900) as scope:
-            async for chunk in decision_graph.astream(
-                current_state,
-                config={"callbacks": [pipeline_cb]},
-            ):
-                for node_name, node_state in chunk.items():
-                    # LangGraph stream yields only the updates from the current node.
-                    # We must accumulate them to have the full state for saving.
-                    current_state.update(node_state)
+        
+        # SECURITY FIX: Enhanced timeout protection with node-level monitoring
+        total_timeout = TIMEOUT_CONFIG["research_pipeline"]["total_timeout"]
+        node_timeout = TIMEOUT_CONFIG["research_pipeline"]["node_timeout"]
+        
+        try:
+            async with asyncio.timeout(total_timeout):
+                node_start_time = time.time()
+                current_node = "unknown"
+                
+                async for chunk in decision_graph.astream(
+                    current_state,
+                    config={"callbacks": [pipeline_cb]},
+                ):
+                    for node_name, node_state in chunk.items():
+                        current_node = node_name
+                        node_duration = time.time() - node_start_time
+                        
+                        # SECURITY FIX: Per-node timeout monitoring
+                        if node_duration > node_timeout:
+                            logger.warning(f"Node {node_name} exceeded timeout ({node_duration:.1f}s > {node_timeout}s)")
+                            raise TimeoutError(f"Node {node_name} timed out after {node_duration:.1f}s")
+                        
+                        # LangGraph stream yields only the updates from the current node.
+                        # We must accumulate them to have the full state for saving.
+                        current_state.update(node_state)
 
-                    progress = NODE_PROGRESS.get(node_name, max_progress)
-                    if progress > max_progress:
-                        max_progress = progress
+                        progress = NODE_PROGRESS.get(node_name, max_progress)
+                        if progress > max_progress:
+                            max_progress = progress
 
-                    step_label = STEP_LABELS.get(node_name, node_name)
+                        step_label = STEP_LABELS.get(node_name, node_name)
 
-                    # Build SSE metadata for retrieval nodes
-                    meta: dict = {}
-                    if node_name == "retrieve_memory":
-                        memories = node_state.get("retrieved_memories", [])
-                        meta["memories_found"] = len(memories)
-                        if memories:
-                            meta["memory_summaries"] = [
-                                m.get("metadata", {}).get("summary", "")[:80]
-                                for m in memories[:3]
-                            ]
-                    elif node_name == "retrieve_github_context":
-                        chunks = node_state.get("github_context", [])
-                        meta["github_chunks"] = len(chunks)
+                        # Build SSE metadata for retrieval nodes
+                        meta: dict = {}
+                        if node_name == "retrieve_memory":
+                            memories = node_state.get("retrieved_memories", [])
+                            meta["memories_found"] = len(memories)
+                            if memories:
+                                meta["memory_summaries"] = [
+                                    m.get("metadata", {}).get("summary", "")[:80]
+                                    for m in memories[:3]
+                                ]
+                        elif node_name == "retrieve_github_context":
+                            chunks = node_state.get("github_context", [])
+                            meta["github_chunks"] = len(chunks)
 
-                    # Publish to SSE event bus (non-blocking)
-                    await bus_publish(job_id, {
-                        "status":   "running",
-                        "progress": max_progress,
-                        "step":     step_label,
-                        "node":     node_name,
-                        "meta":     meta,
-                    })
+                        # Publish to SSE event bus (non-blocking with timeout)
+                        try:
+                            await asyncio.wait_for(
+                                bus_publish(job_id, {
+                                    "status":   "running",
+                                    "progress": max_progress,
+                                    "step":     step_label,
+                                    "node":     node_name,
+                                    "meta":     meta,
+                                }),
+                                timeout=5  # 5 second timeout for SSE publish
+                            )
+                        except asyncio.TimeoutError:
+                            logger.warning(f"SSE publish timed out for job {job_id}")
+                        except Exception as e:
+                            logger.warning(f"SSE publish failed for job {job_id}: {e}")
 
-                    # Also update Supabase for polling fallback (throttled to >=10 point jumps)
-                    if max_progress - _last_written_progress >= 10:
-                        _last_written_progress = max_progress
-                        await anyio.to_thread.run_sync(
-                            research_service.update_job_status,
-                            job_id,
-                            "running",
-                            max_progress,
-                            step_label,
-                        )
+                        # Also update Supabase for polling fallback (throttled to >=10 point jumps)
+                        if max_progress - _last_written_progress >= 10:
+                            _last_written_progress = max_progress
+                            try:
+                                await _execute_with_timeout_and_circuit_breaker(
+                                    "update_progress",
+                                    lambda: anyio.to_thread.run_sync(
+                                        research_service.update_job_status,
+                                        job_id,
+                                        "running",
+                                        max_progress,
+                                        step_label,
+                                    ),
+                                    TIMEOUT_CONFIG["research_pipeline"]["memory_timeout"]
+                                )
+                            except Exception as e:
+                                logger.warning(f"Progress update failed (non-fatal): {e}")
+                        
+                        # Reset node timer for next node
+                        node_start_time = time.time()
+                        
+        except asyncio.TimeoutError:
+            error_msg = f"Research pipeline timed out after {total_timeout}s at node {current_node}"
+            logger.error(error_msg)
+            raise TimeoutError(error_msg)
 
-        if scope.cancel_called:
-            logger.error("Research job %s timed out", job_id)
-            await anyio.to_thread.run_sync(research_service.update_job_status, job_id, "failed", 0, "timeout")
-            await anyio.to_thread.run_sync(research_service.update_session_status, session_id, "failed")
-            return {"session_id": session_id, "job_id": job_id, "status": "timeout"}
+        # Get circuit breaker stats for monitoring
+        circuit_breaker_stats = circuit_manager.get_all_stats()
                 
         final_state = current_state
 
@@ -268,23 +420,35 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
             await anyio.to_thread.run_sync(create_job, user_id, session_id, memory_payload)
             logger.debug("Memory job enqueued for session %s", session_id)
         except Exception as e:
-            logger.warning("Failed to enqueue memory job (non-fatal): %s", e)
+            # SECURITY FIX: Don't expose error details in log message
+            logger.warning("Failed to enqueue memory job for session %s (non-fatal)", session_id)
+            logger.debug("Memory job error details: %s", e)  # Details only in debug level
 
         return {"session_id": session_id, "job_id": job_id, "status": "completed"}
 
     except Exception as exc:
-        # 🔐 FIX 4.1: Enhanced error handling - persist error details to DB and SSE
-        error_message = str(exc)[:200]
-        logger.error("Research background task failed for job %s: %s", job_id, exc, exc_info=True)
+        # SECURITY FIX: Enhanced error handling with circuit breaker information
+        sanitized_error = _sanitize_error_message(exc, "research")
         
-        # Write error details to DB so frontend can display them
+        # Include circuit breaker stats in logs for monitoring
+        try:
+            circuit_breaker_stats = circuit_manager.get_all_stats()
+            breaker_status = {name: stats["state"] for name, stats in circuit_breaker_stats.items()}
+            logger.error(
+                "Research background task failed for job %s: %s (Circuit breakers: %s)", 
+                job_id, exc, breaker_status, exc_info=True
+            )
+        except Exception:
+            logger.error("Research background task failed for job %s: %s", job_id, exc, exc_info=True)
+        
+        # Write sanitized error details to DB
         try:
             await anyio.to_thread.run_sync(
                 research_service.update_job_status,
                 job_id,
                 "failed",
                 0,
-                f"Error: {error_message}"  # Persist error in step field for UI display
+                sanitized_error  # SECURITY FIX: Use sanitized error message
             )
         except Exception as db_err:
             logger.error("Failed to update job status in DB: %s", db_err)
@@ -295,18 +459,18 @@ async def run_research_background_task(session_id: str, job_id: str, question: s
         except Exception as session_err:
             logger.error("Failed to update session status: %s", session_err)
         
-        # Publish detailed failure event to SSE so active streams see the error
+        # Publish sanitized failure event to SSE
         try:
-            await bus_publish(job_id, {
-                "status":   "failed",
-                "progress": 0,
-                "step":     "Research failed",
-                "error":    error_message,
-                "error_type": type(exc).__name__,
-            })
+            safe_event = _create_safe_error_event(job_id, exc, "research")
+            await bus_publish(job_id, safe_event)
         except Exception as sse_err:
             logger.error("Failed to publish failure event to SSE: %s", sse_err)
         
         # DON'T re-raise — FastAPI BackgroundTasks swallows exceptions anyway
-        # Return error dict instead for internal tracking
-        return {"session_id": session_id, "job_id": job_id, "status": "failed", "error": error_message}
+        # Return sanitized error dict for internal tracking
+        return {
+            "session_id": session_id, 
+            "job_id": job_id, 
+            "status": "failed", 
+            "error": sanitized_error  # SECURITY FIX: Sanitized error in return value
+        }

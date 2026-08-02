@@ -28,6 +28,30 @@ def _create_decision_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     
     if not decision:
         return {"new_memories": []}
+    
+    # SECURITY FIX: Validate workspace_id early
+    workspace_id = state.get("workspace_id")
+    user_id = state.get("user_id", "anonymous")
+    
+    if workspace_id and user_id != "anonymous":
+        # Verify user has access to workspace before creating memories
+        try:
+            from services.db import get_supabase
+            supabase = get_supabase("worker")
+            
+            workspace_check = supabase.table("workspace_members")\
+                .select("id")\
+                .eq("workspace_id", workspace_id)\
+                .eq("user_id", user_id)\
+                .execute()
+            
+            if not workspace_check.data:
+                logger.error(f"Memory creation blocked: user {user_id} lacks access to workspace {workspace_id}")
+                return {"new_memories": []}
+                
+        except Exception as e:
+            logger.error(f"Workspace validation failed during memory creation: {e}")
+            return {"new_memories": []}
         
     prompt = f"""
     You are an expert technical architect compressing a recent architectural decision into a retrieval-optimized memory summary.
@@ -91,6 +115,30 @@ def _create_comparison_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     
     if not impact_summary:
         return {"new_memories": []}
+    
+    # SECURITY FIX: Validate workspace_id for comparison memories
+    workspace_id = state.get("workspace_id")
+    user_id = state.get("user_id", "anonymous")
+    
+    if workspace_id and user_id != "anonymous":
+        # Verify user has access to workspace before creating memories
+        try:
+            from services.db import get_supabase
+            supabase = get_supabase("worker")
+            
+            workspace_check = supabase.table("workspace_members")\
+                .select("id")\
+                .eq("workspace_id", workspace_id)\
+                .eq("user_id", user_id)\
+                .execute()
+            
+            if not workspace_check.data:
+                logger.error(f"Comparison memory creation blocked: user {user_id} lacks access to workspace {workspace_id}")
+                return {"new_memories": []}
+                
+        except Exception as e:
+            logger.error(f"Workspace validation failed during comparison memory creation: {e}")
+            return {"new_memories": []}
         
     prompt = f"""
     You are an expert technical architect summarizing a recent architectural comparison between {session_a} and {session_b}.

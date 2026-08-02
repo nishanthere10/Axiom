@@ -53,7 +53,9 @@ export async function getRecentSessions(token: string, workspaceId?: string): Pr
   if (!wsId && typeof window !== "undefined") {
     wsId = localStorage.getItem("activeWorkspaceId") || undefined;
   }
-  const endpoint = wsId ? `/workspaces/${wsId}/research/history` : "/research/history";
+  // /research/history is deprecated (410). Always require workspace scope.
+  if (!wsId) return [];
+  const endpoint = `/workspaces/${wsId}/research/history`;
   const data = await apiFetch<{ sessions: any[] }>(endpoint, token, { cache: "no-store" });
   return data.sessions || [];
 }
