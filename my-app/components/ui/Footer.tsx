@@ -44,7 +44,7 @@ export default function Footer() {
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-primary shrink-0 shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
               <Link href="/" className="font-display font-bold text-xl text-foreground tracking-tight hover:text-foreground/80 transition-colors">
-                Atlas Research
+                Axiom
               </Link>
             </div>
             <p className="text-muted-foreground text-sm max-w-sm leading-relaxed">
@@ -92,7 +92,7 @@ export default function Footer() {
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <p>&copy; {currentYear} Atlas Research. All rights reserved.</p>
+          <p>&copy; {currentYear} Axiom. All rights reserved.</p>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2 w-2">

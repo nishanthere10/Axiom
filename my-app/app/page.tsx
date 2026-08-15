@@ -27,15 +27,11 @@ export default function Home() {
         {/* =========================================
             HERO SECTION
            ========================================= */}
-        <header className="w-full min-h-[85vh] px-10 sm:px-16 md:px-24 lg:px-48 max-w-[140rem] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center py-24 lg:py-36 relative">
-          
-          {/* Radial glow orbs removed */}
+        <header className="w-full min-h-[85vh] px-10 sm:px-16 md:px-24 lg:px-48 max-w-[100rem] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center py-24 lg:py-36 relative">
 
           {/* Left Column: Text Content */}
-          <div className="flex flex-col justify-center items-start text-left space-y-8 max-w-2xl min-h-[450px] w-full">
+          <div className="flex flex-col items-start text-left space-y-8">
 
-            
-            {/* Display font used for maximum impact */}
             <h1 className="text-5xl md:text-6xl lg:text-[4.5rem] font-sans font-semibold tracking-tighter text-zinc-100 leading-[1.05]">
               The smartest way to research <br className="hidden lg:block" />
               <span className="font-sans font-normal italic text-zinc-400">
@@ -43,11 +39,11 @@ export default function Home() {
               </span>
             </h1>
             
-            <p className="text-lg md:text-xl text-zinc-400 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500 fill-mode-both font-normal max-w-xl">
+            <p className="text-lg md:text-xl text-zinc-400 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500 fill-mode-both font-normal">
               Stop guessing. Generate comprehensive decision documents, track architectural evolution, and compare tradeoffs instantly with AI.
             </p>
 
-            <div className="pt-6 flex flex-col sm:flex-row items-center gap-4 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-700 fill-mode-both">
+            <div className="pt-4 flex flex-col sm:flex-row items-start gap-4 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-700 fill-mode-both">
               <Link 
                 href="/workspaces"
                 className="group relative inline-flex h-11 items-center justify-center gap-2 rounded-md bg-zinc-100 px-6 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-300 active:scale-95"
@@ -64,8 +60,8 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Right Column: CardSwap */}
-          <div className="relative w-full min-h-[450px] flex flex-col justify-center items-center animate-in fade-in zoom-in-95 duration-1000 delay-300 fill-mode-both">
+          {/* Right Column: HeroCards */}
+          <div className="hidden lg:block relative w-full min-h-[520px] animate-in fade-in zoom-in-95 duration-1000 delay-300 fill-mode-both">
             <HeroCards />
           </div>
         </header>
@@ -75,10 +71,10 @@ export default function Home() {
         {/* =========================================
             HOW IT WORKS SECTION 
            ========================================= */}
-        <section aria-label="How it works" className="w-full py-24 px-10 sm:px-16 md:px-24 lg:px-48 border-t border-zinc-900 bg-zinc-950/40 backdrop-blur-md">
+        <section aria-label="How it works" className="w-full py-24 px-10 sm:px-16 md:px-24 lg:px-48 border-t border-zinc-900">
           <div className="max-w-[100rem] mx-auto space-y-16">
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
-              <h2 className="text-3xl font-sans font-medium tracking-tight text-zinc-100">How Atlas Works</h2>
+              <h2 className="text-3xl font-sans font-medium tracking-tight text-zinc-100">How Axiom Works</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
@@ -89,7 +85,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-lg font-medium text-zinc-100">Define Decision</h3>
                 <p className="text-zinc-400 text-sm leading-relaxed">
-                  Input your architectural dilemma. Atlas decomposes the problem into research axes and identifies constraints.
+                  Input your architectural dilemma. Axiom decomposes the problem into research axes and identifies constraints.
                 </p>
               </div>
 
@@ -132,15 +128,15 @@ export default function Home() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
               
-              {/* Bento Item 1: Large */}
-              <div className="lg:col-span-2 relative group overflow-hidden rounded-xl bg-zinc-900 border border-zinc-800 p-6 flex flex-col justify-end hover:border-zinc-700 hover:-translate-y-0.5 transition-all duration-300 min-h-[200px]">
+              {/* Bento Item 1 */}
+              <div className="relative group overflow-hidden rounded-xl bg-zinc-900 border border-zinc-800 p-6 flex flex-col justify-end hover:border-zinc-700 hover:-translate-y-0.5 transition-all duration-300 min-h-[200px]">
                 <div className="absolute top-6 right-6 text-zinc-800 group-hover:text-zinc-700 transition-colors z-0">
                   <Layers className="w-24 h-24" />
                 </div>
                 <div className="relative z-20 space-y-2">
                   <h3 className="text-xl font-medium text-zinc-100">Versioned Memory Graph</h3>
                   <p className="text-zinc-400 text-sm max-w-md">
-                    Atlas extracts and remembers historical decisions, team preferences, and constraints across sessions to build persistent context.
+                    Axiom extracts and remembers historical decisions, team preferences, and constraints across sessions to build persistent context.
                   </p>
                 </div>
               </div>
@@ -184,8 +180,8 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Bento Item 5: Large */}
-              <div className="lg:col-span-2 relative group overflow-hidden rounded-xl bg-zinc-900 border border-zinc-800 p-6 flex flex-col justify-end hover:border-zinc-700 hover:-translate-y-0.5 transition-all duration-300 min-h-[200px]">
+              {/* Bento Item 5 */}
+              <div className="relative group overflow-hidden rounded-xl bg-zinc-900 border border-zinc-800 p-6 flex flex-col justify-end hover:border-zinc-700 hover:-translate-y-0.5 transition-all duration-300 min-h-[200px]">
                 <div className="absolute top-6 right-6 text-zinc-800 group-hover:text-zinc-700 transition-colors z-0">
                   <Network className="w-24 h-24" />
                 </div>

@@ -97,8 +97,8 @@ async def lifespan(app: FastAPI):
         pass  # Non-fatal — never let cleanup crash the shutdown
 
 app = FastAPI(
-    title="Atlas Research v1 API",
-    description="Backend API for Atlas Research — AI-powered engineering decision workspace.",
+    title="Axiom v1 API",
+    description="Backend API for Axiom — AI-powered engineering decision workspace.",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -209,4 +209,4 @@ async def health_check_internal(user_id: str = Depends(get_current_user)):
 
 @app.get("/")
 async def root_health_check():
-    return {"status": "healthy", "engine": "Atlas Architectural Core"}
+    return {"status": "healthy", "engine": "Axiom Architectural Core"}

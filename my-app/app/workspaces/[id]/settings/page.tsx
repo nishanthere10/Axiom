@@ -26,7 +26,7 @@ export default function SettingsPage() {
 
       <div className="mb-6 text-center md:text-left">
         <h1 className="text-3xl md:text-4xl font-medium tracking-tight text-foreground">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-2">Manage your Atlas preferences, integrations, and memory.</p>
+        <p className="text-sm text-muted-foreground mt-2">Manage your Axiom preferences, integrations, and memory.</p>
       </div>
 
       <AccountIDBadge />
@@ -38,7 +38,7 @@ export default function SettingsPage() {
           </div>
           <h2 className="text-xl font-semibold tracking-tight text-foreground mb-2">GitHub Integration</h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Connect your repositories so Atlas can understand your architecture, stack, and context without indexing source code.
+            Connect your repositories so Axiom can understand your architecture, stack, and context without indexing source code.
           </p>
         </Link>
 
@@ -46,7 +46,7 @@ export default function SettingsPage() {
           <div className="w-12 h-12 rounded-full bg-surface/50 border border-border/40 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary/10 group-hover:text-primary transition-all duration-300 shadow-sm">
             <BrainCircuit className="w-6 h-6 text-foreground group-hover:text-primary transition-colors" />
           </div>
-          <h2 className="text-xl font-semibold tracking-tight text-foreground mb-2">Atlas Memory</h2>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground mb-2">Axiom Memory</h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Manage your persistent project context, learned constraints, and structural memories that guide architectural decisions.
           </p>

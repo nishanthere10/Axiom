@@ -214,7 +214,7 @@ export default function MemoryPanel() {
             <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
               {q || typeFilter
                 ? "Try clearing your search query or changing the filter type."
-                : "Run a research session — Atlas will automatically extract and remember key architectural decisions, team preferences, and evidence."}
+                : "Run a research session — Axiom will automatically extract and remember key architectural decisions, team preferences, and evidence."}
             </p>
             {!q && !typeFilter && workspaceId && (
               <div className="pt-2">

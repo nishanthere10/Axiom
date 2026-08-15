@@ -45,7 +45,7 @@ export default function ExportButton({ sessionId, sessionType }: ExportButtonPro
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `atlas-${sessionType}-${format}-${sessionId}.${format === 'pdf' ? 'pdf' : 'md'}`;
+      a.download = `axiom-${sessionType}-${format}-${sessionId}.${format === 'pdf' ? 'pdf' : 'md'}`;
       document.body.appendChild(a);
       a.click();
       a.remove();

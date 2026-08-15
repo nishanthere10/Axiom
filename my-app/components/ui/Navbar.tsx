@@ -54,7 +54,7 @@ export default function Navbar() {
               <SheetContent side="left" className="bg-surface border-border text-foreground p-6">
                 <SheetHeader className="text-left mb-6">
                   <SheetTitle className="text-base font-semibold flex items-center gap-2">
-                    Atlas Research
+                    Axiom
                   </SheetTitle>
                 </SheetHeader>
 
@@ -109,7 +109,7 @@ export default function Navbar() {
             className="flex items-center gap-2.5 text-base font-semibold text-foreground tracking-tight hover:text-foreground/80 transition-colors"
           >
             {/* Subtle accent dot removed */}
-            Atlas Research
+            Axiom
           </Link>
 
           {isSignedIn && (

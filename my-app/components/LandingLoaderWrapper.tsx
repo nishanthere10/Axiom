@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import AtlasLoader from "@/components/landingpage-loader";
+import AxiomLoader from "@/components/landingpage-loader";
 
 export default function LandingLoaderWrapper({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
@@ -17,7 +17,7 @@ export default function LandingLoaderWrapper({ children }: { children: React.Rea
   if (isLoading) {
     return (
       <div className="fixed inset-0 z-50 flex h-screen w-full items-center justify-center bg-background">
-        <AtlasLoader />
+        <AxiomLoader />
       </div>
     );
   }

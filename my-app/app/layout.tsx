@@ -19,16 +19,16 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Atlas Research — AI Architectural Decision Engine",
+  title: "Axiom — AI Architectural Decision Engine",
   description: "Generate comprehensive decision documents, compare architectural tradeoffs, and build persistent engineering memory with AI.",
   openGraph: {
-    title: "Atlas Research — AI Architectural Decision Engine",
+    title: "Axiom — AI Architectural Decision Engine",
     description: "AI-powered research workspace for software engineers.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Atlas Research",
+    title: "Axiom",
     description: "AI-powered research workspace for software engineers.",
   },
 };
@@ -40,7 +40,6 @@ import { ToastProvider } from "@/components/ui/ToastProvider";
 import { WorkspaceProvider } from "@/components/WorkspaceContext";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Agentation } from 'agentation';
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -56,7 +55,6 @@ export default function RootLayout({
               className={`${geistSans.variable} ${geistMono.variable} ${plusJakartaSans.variable} h-full antialiased dark`}
             >
               <body className="h-screen w-screen overflow-hidden flex flex-col" suppressHydrationWarning>
-                <Agentation />
                 <CommandPalette />
                 <Navbar />
                 <SystemStatusBanner />

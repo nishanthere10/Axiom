@@ -6,11 +6,11 @@ import { cn } from "@/lib/utils";
 
 const FAQS = [
   {
-    question: "Does Atlas train its models on my proprietary codebase?",
+    question: "Does Axiom train its models on my proprietary codebase?",
     answer: "Absolutely not. We use stateless API endpoints from enterprise-tier providers (OpenAI, Anthropic). Your data is never used to train foundational models. Period.",
   },
   {
-    question: "Which underlying AI models does Atlas use?",
+    question: "Which underlying AI models does Axiom use?",
     answer: "We intelligently route requests depending on the task. For deep architectural reasoning, we primarily use Claude 3.5 Sonnet and GPT-4o. You'll always get frontier-level intelligence.",
   },
   {
@@ -19,7 +19,7 @@ const FAQS = [
   },
   {
     question: "How does the Trust Scoring work?",
-    answer: "Atlas doesn't just guess. It generates multiple internal hypotheses, cross-references them against known engineering patterns, and calculates a confidence metric. If the AI isn't sure, it tells you.",
+    answer: "Axiom doesn't just guess. It generates multiple internal hypotheses, cross-references them against known engineering patterns, and calculates a confidence metric. If the AI isn't sure, it tells you.",
   }
 ];
 

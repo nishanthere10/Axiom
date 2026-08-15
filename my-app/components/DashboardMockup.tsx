@@ -15,7 +15,7 @@ export default function DashboardMockup() {
         <div className="flex-1 flex justify-center">
           <div className="px-4 py-1 rounded-md bg-background border border-white/5 text-xs text-muted-foreground font-mono flex items-center gap-2 shadow-inner">
             <TerminalSquare className="w-3 h-3" />
-            atlas_workspace_749.json
+            axiom_workspace_749.json
           </div>
         </div>
         <div className="w-[52px]" /> {/* Spacer for centering */}

@@ -3,7 +3,7 @@ from typing import Optional
 
 class Settings(BaseSettings):
     # App
-    PROJECT_NAME: str = "Atlas Research v1"
+    PROJECT_NAME: str = "Axiom v1"
     API_BASE_URL: str = "https://atlas-1sr4.onrender.com"
     
     # Supabase

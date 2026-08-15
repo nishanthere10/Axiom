@@ -253,7 +253,7 @@ export default function GitHubIntegrationPage() {
       <div className="text-center md:text-left">
         <h1 className="text-3xl font-medium tracking-tight text-foreground">GitHub Context Provider</h1>
         <p className="text-sm text-muted-foreground mt-2">
-          Connect your GitHub account to allow Atlas to understand your repository architecture, stack, and context.
+          Connect your GitHub account to allow Axiom to understand your repository architecture, stack, and context.
         </p>
       </div>
 
@@ -262,7 +262,7 @@ export default function GitHubIntegrationPage() {
           <GithubIcon className="w-14 h-14 mx-auto text-muted-foreground group-hover:text-foreground transition-colors" />
           <h2 className="text-2xl font-medium tracking-tight">Not Connected</h2>
           <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-            Atlas needs read-only access to your repositories to generate architectural summaries. We do not index source code.
+            Axiom needs read-only access to your repositories to generate architectural summaries. We do not index source code.
           </p>
           <button onClick={connectClerk} className="mt-4 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 transition-all duration-200 shadow-sm inline-flex items-center gap-2">
             Verify GitHub Connection

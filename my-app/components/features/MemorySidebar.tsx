@@ -116,7 +116,7 @@ export function MemorySidebar({ workspaceId, context, isOpen, onClose }: Props) 
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
         <div className="flex items-center gap-2">
           <Brain className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold">Atlas Memory</span>
+          <span className="text-sm font-semibold">Axiom Memory</span>
         </div>
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
           <X className="w-4 h-4" />
