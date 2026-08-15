@@ -69,7 +69,14 @@ def assemble_context(state: ResearchState) -> Dict[str, Any]:
     if arch_chunks:
         github_text_parts.append("**REPOSITORY ARCHITECTURE & TECH STACK BLUEPRINT:**")
         for arch in arch_chunks:
-            tech_stack = ", ".join(arch.get("tech_stack", [])) if arch.get("tech_stack") else ""
+            # FIX: Handle tech_stack as either dict or string
+            tech_stack_data = arch.get("tech_stack", [])
+            
+            # Safely join, extracting the string if it's a dictionary, or just keeping it if it's already a string
+            tech_stack = ", ".join(
+                [item.get("name", str(item)) if isinstance(item, dict) else str(item) for item in tech_stack_data]
+            ) if tech_stack_data else ""
+            
             stack_str = f" (Tech Stack: {tech_stack})" if tech_stack else ""
             github_text_parts.append(f"Repo: {arch.get('repository')}{stack_str}\n{arch.get('content')}")
 

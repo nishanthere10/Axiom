@@ -78,7 +78,6 @@ function ResearchPageInner() {
   function handleSubmitted(response: ResearchResponse) {
     setJobId(response.job_id);
     setSessionId(response.session_id);
-    setCurrentQuestion(response.question || "");
     setPollingState("queued");
     setPageState("polling");
   }

@@ -1,0 +1,57 @@
+# Dependencies (will be reinstalled in Docker)
+node_modules
+npm-debug.log
+package-lock.json
+
+# Build outputs (will be rebuilt)
+.next
+.vercel
+out
+dist
+
+# Development files
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Editor/IDE
+.vscode
+.idea
+.editorconfig
+*.swp
+*.swo
+*~
+
+# Testing
+coverage
+.test-cache
+jest.config.js
+
+# Linting/Code quality
+.eslintcache
+.eslintignore
+.prettierignore
+.prettierrc
+
+# Documentation
+README.md
+CHANGELOG.md
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.circleci
+
+# Misc
+.agent
+.agents
+skills-lock.json
+Makefile
+docker-compose.yml
+Dockerfile.*.example

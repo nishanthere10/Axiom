@@ -10,3 +10,10 @@ graphify-out/
 # Markdown files in root except CLAUDE.md
 /*.md
 !/CLAUDE.md
+
+# Temporary and one-off scripts
+move_sql.py
+move_sql.js
+backend/test_memory_items.py
+backend/VERIFY_PRODUCTION_FIX.sh
+backend/migrations/

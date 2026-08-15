@@ -87,7 +87,7 @@ def claim_next_job() -> Optional[Dict[str, Any]]:
     try:
         logger.debug(f"Attempting atomic RPC claim with worker_id={worker_id}")
         result = supabase.rpc('claim_next_memory_job', {
-            'current_time': now,
+            'p_current_time': now,
             'worker_id': worker_id,
             'requesting_user_id': None
         }).execute()

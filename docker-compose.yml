@@ -1,0 +1,157 @@
+# Docker Compose Configuration for Atlas Research Platform
+# ─────────────────────────────────────────────────────────────────────────────
+# Services:
+#   - backend: FastAPI application (Python)
+#   - frontend: Next.js application (Node.js)
+#   - redis: Redis cache and job queue
+#
+# Usage:
+#   docker-compose up              # Start all services in foreground
+#   docker-compose up -d           # Start all services in background
+#   docker-compose down            # Stop and remove all containers
+#   docker-compose logs -f         # Stream logs from all services
+#   docker-compose ps              # Show running containers
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: '3.8'
+
+services:
+  # ─────────────────────────────────────────────────────────────────────────
+  # Backend Service (FastAPI + Python)
+  # ─────────────────────────────────────────────────────────────────────────
+  
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: atlas-backend
+    image: atlas:backend-latest
+    ports:
+      # Map container port 8000 to host port 8000
+      - "8000:8000"
+    environment:
+      # Python environment settings
+      - PORT=8000
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - DEBUG=false
+      # Service URLs
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      # Load backend environment variables
+      - ./backend/.env
+    volumes:
+      # Mount backend code for development (comment out for production)
+      - ./backend:/app
+      # Exclude virtual environment from mount
+      - /app/.venv
+    restart: unless-stopped
+    networks:
+      - atlas-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    command: >
+      sh -c "
+      echo 'Waiting for Redis...';
+      sleep 5;
+      echo 'Starting FastAPI application...';
+      uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Frontend Service (Next.js + Node.js)
+  # ─────────────────────────────────────────────────────────────────────────
+  
+  frontend:
+    build:
+      context: ./my-app
+      dockerfile: Dockerfile
+    container_name: atlas-frontend
+    image: atlas:frontend-latest
+    ports:
+      # Map container port 3000 to host port 3000
+      - "3000:3000"
+    environment:
+      # Node environment
+      - NODE_ENV=production
+      # API Configuration
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    env_file:
+      # Load frontend environment variables
+      - ./my-app/.env
+    restart: unless-stopped
+    networks:
+      - atlas-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Redis Service (Cache & Job Queue)
+  # ─────────────────────────────────────────────────────────────────────────
+  
+  redis:
+    image: redis:7-alpine
+    container_name: atlas-redis
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      # Map container port 6379 to host port 6379
+      - "6379:6379"
+    volumes:
+      # Persist Redis data
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - atlas-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Networks
+# ─────────────────────────────────────────────────────────────────────────
+# Defined network allows services to communicate with each other using
+# service names as hostnames (e.g., backend:8000, redis:6379)
+
+networks:
+  atlas-network:
+    driver: bridge
+
+# ─────────────────────────────────────────────────────────────────────────
+# Volumes
+# ─────────────────────────────────────────────────────────────────────────
+# Persist data between container restarts
+
+volumes:
+  redis-data:
+    driver: local

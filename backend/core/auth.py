@@ -299,3 +299,34 @@ async def verify_workspace_owner_path(
         logger.error("Workspace owner path verification error: %s", e)
         raise HTTPException(status_code=500, detail="Error verifying workspace owner access")
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Legacy/Backward-Compatible Auth Functions
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def verify_workspace_access_by_user_id(
+    workspace_id: str,
+    user_id: str
+) -> bool:
+    """
+    Backward-compatible function: Verifies workspace access for a given user_id.
+    Used by legacy code paths that don't use FastAPI dependencies.
+    
+    Returns True if user has access, False otherwise.
+    Raises HTTPException on database errors.
+    """
+    if not workspace_id or not user_id:
+        return False
+    
+    try:
+        supabase = get_supabase()
+        response = supabase.table("workspace_members").select("id").eq("workspace_id", workspace_id).eq("user_id", user_id).limit(1).execute()
+        has_access = bool(response.data)
+        
+        if not has_access:
+            logger.warning("AUTH: user_id=%s denied access to workspace_id=%s", user_id, workspace_id)
+        
+        return has_access
+    except Exception as e:
+        logger.error("Workspace access verification error: %s", e)
+        raise HTTPException(status_code=500, detail="Error verifying workspace access")
+
